@@ -349,6 +349,7 @@ let size_of_ws = function
   | U64  -> 8
   | U128 -> 16
   | U256 -> 32
+  | U512 -> 64
 
 let string_of_ws = Annotations.string_of_ws
 

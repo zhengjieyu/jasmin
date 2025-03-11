@@ -16,7 +16,8 @@ Variant wsize :=
   | U32
   | U64
   | U128
-  | U256.
+  | U256
+  | U512.
 
 (* Size in bits of the elements of a vector. *)
 Variant velem := VE8 | VE16 | VE32 | VE64.
@@ -48,7 +49,7 @@ Qed.
 HB.instance Definition _ := hasDecEq.Build wsize wsize_axiom.
 
 Definition wsizes :=
-  [:: U8 ; U16 ; U32 ; U64 ; U128 ; U256 ].
+  [:: U8 ; U16 ; U32 ; U64 ; U128 ; U256 ; U512].
 
 Lemma wsize_fin_axiom : Finite.axiom wsizes.
 Proof. by case. Qed.
@@ -56,24 +57,27 @@ Proof. by case. Qed.
 (* ** Comparison
  * -------------------------------------------------------------------- *)
 Definition wsize_cmp s s' :=
-  match s, s' with
-  | U8, U8 => Eq
-  | U8, (U16 | U32 | U64 | U128 | U256)  => Lt
-  | U16, U8 => Gt
-  | U16, U16 => Eq
-  | U16, (U32 | U64 | U128 | U256) => Lt
-  | U32, (U8 | U16) => Gt
-  | U32, U32 => Eq
-  | U32, (U64 | U128 | U256) => Lt
-  | U64, (U8 | U16 | U32) => Gt
-  | U64, U64 => Eq
-  | U64, ( U128 | U256) => Lt
-  | U128, (U8 | U16 | U32 | U64) => Gt
-  | U128, U128 => Eq
-  | U128, U256 => Lt
-  | U256, (U8 | U16 | U32 | U64 | U128) => Gt
-  | U256, U256 => Eq
-  end.
+ match s, s' with
+ | U8, U8 => Eq
+ | U8, (U16 | U32 | U64 | U128 | U256 | U512)  => Lt
+ | U16, U8 => Gt
+ | U16, U16 => Eq
+ | U16, (U32 | U64 | U128 | U256 | U512) => Lt
+ | U32, (U8 | U16) => Gt
+ | U32, U32 => Eq
+ | U32, (U64 | U128 | U256 | U512) => Lt
+ | U64, (U8 | U16 | U32) => Gt
+ | U64, U64 => Eq
+ | U64, ( U128 | U256 | U512) => Lt
+ | U128, (U8 | U16 | U32 | U64) => Gt
+ | U128, U128 => Eq
+ | U128, (U256 | U512) => Lt
+ | U256, (U8 | U16 | U32 | U64 | U128) => Gt
+ | U256, U256 => Eq
+ | U256, U512 => Lt
+ | U512, (U8 | U16 | U32 | U64 | U128 | U256) => Gt
+ | U512, U512 => Eq
+ end.
 
 #[export]
 Instance wsizeO : Cmp wsize_cmp.
@@ -87,23 +91,28 @@ Qed.
 Lemma wsize_le_U8 s: (U8 <= s)%CMP.
 Proof. by case: s. Qed.
 
-Lemma wsize_ge_U256 s: (s <= U256)%CMP.
+
+
+Lemma wsize_ge_U512 s: (s <= U512)%CMP.
 Proof. by case s. Qed.
 
-#[global]Hint Resolve wsize_le_U8 wsize_ge_U256: core.
+#[global]Hint Resolve wsize_le_U8 wsize_ge_U512: core.
 
 (* -------------------------------------------------------------------- *)
 Definition size_8_16 sz := (sz <= U16)%CMP.
-Definition size_8_32 sz := (sz <= U64)%CMP.
+Definition size_8_32 sz := (sz <= U32)%CMP.
 Definition size_8_64 sz := (sz <= U64)%CMP.
 Definition size_16_32 sz := ((U16 <= sz) && (sz <= U32))%CMP.
 Definition size_16_64 sz := ((U16 ≤ sz) && (sz ≤ U64))%CMP.
 Definition size_32_64 sz := ((U32 ≤ sz) && (sz ≤ U64))%CMP.
 Definition size_128_256 sz := ((U128 ≤ sz) && (sz ≤ U256))%CMP.
+Definition size_256_512 sz := ((U256 ≤ sz) && (sz ≤ U512))%CMP.
+Definition size_128_512 sz := ((U128 ≤ sz) && (sz ≤ U512))%CMP.
+Definition size_512 sz := (sz == U512)%CMP.
 
-Lemma wsize_nle_u64_size_128_256 sz :
-  (sz ≤ U64)%CMP = false →
-  size_128_256 sz.
+Lemma wsize_nle_u128_size_256_512 sz :
+  (sz ≤ U128)%CMP = false →
+  size_256_512 sz.
 Proof. by case: sz. Qed.
 
 (* -------------------------------------------------------------------- *)
@@ -116,6 +125,7 @@ Definition string_of_wsize (sz: wsize) : string :=
   | U64 => "64"
   | U128 => "128"
   | U256 => "256"
+  | U512 => "512"
   end.
 
 Definition string_of_ve_sz (ve:velem) (sz:wsize) : string :=
@@ -134,8 +144,13 @@ Definition string_of_ve_sz (ve:velem) (sz:wsize) : string :=
   | VE16, U256 => "16u16"
   | VE32, U256 => "8u32"
   | VE64, U256 => "4u64"
+  | VE8 , U512 => "64u8"
+  | VE16, U512 => "32u16"
+  | VE32, U512 => "16u32"
+  | VE64, U512 => "8u64"
   | _,    _    => "ERROR: please repport"
   end.
+
 
 Definition pp_s (s: string) (_: unit) : string := s.
 

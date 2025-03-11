@@ -79,7 +79,7 @@ Class pointer_op (pointer: eqType) : Type := PointerOp {
   p_to_z : pointer -> Z; 
 
   add_sub : forall p k, add p (sub k p) = k;
-  sub_add : forall p k, 0 <= k < wsize_size U256 -> sub (add p k) p = k; 
+  sub_add : forall p k, 0 <= k < wsize_size U512 -> sub (add p k) p = k; 
   add_0   : forall p, add p 0 = p;
 
 }.
@@ -232,7 +232,7 @@ Section CoreMem.
     case: ifP => //= _.
     case: eqP => [<- | hne].
     + rewrite sub_add ?eq_refl //.
-      have : wsize_size ws <= wsize_size U256 by case: (ws).
+      have : wsize_size ws <= wsize_size U512 by case: (ws).
       lia.
     by case: eqP => // heq; case: hne; rewrite -heq add_sub.
   Qed.
@@ -313,7 +313,7 @@ Section CoreMem.
     move=> al' k hk.
     rewrite (write_read8 hw) sub_add /=.
     + by case: andP => //; rewrite !zify; lia.
-    have : wsize_size s <= wsize_size U256 by case: (s).
+    have : wsize_size s <= wsize_size U512 by case: (s).
     lia.
   Qed.
 
@@ -587,7 +587,7 @@ refine
 - abstract (move=> p k => hk;
   rewrite -{2}(@wunsigned_repr_small Uptr k);
     [ f_equal; ssring
-    | have := wsize_size_wbase U256;
+    | have := wsize_size_wbase U512;
       have := wbase_m (wsize_le_U8 (@Uptr pd));
       Lia.lia ]).
 - abstract (move => p; rewrite wrepr0; ssring).

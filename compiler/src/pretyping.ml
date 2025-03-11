@@ -736,6 +736,11 @@ let tt_vsize_op loc op (vs:S.vsize) (ve:S.vesize)  =
   | `V16, `W16 -> W.VE16, W.U256  
   | `V8 , `W32 -> W.VE32, W.U256
   | `V4 , `W64 -> W.VE64, W.U256
+  (* 512 *) 
+  | `V64, `W8  -> W.VE8 , W.U512
+  | `V32, `W16 -> W.VE16, W.U512  
+  | `V16 , `W32 -> W.VE32, W.U512
+  | `V8 , `W64 -> W.VE64, W.U512
   | _   ,  _   -> rs_tyerror ~loc (InvalidOperator op)
 
 let op_info_dfl exn ty s (intok, (minws, maxws)) = 
@@ -794,6 +799,7 @@ type 'o op_info = {
 
 let cmp_8_64 = (W.U8, W.U64)
 let cmp_8_256 = (W.U8, W.U256)
+let cmp_8_512 = (W.U8, W.U512)
 
 let mk_cmp_kind eop vop = function
   | OpKE c        -> eop c
@@ -801,7 +807,7 @@ let mk_cmp_kind eop vop = function
 
 let mk_cmp_info eop vop = {
     opi_op   = mk_cmp_kind eop vop;
-    opi_wcmp = true, cmp_8_256;
+    opi_wcmp = true, cmp_8_512;
     opi_vcmp = Some cmp_8_64;
   }
 
@@ -823,7 +829,7 @@ let mk_logic_info eop =
     | OpKE (Cmp_w(_,ws)) -> eop ws
     | OpKV (_s,_ve,ws)   -> eop ws in
   { opi_op = mk;
-    opi_wcmp = false, cmp_8_256;
+    opi_wcmp = false, cmp_8_512;
     opi_vcmp = Some (cmp_8_64); }
 
 (* -------------------------------------------------------------------- *)
@@ -918,9 +924,9 @@ let op2_of_pop2 exn ty (op : S.peop2) =
   | `Div  c -> op2_of_ty exn op c ty div_info 
   | `Mod  c -> op2_of_ty exn op c ty mod_info 
 
-  | `BAnd c -> op2_of_ty exn op c (max_ty ty P.u256 |> oget ~exn) land_info
-  | `BOr  c -> op2_of_ty exn op c (max_ty ty P.u256 |> oget ~exn) lor_info
-  | `BXOr c -> op2_of_ty exn op c (max_ty ty P.u256 |> oget ~exn) lxor_info
+  | `BAnd c -> op2_of_ty exn op c (max_ty ty P.u512 |> oget ~exn) land_info
+  | `BOr  c -> op2_of_ty exn op c (max_ty ty P.u512 |> oget ~exn) lor_info
+  | `BXOr c -> op2_of_ty exn op c (max_ty ty P.u512 |> oget ~exn) lxor_info
   | `ShR  c -> op2_of_ty exn op c ty shr_info
   | `ShL  c -> op2_of_ty exn op c ty shl_info
   | `ROR  c -> op2_of_ty exn op c ty (rot_info exn (fun x -> E.Oror x))
@@ -970,13 +976,13 @@ let cast loc e ety ty =
   | P.Bty (P.U w1), P.Bty (P.U w2) when W.wsize_cmp w1 w2 <> Datatypes.Lt -> e
   | _, _ when P.pty_equal ety ty -> e
   | P.Arr _, P.Arr _ -> e (* we delay typechecking until we know the lengths *)
-  | _  ->  rs_tyerror ~loc (InvalidCast(ety,ty))
+  | _  ->  rs_tyerror ~loc  (InvalidCast(ety,ty))
 
 let cast_word loc ws e ety =
   match ety with
   | P.Bty P.Int   -> P.Papp1 (Oword_of_int ws, e), ws
   | P.Bty (P.U ws1) -> e, ws1
-  | _             ->  rs_tyerror ~loc (InvalidCast(ety,P.Bty (P.U ws)))
+  | _             -> rs_tyerror ~loc (InvalidCast(ety,P.Bty (P.U ws)))
 
 let cast_int loc e ety = 
   cast loc e ety P.tint 
@@ -1037,6 +1043,7 @@ let wsize_of_bits ~loc =
   | 64 -> W.U64
   | 128 -> W.U128
   | 256 -> W.U256
+  | 512 -> W.U512
   | n -> rs_tyerror ~loc (PackWrongWS n)
 
 let pelem_of_bits ~loc =
@@ -1339,6 +1346,7 @@ let extract_size str : string * Sopn.prim_x86_suffix option =
     | "64"  -> PVp W.U64
     | "128" -> PVp W.U128
     | "256" -> PVp W.U256
+    | "512" -> PVp W.U512
 
     | "u8"   -> PVs (Unsigned, W.U8)
     | "u16"  -> PVs (Unsigned, W.U16)
@@ -1346,6 +1354,7 @@ let extract_size str : string * Sopn.prim_x86_suffix option =
     | "u64"  -> PVs (Unsigned, W.U64)
     | "u128" -> PVs (Unsigned, W.U128)
     | "u256" -> PVs (Unsigned, W.U256)
+    | "u512" -> PVs (Unsigned, W.U512)
 
     | "s8"   -> PVs (Signed, W.U8)
     | "s16"  -> PVs (Signed, W.U16)
@@ -1353,6 +1362,7 @@ let extract_size str : string * Sopn.prim_x86_suffix option =
     | "s64"  -> PVs (Signed, W.U64)
     | "s128" -> PVs (Signed, W.U128)
     | "s256" -> PVs (Signed, W.U256)
+    | "s512" -> PVs (Signed, W.U512)
 
     | "2u8"   -> PVsv (W.Unsigned, W.VE8,  W.U16)
     | "4u8"   -> PVsv (W.Unsigned, W.VE8,  W.U32)
@@ -1368,6 +1378,10 @@ let extract_size str : string * Sopn.prim_x86_suffix option =
     | "16u16" -> PVsv (W.Unsigned, W.VE16, W.U256)
     | "8u32"  -> PVsv (W.Unsigned, W.VE32, W.U256)
     | "4u64"  -> PVsv (W.Unsigned, W.VE64, W.U256)
+    | "64u8"  -> PVsv (W.Unsigned, W.VE8,  W.U512)
+    | "32u16" -> PVsv (W.Unsigned, W.VE16, W.U512)
+    | "16u32"  -> PVsv (W.Unsigned, W.VE32, W.U512)
+    | "8u64"  -> PVsv (W.Unsigned, W.VE64, W.U512)
 
     | "2s8"   -> PVsv (W.Signed, W.VE8,  W.U16)
     | "4s8"   -> PVsv (W.Signed, W.VE8,  W.U32)
@@ -1383,6 +1397,10 @@ let extract_size str : string * Sopn.prim_x86_suffix option =
     | "16s16" -> PVsv (W.Signed, W.VE16, W.U256)
     | "8s32"  -> PVsv (W.Signed, W.VE32, W.U256)
     | "4s64"  -> PVsv (W.Signed, W.VE64, W.U256)
+    | "64s8"  -> PVsv (W.Signed, W.VE8,  W.U512)
+    | "32s16" -> PVsv (W.Signed, W.VE16, W.U512)
+    | "16s32"  -> PVsv (W.Signed, W.VE32, W.U512)
+    | "8s64"  -> PVsv (W.Signed, W.VE64, W.U512)
     | s ->
       let wsize_of_int = function
         | 8   -> W.U8
@@ -1391,6 +1409,7 @@ let extract_size str : string * Sopn.prim_x86_suffix option =
         | 64  -> W.U64
         | 128 -> W.U128
         | 256 -> W.U256
+        | 512 -> W.U512
         | _   -> raise Not_found in
       try
         Scanf.sscanf s "%c%u%c%u%!"

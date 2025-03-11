@@ -33,7 +33,7 @@ Notation sword32  := (sword U32).
 Notation sword64  := (sword U64).
 Notation sword128 := (sword U128).
 Notation sword256 := (sword U256).
-
+Notation sword512 := (sword U512).
 (* -------------------------------------------------------------------- *)
 Notation ty_msf := (sword msf_size).
 

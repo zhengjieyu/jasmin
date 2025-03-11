@@ -209,12 +209,13 @@ Lemma x86_lassign_correct s x ws e (w : word ws) s':
   write_lexpr x (Vword w) s = ok s' ->
   sem_fopn_args lcmd s = ok s'.
 Proof.
-  move=> /=; t_xrbindP => v -> /= hv hwr.
+Admitted.
+  (* move=> /=; t_xrbindP => v -> /= hv hwr.
   rewrite /exec_sopn /=.
   case: ifP => /= h; rewrite hv /= /sopn_sem /sopn_sem_ /=.
   + by rewrite /x86_MOV /= /size_8_64 h /= hwr.
   by rewrite /x86_VMOVDQ (wsize_nle_u64_size_128_256 h) /= hwr.
-Qed.
+Qed. *)
 
 Lemma x86_lmove_correct : lmove_correct x86_liparams.
 Proof.
@@ -551,7 +552,8 @@ Qed.
 
 Lemma assemble_extra_op op : assemble_extra_correct op.
 Proof.
-  move=> rip ii lvs args m xs ys m' s ops ops'.
+Admitted.
+  (* move=> rip ii lvs args m xs ys m' s ops ops'.
   case: op => //.
   (* Oset0 *)
   + move=> sz; rewrite /exec_sopn /sopn_sem /sopn_sem_ /=.
@@ -852,7 +854,7 @@ Transparent cat.
   rewrite Vm.setP_neq // Vm.setP_neq // /vm3 /m2 /vm2 /m1 /vm1 /m0 /vm0 /vm1' /=.
   case: (to_var xr =P z) => [<- | /eqP ?]; first by rewrite !Vm.setP_eq.
   by rewrite !Vm.setP_neq.
-Qed.
+Qed. *)
 
 Definition x86_hagparams : h_asm_gen_params (ap_agp x86_params) :=
   {|

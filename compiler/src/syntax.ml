@@ -15,7 +15,7 @@ type arr_access = Warray_.arr_access
 type sign = [ `Unsigned | `Signed ]
 
 type vesize = [`W1 | `W2 | `W4 | `W8 | `W16 | `W32 | `W64 | `W128]
-type vsize   = [ `V2 | `V4 | `V8 | `V16 | `V32 ]
+type vsize   = [ `V2 | `V4 | `V8 | `V16 | `V32 | `V64]
 
 type swsize  = wsize * sign
 type sowsize  = wsize option * sign
@@ -51,6 +51,7 @@ let int_of_vsize : vsize -> int =
   | `V8  -> 8
   | `V16 -> 16
   | `V32 -> 32
+  | `V64 -> 64
 
 let bits_of_vesize : vesize -> int =
   function

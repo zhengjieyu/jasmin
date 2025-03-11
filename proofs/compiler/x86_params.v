@@ -85,7 +85,8 @@ Definition x86_free_stack_frame (rspi: var_i) (tmp: option var_i) (sz: Z) :=
 Definition x86_lassign (x: lexpr) (ws: wsize) (e: rexpr) :=
   let op := if (ws <= U64)%CMP
             then MOV ws
-            else VMOVDQU ws
+            else if (ws <= U256)%CMP then VMOVDQU ws
+            else VMOVDQA32 ws
   in ([:: x ], Ox86 op, [:: e ]).
 
 Definition x86_set_up_sp_register
@@ -285,6 +286,7 @@ Definition x86_is_move_op (o : asm_op_t) :=
   | BaseOp (None, MOV _) => true
   | BaseOp (None, VMOVDQA _) => true
   | BaseOp (None, VMOVDQU _) => true
+  | BaseOp (None, VMOVDQA32 _) => true
   | ExtOp Ox86SLHmove => true
   | _ => false
   end.

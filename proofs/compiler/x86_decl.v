@@ -18,7 +18,7 @@ Require Import
 
 (* --------------------------------------------- *)
 Definition x86_reg_size  := U64.
-Definition x86_xreg_size := U256.
+Definition x86_xreg_size := U512.
 
 (* -------------------------------------------------------------------- *)
 Variant register : Type :=
@@ -34,7 +34,11 @@ Variant xmm_register : Type :=
   | XMM0 | XMM1 | XMM2 | XMM3
   | XMM4 | XMM5 | XMM6 | XMM7
   | XMM8 | XMM9 | XMM10 | XMM11
-  | XMM12 | XMM13 | XMM14 | XMM15.
+  | XMM12 | XMM13 | XMM14 | XMM15
+  | XMM16 | XMM17 | XMM18 | XMM19
+  | XMM20 | XMM21 | XMM22 | XMM23
+  | XMM24 | XMM25 | XMM26 | XMM27
+  | XMM28 | XMM29 | XMM30 | XMM31.
 
 (* -------------------------------------------------------------------- *)
 Variant rflag : Type :=
@@ -148,7 +152,7 @@ HB.instance Definition _ := isFinite.Build register_ext regxs_fin_axiom.
 
 (* -------------------------------------------------------------------- *)
 Definition xmm_registers :=
-  [:: XMM0; XMM1; XMM2; XMM3; XMM4; XMM5; XMM6; XMM7; XMM8; XMM9; XMM10; XMM11; XMM12; XMM13; XMM14; XMM15 ].
+  [:: XMM0; XMM1; XMM2; XMM3; XMM4; XMM5; XMM6; XMM7; XMM8; XMM9; XMM10; XMM11; XMM12; XMM13; XMM14; XMM15 ; XMM16; XMM17; XMM18; XMM19; XMM20; XMM21; XMM22; XMM23; XMM24; XMM25; XMM26; XMM27; XMM28; XMM29; XMM30; XMM31 ].
 
 Lemma xmm_registers_fin_axiom : Finite.axiom xmm_registers.
 Proof. by case. Qed.
@@ -266,6 +270,22 @@ Definition xreg_to_string r : string :=
   | XMM13 => "XMM13"
   | XMM14 => "XMM14"
   | XMM15 => "XMM15"
+  | XMM16  => "XMM16"
+  | XMM17  => "XMM17"
+  | XMM18  => "XMM18"
+  | XMM19  => "XMM19"
+  | XMM20  => "XMM20"
+  | XMM21  => "XMM21"
+  | XMM22  => "XMM22"
+  | XMM23  => "XMM23"
+  | XMM24  => "XMM24"
+  | XMM25  => "XMM25"
+  | XMM26 => "XMM26"
+  | XMM27 => "XMM27"
+  | XMM28 => "XMM28"
+  | XMM29 => "XMM29"
+  | XMM30 => "XMM30"
+  | XMM31 => "XMM31"
   end.
 
 #[global]

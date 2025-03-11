@@ -373,7 +373,7 @@ Hypothesis no_overflow_size : no_overflow rsp sao.(sao_size).
 Hypothesis disjoint_zrange_globals_locals :
   0 < glob_size -> 0 < sao.(sao_size) ->
   disjoint_zrange rip glob_size rsp sao.(sao_size).
-Hypothesis rip_align : is_align rip U256.
+Hypothesis rip_align : is_align rip U512.
   (* could be formulated [forall ws, is_align rip ws] (cf. extend_mem) *)
 Hypothesis rsp_align : is_align rsp sao.(sao_align).
 
@@ -934,7 +934,7 @@ Proof.
     rewrite /Addr_globals /Offset_slots /Align_globals /Align_slots heq.
     apply is_align_add.
     + apply: is_align_m rip_align.
-      by apply wsize_ge_U256.
+      by apply wsize_ge_U512.
     rewrite WArray.arr_is_align.
     by apply /eqP; apply (init_map_align heq).
   + rewrite /Addr /Align !(pick_slot_locals hin).
@@ -1623,7 +1623,7 @@ Qed.
 Record extend_mem (m1 m2:mem) (rip:pointer) (data:seq u8) := {
   em_no_overflow : no_overflow rip (Z.of_nat (size data));
     (* [rip] is able to store a block large enough *)
-  em_align       : is_align rip U256;
+  em_align       : is_align rip U512;
     (* [rip] is 32-bytes aligned (and thus is 1,2,4,8,16-bytes aligned) *)
     (* could be formulated, [forall ws, is_align rip ws] *)
   em_read_old8   : forall p, validw m1 Aligned p U8 -> read m1 Aligned p U8 = read m2 Aligned p U8;

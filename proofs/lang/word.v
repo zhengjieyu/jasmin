@@ -50,11 +50,12 @@ Qed.
 
 (* -------------------------------------------------------------- *)
 Definition nat7   : nat := 7.
-Definition nat15  : nat := nat7.+4.+4.
-Definition nat31  : nat := nat15.+4.+4.+4.+4.
-Definition nat63  : nat := nat31.+4.+4.+4.+4.+4.+4.+4.+4.
-Definition nat127 : nat := nat63.+4.+4.+4.+4.+4.+4.+4.+4.+4.+4.+4.+4.+4.+4.+4.+4.
-Definition nat255 : nat := nat127.+4.+4.+4.+4.+4.+4.+4.+4.+4.+4.+4.+4.+4.+4.+4.+4.+4.+4.+4.+4.+4.+4.+4.+4.+4.+4.+4.+4.+4.+4.+4.+4.
+Definition nat15  : nat := 15.
+Definition nat31  : nat := 31.
+Definition nat63  : nat := 63.
+Definition nat127 : nat := 127.
+Definition nat255 : nat := 255.
+Definition nat511 : nat := 511.
 
 Definition wsize_size_minus_1 (s: wsize) : nat :=
   match s with
@@ -64,6 +65,7 @@ Definition wsize_size_minus_1 (s: wsize) : nat :=
   | U64  => nat63
   | U128 => nat127
   | U256 => nat255
+  | U512 => nat511
   end.
 
 Coercion nat_of_wsize (sz : wsize) :=
@@ -80,7 +82,8 @@ Definition wsize_size (sz: wsize) : Z :=
   | U64  => 8
   | U128 => 16
   | U256 => 32
-  end.
+  | U512 => 64
+end.
 
 Definition wsize_log2 sz : nat :=
   match sz with
@@ -90,6 +93,7 @@ Definition wsize_log2 sz : nat :=
   | U64 => 3
   | U128 => 4
   | U256 => 5
+  | U512 => 6
   end.
 
 Lemma wsize8 : wsize_size U8 = 1%Z. done. Qed.
@@ -166,12 +170,13 @@ Lemma wsize_size_le a b :
   (wsize_size a | wsize_size b).
 Proof.
   case: a; case: b => // _.
-  1, 7, 12, 16, 19, 21: by exists 1.
-  1, 6, 10, 13, 15: by exists 2.
-  1, 5, 8, 10: by exists 4.
-  1, 4, 6: by exists 8.
-  1, 3: by exists 16.
-  by exists 32.
+  1, 8, 14, 19, 23, 26, 28: by exists 1.
+  1, 7, 12, 16, 19, 21: by exists 2.
+  1, 6, 10, 13, 15: by exists 4.
+  1, 5, 8, 10: by exists 8.
+  1, 4, 6: by exists 16.
+  1, 3: by exists 32.
+  1: by exists 64.
 Qed.
 
 Coercion nat_of_pelem (pe: pelem) : nat :=
@@ -437,6 +442,7 @@ Notation u32  := (word U32).
 Notation u64  := (word U64).
 Notation u128 := (word U128).
 Notation u256 := (word U256).
+Notation u512 := (word U512).
 
 Definition wbit_n sz (w:word sz) (n:nat) : bool :=
    wbit (wunsigned w) n.
@@ -1614,20 +1620,48 @@ Definition wperm2i128 (w1 w2: u256) (i: u8) : u256 :=
   make_vec U256 [:: lo ; hi ].
 
 (* -------------------------------------------------------------------*)
+Definition wshufi32x4 (w1 w2: u512) (i: u8) : u512 :=
+  let choose (n: nat) :=
+        match urepr (subword n 2 i) with
+        | 0 => subword 0 U128 w1
+        | 1 => subword U128 U128 w1
+        | 2 => subword (2 * U128) U128 w1
+        | 3 => subword (3 * U128) U128 w1
+        | 4 => subword 0 U128 w2
+        | 5 => subword U128 U128 w2
+        | 6 => subword (2 * U128) U128 w2
+        | _ => subword (3 * U128) U128 w2
+        end in
+    let lo1 := if wbit_n i 3 then 0%R else choose 0%nat in
+    let lo2 := if wbit_n i 5 then 0%R else choose 2%nat in
+    let hi1 := if wbit_n i 7 then 0%R else choose 4%nat in
+    let hi2 := if wbit_n i 9 then 0%R else choose 6%nat in
+    make_vec U512 [:: lo1 ; lo2 ; hi1 ; hi2 ].
+
+(* -------------------------------------------------------------------*)
 Definition wpermd1 (v: seq u32) (idx: u32) :=
   let off := wunsigned idx mod 8 in
   (v`_(Z.to_nat off))%R.
+
+Definition wpermb1 (v: seq u8) (idx: u8) :=
+let off := wunsigned idx mod 8 in
+(v`_(Z.to_nat off))%R.
 
 Definition wpermd sz (idx w: word sz) : word sz :=
   let v := split_vec U32 w in
   let i := split_vec U32 idx in
   make_vec sz (map (wpermd1 v) i).
 
+Definition wpermb sz (idx w: word sz) : word sz :=
+  let v := split_vec U8 w in
+  let i := split_vec U8 idx in
+  make_vec sz (map (wpermb1 v) i).
+
 (* -------------------------------------------------------------------*)
-Definition wpermq (w: u256) (i: u8) : u256 :=
+Definition wpermq sz (w: word sz) (i: u8) : word sz :=
   let v := split_vec U64 w in
   let j := split_vec 2 i in
-  make_vec U256 (map (λ n, v`_(Z.to_nat (urepr n)))%R j).
+  make_vec sz (map (λ n, v`_(Z.to_nat (urepr n)))%R j).
 
 (* -------------------------------------------------------------------*)
 Definition wpsxldq op sz (w: word sz) (i: u8) : word sz :=
@@ -1713,6 +1747,18 @@ Definition blendv (ve: velem) sz (w1 w2 m: word sz): word sz :=
   make_vec sz r.
 
 Definition wpblendvb := blendv VE8.
+
+(* -------------------------------------------------------------------*)
+
+
+
+Definition wpermi2q sz (w1: word sz) (m: word sz) : word sz :=
+ w1.
+(* let v1 := split_vec U64 w1 in
+let v2 := split_vec U64 w2 in
+let b := split_vec 1 m in
+let r := map3 (λ b v1 v2, if b == 1%R then v2 else v1) b v1 v2 in *)
+(* make_vec sz r. *)
 
 (* -------------------------------------------------------------------*)
 Lemma pow2pos q : 0 < 2 ^ Z.of_nat q.

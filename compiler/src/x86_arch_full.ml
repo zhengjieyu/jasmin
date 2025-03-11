@@ -134,7 +134,11 @@ module X86_core = struct
     | VAESIMC -> true
     | VAESKEYGENASSIST -> true
     | VBROADCASTI128 -> true
+    | VBROADCASTI32X4 -> true
+    | VBROADCASTI64X4 -> true
     | VEXTRACTI128 -> true
+    | VEXTRACTI64X2 -> true
+    | VEXTRACTI32X8 -> true
     | VINSERTI128 -> true
     | VMOV _ -> true
     | VMOVDQA _ -> true
@@ -158,8 +162,10 @@ module X86_core = struct
     | VPCMPEQ _ -> true
     | VPCMPGT _ -> true
     | VPERM2I128 -> true
-    | VPERMD -> true
-    | VPERMQ -> true
+    | VPERMD _ -> true
+    | VPERMB _ -> true
+    | VPERMQ _ -> true
+    | VPERMQ512 -> true
     | VPEXTR _ -> true
     | VPINSR _ -> true
     | VPMADDUBSW _ -> true
@@ -176,6 +182,7 @@ module X86_core = struct
     | VPMULHRS _ -> true
     | VPMULHU _ -> true
     | VPMULL _ -> true
+    | VPERMT2Q _ -> true
     | VPMULU _ -> true
     | VPOR _ -> true
     | VPSHUFB _ -> true
@@ -195,6 +202,8 @@ module X86_core = struct
     | VPUNPCKH _ -> true
     | VPUNPCKL _ -> true
     | VPXOR _ -> true
+    | VMOVDQA32 _ -> true
+    | VSHUFI32X4 -> true
     | VSHUFPS _ -> false (* Not DOIT *)
     | XCHG _ -> false (* Not DOIT *)
     | XOR _ -> true

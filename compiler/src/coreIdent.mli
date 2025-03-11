@@ -31,6 +31,7 @@ val u32   : 'len gty
 val u64   : 'len gty
 val u128  : 'len gty
 val u256  : 'len gty
+val u512  : 'len gty
 val tu    : wsize -> 'len gty
 val tbool : 'len gty
 val tint  : 'len gty

@@ -117,6 +117,7 @@ let pp_xmm_register ~(reg_pre:string) (ws: W.wsize) (r: xmm_register) : string =
      | U64
      | U128 -> "x"
      | U256 -> "y"
+     | U512 -> "z"
      )
     (match r with
      | XMM0 -> 0
@@ -134,7 +135,24 @@ let pp_xmm_register ~(reg_pre:string) (ws: W.wsize) (r: xmm_register) : string =
      | XMM12 -> 12
      | XMM13 -> 13
      | XMM14 -> 14
-     | XMM15 -> 15)
+     | XMM15 -> 15
+     | XMM16 -> 16
+     | XMM17 -> 17
+     | XMM18 -> 18
+     | XMM19 -> 19
+     | XMM20 -> 20
+     | XMM21 -> 21
+     | XMM22 -> 22
+     | XMM23 -> 23
+     | XMM24 -> 24
+     | XMM25 -> 25
+     | XMM26 -> 26
+     | XMM27 -> 27
+     | XMM28 -> 28
+     | XMM29 -> 29
+     | XMM30 -> 30
+     | XMM31 -> 31
+     )
 
 (* -------------------------------------------------------------------- *)
 let pp_scale (scale : Datatypes.nat) =
@@ -184,6 +202,7 @@ let align_of_ws =
   | W.U64 -> 3
   | W.U128 -> 4
   | W.U256 -> 5
+  | W.U512 -> 6
 
 let pp_align ws =
   let n = align_of_ws ws in
@@ -340,6 +359,7 @@ module Intel : BPrinter = struct
     | U64  -> "qword"
     | U128 -> "xmmword"
     | U256 -> "ymmword"
+    | U512 -> "zmmword"
 
   let pp_address ws (addr : (_, _, _, _, _) Arch_decl.address) =
     match addr with

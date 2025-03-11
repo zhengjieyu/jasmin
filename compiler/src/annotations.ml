@@ -12,6 +12,7 @@ let int_of_ws = function
   | U64  -> 64
   | U128 -> 128
   | U256 -> 256
+  | U512 -> 512
 
 let string_of_ws ws = Format.sprintf "u%i" (int_of_ws ws)
 
