@@ -1830,7 +1830,7 @@ Definition x86_VEXTRACTI64X2 (v: u512) (i: u8) : tpl (w_ty U128) :=
 let r := if lsb i then wshr v (Z.of_nat U128) else v in
 zero_extend U128 r.              
 Definition Ox86_VEXTRACTI64X2_instr :=
-mk_instr_pp "VVEXTRACTI64X2" w512w8_ty w128_ty [:: Eu 1; Eu 2] [:: Eu 0] MSB_CLEAR x86_VEXTRACTI64X2
+mk_instr_pp "VEXTRACTI64X2" w512w8_ty w128_ty [:: Eu 1; Eu 2] [:: Eu 0] MSB_CLEAR x86_VEXTRACTI64X2
             (check_xmmm_xmm_imm8 U512) 3 (primM VEXTRACTI64X2) (pp_name_ty "vextracti64x2" [::U128; U512; U8]).
 
 

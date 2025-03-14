@@ -1,5 +1,8 @@
+require "params.jinc"
+u512 rho56 = 0x383F3E3D3C3B3A393037363533323131282F2E2D2C2B2A292027262524232221181F1E1D1C1B1A191017161514131211080F0E0D0C0B0A090007060504030201;
+u512 rho8 = 0x3E3D3C3B3A39383F3635343332313037322E2D2C2B2A29282F2625242322212027271E1D1C1B1A19181F16151413121110170E0D0C0B0A09080F0605040302010007;
 param int SHAKE128_RATE = 168;
-param int shake256_RATE = 136;
+param int SHAKE256_RATE = 136;
 param int SHA3_256_RATE = 136;
 param int SHA3_512_RATE = 72;
 
@@ -93,6 +96,16 @@ inline fn __prepare_theta(reg ptr u512[25] A_8x) -> reg u512, reg u512, reg u512
     return Ca, Ce, Ci, Co, Cu;
 
 }
+
+inline fn __rol_8u64_rho56(reg u512 a) -> reg u512
+{
+	reg u512 r;
+
+	r = #VPSHUFB_512(a, rho56);
+
+	return r; 
+}
+
 inline fn __rol_8u64_rho8(reg u512 a) -> reg u512
 {
 	reg u512 r;
@@ -900,7 +913,333 @@ reg u512 Ca, reg u512 Ce, reg u512 Ci, reg u512 Co, reg u512 Cu)
 
     return A_8x, E_8x, Ca, Ce, Ci, Co, Cu;
 }
+inline fn __second_last(
+reg ptr u512[25] A_8x, reg ptr u512[25] E_8x, inline int index,
+reg u512 Da, reg u512 De, reg u512 Di, reg u512 Do, reg u512 Du) 
+-> reg ptr u512[25], reg ptr u512[25]
+{
+    reg u512 Bba, Bbe, Bbi, Bbo, Bbu;
+    reg u512 t512;
 
+    t512 = A_8x[ba];
+    t512 ^= Da;
+    A_8x[ba] = t512;
+    Bba = t512;
+
+    t512 = A_8x[ge];
+    t512 ^= De;
+    A_8x[ge] = t512;
+    Bbe = __rol_8u64(t512, 44);
+
+    t512 = A_8x[ki];
+    t512 ^= Di;
+    A_8x[ki] = t512;
+    Bbi = __rol_8u64(t512, 43);
+
+    // E##ba = XOR512(Bba, ANDnu512(Bbe, Bbi)); XOReq512(E##ba, CONSt512_64(KeccakF1600RoundConstants[i]));
+    t512 = #VPANDN_512(Bbe, Bbi);
+    t512 ^= Bba;
+    t512 ^= KeccakF1600RoundConstants[index];
+    E_8x[ba] = t512;
+
+    t512 = A_8x[mo];
+    t512 ^= Do;
+    A_8x[mo] = t512;
+    Bbo = __rol_8u64(t512, 21);
+
+    //  E##be = XOR512(Bbe, ANDnu512(Bbi, Bbo));
+    t512 = #VPANDN_512(Bbi, Bbo);
+    t512 ^= Bbe;
+    E_8x[be] = t512;
+
+    t512 = A_8x[su];
+    t512 ^= Du;
+    A_8x[su] = t512;
+    Bbu = __rol_8u64(t512, 14);
+
+    // E##bi = XOR512(Bbi, ANDnu512(Bbo, Bbu)); 
+    t512 = #VPANDN_512(Bbo, Bbu);
+    t512 ^= Bbi;
+    E_8x[bi] = t512;
+
+    // E##bo = XOR512(Bbo, ANDnu512(Bbu, Bba));
+    t512 = #VPANDN_512(Bbu, Bba);
+    t512 ^= Bbo;
+    E_8x[bo] = t512;
+    
+    // E##bu = XOR512(Bbu, ANDnu512(Bba, Bbe));
+    t512 = #VPANDN_512(Bba, Bbe);
+    t512 ^= Bbu; 
+    E_8x[bu] = t512;
+
+    return A_8x, E_8x;
+}
+
+inline fn __third_last(
+reg ptr u512[25] A_8x, reg ptr u512[25] E_8x,
+reg u512 Da, reg u512 De, reg u512 Di, reg u512 Do, reg u512 Du) 
+-> reg ptr u512[25], reg ptr u512[25]
+{
+    reg u512 Bga, Bge, Bgi, Bgo, Bgu;
+    reg u512 t512;
+
+    t512 = A_8x[bo];
+    t512 ^= Do;
+    A_8x[bo] = t512;
+    Bga = __rol_8u64(t512, 28);
+
+    t512 = A_8x[gu];
+    t512 ^= Du;
+    A_8x[gu] = t512;
+    Bge = __rol_8u64(t512, 20);
+
+    t512 = A_8x[ka];
+    t512 ^= Da;
+    A_8x[ka] = t512;
+    Bgi = __rol_8u64(t512, 3);   
+
+    // E##ga = XOR512(Bga, ANDnu512(Bge, Bgi))
+    t512 = #VPANDN_512(Bge, Bgi);
+    t512 ^= Bga;
+    E_8x[ga] = t512;
+
+    t512 = A_8x[me];
+    t512 ^= De;
+    A_8x[me] = t512;
+    Bgo = __rol_8u64(t512, 45);
+
+    // E##ge = XOR512(Bge, ANDnu512(Bgi, Bgo))
+    t512 = #VPANDN_512(Bgi, Bgo);
+    t512 ^= Bge;
+    E_8x[ge] = t512;
+
+    t512 = A_8x[si];
+    t512 ^= Di;
+    A_8x[si] = t512;
+    Bgu = __rol_8u64(t512, 61);
+
+    //  E##gi = XOR512(Bgi, ANDnu512(Bgo, Bgu))
+    t512 = #VPANDN_512(Bgo, Bgu);
+    t512 ^= Bgi;
+    E_8x[gi] = t512;
+
+    // E##go = XOR512(Bgo, ANDnu512(Bgu, Bga));
+    t512 = #VPANDN_512(Bgu, Bga);
+    t512 ^= Bgo;
+    E_8x[go] = t512;
+
+    // E##gu = XOR512(Bgu, ANDnu512(Bga, Bge));
+    t512 = #VPANDN_512(Bga, Bge);
+    t512 ^= Bgu;
+    E_8x[gu] = t512;
+
+    return A_8x, E_8x;
+}
+
+inline fn __fourth_last(
+reg ptr u512[25] A_8x, reg ptr u512[25] E_8x,
+reg u512 Da, reg u512 De, reg u512 Di, reg u512 Do, reg u512 Du) 
+-> reg ptr u512[25], reg ptr u512[25]
+{
+    reg u512 Bka, Bke, Bki, Bko, Bku;
+    reg u512 t512;
+
+    t512 = A_8x[be];
+    t512 ^= De;
+    A_8x[be] = t512;
+    Bka = __rol_8u64(t512, 1);
+
+    t512 = A_8x[gi];
+    t512 ^= Di;
+    A_8x[gi] = t512;
+    Bke = __rol_8u64(t512, 6);
+
+    t512 = A_8x[ko];
+    t512 ^= Do;
+    A_8x[ko] = t512;
+    Bki = __rol_8u64(t512, 25);
+
+    // E##ka = XOR512(Bka, ANDnu512(Bke, Bki));
+    t512 = #VPANDN_512(Bke, Bki);
+    t512 ^= Bka;
+    E_8x[ka] = t512;
+    
+    t512 = A_8x[mu];
+    t512 ^= Du;
+    A_8x[mu] = t512;
+    Bko = __rol_8u64_rho8(t512);
+
+    // E##ke = XOR512(Bke, ANDnu512(Bki, Bko));
+    t512 = #VPANDN_512(Bki, Bko);
+    t512 ^= Bke;
+    E_8x[ke] = t512;
+    
+    t512 = A_8x[sa];
+    t512 ^= Da;
+    A_8x[sa] = t512;
+    Bku = __rol_8u64(t512, 18);
+
+    // E##ki = XOR512(Bki, ANDnu512(Bko, Bku))
+    t512 = #VPANDN_512(Bko, Bku);
+    t512 ^= Bki;
+    E_8x[ki] = t512;
+
+    //  E##ko = XOR512(Bko, ANDnu512(Bku, Bka));
+    t512 = #VPANDN_512(Bku, Bka);
+    t512 ^= Bko;
+    E_8x[ko] = t512;
+
+    //  E##ku = XOR512(Bku, ANDnu512(Bka, Bke));
+    t512 = #VPANDN_512(Bka, Bke);
+    t512 ^= Bku;
+    E_8x[ku] = t512;
+
+    return A_8x, E_8x;
+}
+
+inline fn __fifth_last(
+reg ptr u512[25] A_8x, reg ptr u512[25] E_8x,
+reg u512 Da, reg u512 De, reg u512 Di, reg u512 Do, reg u512 Du) 
+-> reg ptr u512[25], reg ptr u512[25]
+{
+    reg u512 Bma, Bme, Bmi, Bmo, Bmu;
+    reg u512 t512;
+
+    t512 = A_8x[bu];
+    t512 ^= Du;
+    A_8x[bu] = t512;
+    Bma = __rol_8u64(t512, 27);
+
+    t512 = A_8x[ga];
+    t512 ^= Da;
+    A_8x[ga] = t512;
+    Bme = __rol_8u64(t512, 36);
+
+    t512 = A_8x[ke];
+    t512 ^= De;
+    A_8x[ke] = t512;
+    Bmi = __rol_8u64(t512, 10);
+
+    // E##ma = XOR512(Bma, ANDnu512(Bme, Bmi));
+    t512 = #VPANDN_512(Bme, Bmi);
+    t512 ^= Bma;
+    E_8x[ma] = t512;
+
+    t512 = A_8x[mi];
+    t512 ^= Di;
+    A_8x[mi] = t512;
+    Bmo = __rol_8u64(t512, 15);
+
+    // E##me = XOR512(Bme, ANDnu512(Bmi, Bmo));
+    t512 = #VPANDN_512(Bmi, Bmo);
+    t512 ^= Bme;
+    E_8x[me] = t512;
+
+    t512 = A_8x[so];
+    t512 ^= Do;
+    A_8x[so] = t512;
+    Bmu = __rol_8u64_rho56(t512);
+
+    // E##mi = XOR512(Bmi, ANDnu512(Bmo, Bmu));
+    t512 = #VPANDN_512(Bmo, Bmu);
+    t512 ^= Bmi;
+    E_8x[mi] = t512;
+
+    // E##mo = XOR512(Bmo, ANDnu512(Bmu, Bma));
+    t512 = #VPANDN_512(Bmu, Bma);
+    t512 ^= Bmo;
+    E_8x[mo] = t512;
+
+    // E##mu = XOR512(Bmu, ANDnu512(Bma, Bme));
+    t512 = #VPANDN_512(Bma, Bme);
+    t512 ^= Bmu;
+    E_8x[mu] = t512;
+
+    return A_8x, E_8x;
+}
+
+inline fn __sixth_last(
+reg ptr u512[25] A_8x, reg ptr u512[25] E_8x,
+reg u512 Da, reg u512 De, reg u512 Di, reg u512 Do, reg u512 Du) 
+-> reg ptr u512[25], reg ptr u512[25]
+{
+    reg u512 Bsa, Bse, Bsi, Bso, Bsu;
+    reg u512 t512;
+
+    t512 = A_8x[bi];
+    t512 ^= Di;
+    A_8x[bi] = t512;
+    Bsa = __rol_8u64(t512, 62);
+
+    t512 = A_8x[go];
+    t512 ^= Do;
+    A_8x[go] = t512;
+    Bse = __rol_8u64(t512, 55);
+
+    t512 = A_8x[ku];
+    t512 ^= Du;
+    A_8x[ku] = t512;
+    Bsi = __rol_8u64(t512, 39);
+
+    // E##sa = XOR512(Bsa, ANDnu512(Bse, Bsi));
+    t512 = #VPANDN_512(Bse, Bsi);
+    t512 ^= Bsa;
+    E_8x[sa] = t512;
+
+    t512 = A_8x[ma];
+    t512 ^= Da;
+    A_8x[ma] = t512;
+    Bso = __rol_8u64(t512, 41);
+
+    // E##se = XOR512(Bse, ANDnu512(Bsi, Bso))
+    t512 = #VPANDN_512(Bsi, Bso);
+    t512 ^= Bse;
+    E_8x[se] = t512;
+
+    t512 = A_8x[se];
+    t512 ^= De;
+    A_8x[se] = t512;
+    Bsu = __rol_8u64(t512, 2);
+
+    // E##si = XOR512(Bsi, ANDnu512(Bso, Bsu)); 
+    t512 = #VPANDN_512(Bso, Bsu);
+    t512 ^= Bsi;
+    E_8x[si] = t512;
+
+    // E##so = XOR512(Bso, ANDnu512(Bsu, Bsa));
+    t512 = #VPANDN_512(Bsu, Bsa);
+    t512 ^= Bso;
+    E_8x[so] = t512;
+
+    // E##su = XOR512(Bsu, ANDnu512(Bsa, Bse));
+    t512 = #VPANDN_512(Bsa, Bse);
+    t512 ^= Bsu;
+    E_8x[su] = t512;
+
+    return A_8x, E_8x;
+}
+
+inline fn __theta_rho_pi_chi_iota(
+reg ptr u512[25] A_8x, reg ptr u512[25] E_8x, inline int index,
+reg u512 Ca, reg u512 Ce, reg u512 Ci, reg u512 Co, reg u512 Cu) 
+-> reg ptr u512[25], reg ptr u512[25]
+{
+    reg u512 Da, De, Di, Do, Du;
+
+    Da, De, Di, Do, Du = __first(Ca, Ce, Ci, Co, Cu);
+
+    A_8x, E_8x = __second_last(A_8x, E_8x, index, Da, De, Di, Do, Du);
+
+    A_8x, E_8x = __third_last(A_8x, E_8x, Da, De, Di, Do, Du);
+
+    A_8x, E_8x = __fourth_last(A_8x, E_8x, Da, De, Di, Do, Du);
+
+    A_8x, E_8x  = __fifth_last(A_8x, E_8x, Da, De, Di, Do, Du);
+ 
+    A_8x, E_8x  = __sixth_last(A_8x, E_8x, Da, De, Di, Do, Du);
+
+    return A_8x, E_8x;
+}
 fn _KeccakF1600_StatePermute8x(reg ptr u512[25] A_8x) -> reg ptr u512[25]
 {
     reg u512 Ca, Ce, Ci, Co, Cu;
@@ -1007,15 +1346,15 @@ fn _shake256_absorb8x_33(reg ptr u512[25] s, reg ptr u8[33] m0 m1 m2 m3 m4 m5 m6
 
 
   t0 = shake_sep[u512 0];// ？？
-  t1 = s[shake256_RATE / 8 - 1]; 
+  t1 = s[SHAKE256_RATE / 8 - 1]; 
   t0 = t0 ^ t1;
-  s[shake256_RATE / 8 - 1] = t0;
+  s[SHAKE256_RATE / 8 - 1] = t0;
 
   return s;
 }
 
 inline
-fn __shake256_squeezeblock8x(reg ptr u512[25] state, reg ptr u8[shake256_RATE] h0 h1 h2 h3 h4 h5 h6 h7) -> reg ptr u512[25], reg ptr u8[shake256_RATE], reg ptr u8[shake256_RATE], reg ptr u8[shake256_RATE], reg ptr u8[shake256_RATE], reg ptr u8[shake256_RATE], reg ptr u8[shake256_RATE], reg ptr u8[shake256_RATE], reg ptr u8[shake256_RATE]
+fn __shake256_squeezeblock8x(reg ptr u512[25] state, reg ptr u8[SHAKE256_RATE] h0 h1 h2 h3 h4 h5 h6 h7) -> reg ptr u512[25], reg ptr u8[SHAKE256_RATE], reg ptr u8[SHAKE256_RATE], reg ptr u8[SHAKE256_RATE], reg ptr u8[SHAKE256_RATE], reg ptr u8[SHAKE256_RATE], reg ptr u8[SHAKE256_RATE], reg ptr u8[SHAKE256_RATE], reg ptr u8[SHAKE256_RATE]
 {
   reg u512 t512;
   reg u128 t128;
@@ -1023,7 +1362,7 @@ fn __shake256_squeezeblock8x(reg ptr u512[25] state, reg ptr u8[shake256_RATE] h
 
   state = _KeccakF1600_StatePermute8x(state);
 
-	for i = 0 to (shake256_RATE / 8) {
+	for i = 0 to (SHAKE256_RATE / 8) {
     t512 = state[i];
     t128 = (128u)t512;
 		h0[u64 i] = #VMOVLPD(t128);
@@ -1042,25 +1381,25 @@ fn __shake256_squeezeblock8x(reg ptr u512[25] state, reg ptr u8[shake256_RATE] h
   return state, h0, h1, h2, h3, h4, h5, h6, h7;
 }
 
-param int NOISE_NBLOCKS = (KYBER_ETA1 * KYBER_N/4 + shake256_RATE - 1)/shake256_RATE;
+param int NOISE_NBLOCKS = (MLKEM_ETA1 * MLKEM_N/4 + SHAKE256_RATE - 1)/SHAKE256_RATE;
 
 inline
-fn __shake256_squeezenblocks8x(reg ptr u512[25] state, reg ptr u8[NOISE_NBLOCKS * shake256_RATE] buf0 buf1 buf2 buf3) -> reg ptr u512[25], reg ptr u8[NOISE_NBLOCKS*shake256_RATE], reg ptr u8[NOISE_NBLOCKS*shake256_RATE], reg ptr u8[NOISE_NBLOCKS*shake256_RATE], reg ptr u8[NOISE_NBLOCKS*shake256_RATE], reg ptr u8[NOISE_NBLOCKS*shake256_RATE], reg ptr u8[NOISE_NBLOCKS*shake256_RATE], reg ptr u8[NOISE_NBLOCKS*shake256_RATE], reg ptr u8[NOISE_NBLOCKS*shake256_RATE]
+fn __shake256_squeezenblocks8x(reg ptr u512[25] state, reg ptr u8[NOISE_NBLOCKS * SHAKE256_RATE] buf0 buf1 buf2 buf3 buf4 buf5 buf6 buf7) -> reg ptr u512[25], reg ptr u8[NOISE_NBLOCKS*SHAKE256_RATE], reg ptr u8[NOISE_NBLOCKS*SHAKE256_RATE], reg ptr u8[NOISE_NBLOCKS*SHAKE256_RATE], reg ptr u8[NOISE_NBLOCKS*SHAKE256_RATE], reg ptr u8[NOISE_NBLOCKS*SHAKE256_RATE], reg ptr u8[NOISE_NBLOCKS*SHAKE256_RATE], reg ptr u8[NOISE_NBLOCKS*SHAKE256_RATE], reg ptr u8[NOISE_NBLOCKS*SHAKE256_RATE]
 {
   inline int i;
 
   for i = 0 to NOISE_NBLOCKS
   {
     state, 
-    buf0[i*shake256_RATE:shake256_RATE], 
-    buf1[i*shake256_RATE:shake256_RATE], 
-    buf2[i*shake256_RATE:shake256_RATE], 
-    buf3[i*shake256_RATE:shake256_RATE], 
-    buf4[i*shake256_RATE:shake256_RATE], 
-    buf5[i*shake256_RATE:shake256_RATE], 
-    buf6[i*shake256_RATE:shake256_RATE], 
-    buf7[i*shake256_RATE:shake256_RATE] 
-    = __shake256_squeezeblock8x(state, buf0[i*shake256_RATE:shake256_RATE], buf1[i*shake256_RATE:shake256_RATE], buf2[i*shake256_RATE:shake256_RATE], buf3[i*shake256_RATE:shake256_RATE], buf4[i*shake256_RATE:shake256_RATE], buf5[i*shake256_RATE:shake256_RATE], buf6[i*shake256_RATE:shake256_RATE], buf7[i*shake256_RATE:shake256_RATE]);  
+    buf0[i*SHAKE256_RATE:SHAKE256_RATE], 
+    buf1[i*SHAKE256_RATE:SHAKE256_RATE], 
+    buf2[i*SHAKE256_RATE:SHAKE256_RATE], 
+    buf3[i*SHAKE256_RATE:SHAKE256_RATE], 
+    buf4[i*SHAKE256_RATE:SHAKE256_RATE], 
+    buf5[i*SHAKE256_RATE:SHAKE256_RATE], 
+    buf6[i*SHAKE256_RATE:SHAKE256_RATE], 
+    buf7[i*SHAKE256_RATE:SHAKE256_RATE] 
+    = __shake256_squeezeblock8x(state, buf0[i*SHAKE256_RATE:SHAKE256_RATE], buf1[i*SHAKE256_RATE:SHAKE256_RATE], buf2[i*SHAKE256_RATE:SHAKE256_RATE], buf3[i*SHAKE256_RATE:SHAKE256_RATE], buf4[i*SHAKE256_RATE:SHAKE256_RATE], buf5[i*SHAKE256_RATE:SHAKE256_RATE], buf6[i*SHAKE256_RATE:SHAKE256_RATE], buf7[i*SHAKE256_RATE:SHAKE256_RATE]);  
   }
 
   return state, buf0, buf1, buf2, buf3, buf4, buf5, buf6, buf7;

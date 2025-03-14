@@ -1,11 +1,7 @@
 require "gen_fipsavx512asm.jazz"
-param int MLKEM_SYMBYTES = 32;
-param int MLKEM_N = 256;
-param int MLKEM_Q = 3329;
-param int MLKEM_QINV = -3327;
-param int MLKEM_POLYCOMPRESSEDBYTES = 128;
-param int MLKEM_ETA2 = 2;
-param int MLKEM_ETA1 = 2;
+require "params.jinc"
+require "shuffle.jinc"
+require "reduce.jinc"
 inline
 fn mont_red(reg u512 lo hi qx32 qinvx32) -> reg u512 {
   reg u512 m;
@@ -606,8 +602,8 @@ inline fn __karatsuba32x(reg u512 al ah bl bh const_q const_qinv zeta) -> reg u5
 fn _poly_basemul(reg ptr u16[MLKEM_N] rp ap bp) -> reg ptr u16[MLKEM_N]
 {
   reg u512 const_q const_qinv;
-  const_q = jqx32.[u512 0];
-  const_qinv = jqinvx32.[u512 0];
+  const_q = jqx32[u512 0];
+  const_qinv = jqinvx32[u512 0];
   reg u512 f0 f1 f2 f3 f4 f5 f6 f7 g0 g1 g2 g3 g4 g5 g6 g7 zeta;
   reg u512 h0 h1;
 
@@ -776,6 +772,7 @@ inline fn __butterfly(reg u512 l r zl zh const_q) -> reg u512, reg u512
 
   r = #VPSUB_32u16(l, 11);
   l = #VPADD_32u16(l, 11);
+  return r, l;
 
 }
 fn _poly_ntt(reg ptr u16[MLKEM_N] rp) -> reg ptr u16[MLKEM_N]
@@ -800,120 +797,120 @@ fn _poly_ntt(reg ptr u16[MLKEM_N] rp) -> reg ptr u16[MLKEM_N]
   zetaqinv = #VPBROADCAST_32u16(zetasp[u16 1]);
 
   
-  __butterfly(r0, r4, zeta, zetaqinv);
-  __butterfly(r1, r5, zeta, zetaqinv);
-  __butterfly(r2, r6, zeta, zetaqinv);
-  __butterfly(r3, r7, zeta, zetaqinv);
+  __butterfly(r0, r4, zeta, zetaqinv, qx32);
+  __butterfly(r1, r5, zeta, zetaqinv, qx32);
+  __butterfly(r2, r6, zeta, zetaqinv, qx32);
+  __butterfly(r3, r7, zeta, zetaqinv, qx32);
   //level1
   zeta = #VPBROADCAST_32u16(zetasp[u16 2]);
   zetaqinv = #VPBROADCAST_32u16(zetasp[u16 3]);
   
-  __butterfly(r0, r2, zeta, zetaqinv);
-  __butterfly(r1, r3, zeta, zetaqinv);
+  __butterfly(r0, r2, zeta, zetaqinv, qx32);
+  __butterfly(r1, r3, zeta, zetaqinv, qx32);
 
   zeta = #VPBROADCAST_32u16(zetasp[u16 4]);
   zetaqinv = #VPBROADCAST_32u16(zetasp[u16 5]);
 
-  __butterfly(r4, r6, zeta, zetaqinv);
-  __butterfly(r5, r7, zeta, zetaqinv);
+  __butterfly(r4, r6, zeta, zetaqinv, qx32);
+  __butterfly(r5, r7, zeta, zetaqinv, qx32);
 
   //level 2
   zeta = #VPBROADCAST_32u16(zetasp[u16 6]);
   zetaqinv = #VPBROADCAST_32u16(zetasp[u16 7]);
-  __butterfly(r0, r1, zeta, zetaqinv);
+  __butterfly(r0, r1, zeta, zetaqinv, qx32);
   zeta = #VPBROADCAST_32u16(zetasp[u16 8]);
   zetaqinv = #VPBROADCAST_32u16(zetasp[u16 9]);
-  __butterfly(r2, r3, zeta, zetaqinv);
+  __butterfly(r2, r3, zeta, zetaqinv, qx32);
   zeta = #VPBROADCAST_32u16(zetasp[u16 10]);
   zetaqinv = #VPBROADCAST_32u16(zetasp[u16 11]);
-  __butterfly(r4, r5, zeta, zetaqinv);
+  __butterfly(r4, r5, zeta, zetaqinv, qx32);
   zeta = #VPBROADCAST_32u16(zetasp[u16 12]);
   zetaqinv = #VPBROADCAST_32u16(zetasp[u16 13]);
-  __butterfly(r6, r7, zeta, zetaqinv);
+  __butterfly(r6, r7, zeta, zetaqinv, qx32);
 
   //level 3
   r12, r13 = __shuffle16(r0, r1);
   zeta = zetasp.[u512 14*64];
   zetaqinv = zetasp.[u512 46*64];
-  __butterfly(r12, r13, zeta, zetaqinv);
+  __butterfly(r12, r13, zeta, zetaqinv, qx32);
 
   r14, r15 = __shuffle16(r2, r3);
   zeta = zetasp.[u512 78*64];
   zetaqinv = zetasp.[u512 110*64];
-  __butterfly(r14, r15, zeta, zetaqinv);
+  __butterfly(r14, r15, zeta, zetaqinv, qx32);
 
   r16, r17 = __shuffle16(r4, r5);
   zeta = zetasp.[u512 142*64];
   zetaqinv = zetasp.[u512 174*64];
-  __butterfly(r16, r17, zeta, zetaqinv);
+  __butterfly(r16, r17, zeta, zetaqinv, qx32);
 
   r18, r19 = __shuffle16(r6, r7);
   zeta = zetasp.[u512 206*64];
   zetaqinv = zetasp.[u512 238*64];
-  __butterfly(r18, r19, zeta, zetaqinv);
+  __butterfly(r18, r19, zeta, zetaqinv, qx32);
   
   // level 4
   r1, r2 = __shuffle16(r12, r13);
   zeta = zetasp.[u512 270*64];
   zetaqinv = zetasp.[u512 302*64];
-  __butterfly(r1, r2, zeta, zetaqinv);
+  __butterfly(r1, r2, zeta, zetaqinv, qx32);
 
   r3, r4 = __shuffle16(r14, r15);
   zeta = zetasp.[u512 334*64];
   zetaqinv = zetasp.[u512 366*64];
-  __butterfly(r3, r4, zeta, zetaqinv);
+  __butterfly(r3, r4, zeta, zetaqinv, qx32);
 
   r5, r6 = __shuffle16(r16, r17);
   zeta = zetasp.[u512 398*64];
   zetaqinv = zetasp.[u512 430*64];
-  __butterfly(r5, r6, zeta, zetaqinv);
+  __butterfly(r5, r6, zeta, zetaqinv, qx32);
 
   r7, r8 = __shuffle16(r18, r19);
   zeta = zetasp.[u512 462*64];
   zetaqinv = zetasp.[u512 494*64];
-  __butterfly(r7, r8, zeta, zetaqinv);
+  __butterfly(r7, r8, zeta, zetaqinv, qx32);
 
   //level 5
   r12, r13 = __shuffle4(r1, r2);
   zeta = zetasp.[u512 526*64];
   zetaqinv = zetasp.[u512 558*64];
-  __butterfly(r12, r13, zeta, zetaqinv);
+  __butterfly(r12, r13, zeta, zetaqinv, qx32);
 
   r14, r15 = __shuffle4(r3, r4);
   zeta = zetasp.[u512 590*64];
   zetaqinv = zetasp.[u512 622*64];
-  __butterfly(r14, r15, zeta, zetaqinv);
+  __butterfly(r14, r15, zeta, zetaqinv, qx32);
 
   r16, r17 = __shuffle4(r5, r6);
   zeta = zetasp.[u512 654*64];
   zetaqinv = zetasp.[u512 686*64];
-  __butterfly(r16, r17, zeta, zetaqinv);
+  __butterfly(r16, r17, zeta, zetaqinv, qx32);
 
   r18, r19 = __shuffle4(r7, r8);
   zeta = zetasp.[u512 718*64];
   zetaqinv = zetasp.[u512 750*64];
-  __butterfly(r18, r19, zeta, zetaqinv);
+  __butterfly(r18, r19, zeta, zetaqinv, qx32);
 
   //level 6
   r1, r2 = __shuffle2(r12, r13);
   zeta = zetasp.[u512 782*64];
   zetaqinv = zetasp.[u512 814*64];
-  __butterfly(r1, r2, zeta, zetaqinv);
+  __butterfly(r1, r2, zeta, zetaqinv, qx32);
 
   r3, r4 = __shuffle2(r14, r15);
   zeta = zetasp.[u512 846*64];
   zetaqinv = zetasp.[u512 878*64];
-  __butterfly(r3, r4, zeta, zetaqinv);
+  __butterfly(r3, r4, zeta, zetaqinv, qx32);
 
   r5, r6 = __shuffle2(r16, r17);
   zeta = zetasp.[u512 910*64];
   zetaqinv = zetasp.[u512 942*64];
-  __butterfly(r5, r6, zeta, zetaqinv);
+  __butterfly(r5, r6, zeta, zetaqinv, qx32);
 
   r7, r8 = __shuffle2(r18, r19);
   zeta = zetasp.[u512 974*64];
   zetaqinv = zetasp.[u512 1006*64];
-  __butterfly(r7, r8, zeta, zetaqinv);
+  __butterfly(r7, r8, zeta, zetaqinv, qx32);
 
   r12, r13 = __shuffle1(r1, r2);
   r14, r15 = __shuffle1(r3, r4);
@@ -928,105 +925,80 @@ fn _poly_ntt(reg ptr u16[MLKEM_N] rp) -> reg ptr u16[MLKEM_N]
   rp.[u512 64*5] = r17;
   rp.[u512 64*6] = r18;
   rp.[u512 64*7] = r19;
-
+  return rp;
 }
 u16[1038] jzetas_inv_exp = { 23132, 23132,-17422,-17422,  7756,  7756, 23998, 23998,-20257,-20257, 28644, 28644,-23860,-23860, 31636, 31636,
 -17442,-17442, 10906, 10906, 23210, 23210,-22502,-22502,-20198,-20198, -7934, -7934,-21498,-21498, 10335, 10335,
   1628,  1628,  1522,  1522, -1460, -1460,   958,   958,   991,   991,   996,   996,  -308,  -308,  -108,  -108,
    478,   478,  -870,  -870,  -854,  -854, -1510, -1510,   794,   794, -1278, -1278, -1530, -1530, -1185, -1185,
-
  14469, 14469, 16989, 16989,-11044,-11044, 24214, 24214,-14903,-14903, 10946, 10946, -6280, -6280,-20927,-20927,
 -32384,-32384, 24391, 24391, 15355, 15355, -7382, -7382,  2146,  2146, 25435, 25435, 20297, 20297,-31183,-31183,   
  -1659, -1659, -1187, -1187,   220,   220,  -874,  -874, -1335, -1335,  1218,  1218,  -136,  -136, -1215, -1215,
    384,   384, -1465, -1465, -1285, -1285,  1322,  1322,   610,   610,   603,   603,  1097,  1097,   817,   817,
-
 -12619,-12619, -5276, -5276, 19529, 19529,-14430,-14430, 18525, 18525, 17560, 17560, 20100, 20100,-18486,-18486,
  12639, 12639,-28762,-28762,-18741,-18741, 29175, 29175, 30317, 30317, 10631, 10631,-32502,-32502, 32010, 32010,
    -75,   -75,  -156,  -156,   329,   329,   418,   418,   349,   349,  -872,  -872,   644,   644, -1590, -1590,
   1119,  1119,  -602,  -602,  1483,  1483,  -777,  -777,  -147,  -147,  1159,  1159,   778,   778,  -246,  -246,
-
   5493,  5493,  6182,  6182, 23092, 23092,-14883,-14883, -4587, -4587,   945,   945, 13131, 13131,-27738,-27738,
 -21655,-21655, 20494, 20494,-14233,-14233,-32227,-32227, 13387, 13387,-11477,-11477, 11182, 11182,  -335,  -335,
   1653,  1653,  1574,  1574,  -460,  -460,  -291,  -291,  -235,  -235,   177,   177,   587,   587,   422,   422,
    105,   105,  1550,  1550,   871,   871, -1251, -1251,   843,   843,   555,   555,   430,   430, -1103, -1103,
-
-// level 1  _ZETAS_EXP_INV+256
 -17915,-17915,-17915,-17915,-24155,-24155,-24155,-24155,  4311,  4311,  4311,  4311, 16832, 16832, 16832, 16832,
 -12757,-12757,-12757,-12757,-29156,-29156,-29156,-29156, 14017, 14017, 14017, 14017, 13426, 13426, 13426, 13426,
  -1275, -1275, -1275, -1275,   677,   677,   677,   677, -1065, -1065, -1065, -1065,   448,   448,   448,   448,
   -725,  -725,  -725,  -725, -1508, -1508, -1508, -1508,   961,   961,   961,   961,  -398,  -398,  -398,  -398,
-
  18249, 18249, 18249, 18249,-30199,-30199,-30199,-30199,  9075,  9075,  9075,  9075,-28309,-28309,-28309,-28309,
  -8898, -8898, -8898, -8898,-15887,-15887,-15887,-15887,-28250,-28250,-28250,-28250, 19883, 19883, 19883, 19883,
   -951,  -951,  -951,  -951,  -247,  -247,  -247,  -247, -1421, -1421, -1421, -1421,   107,   107,   107,   107,
    830,   830,   830,   830,  -271,  -271,  -271,  -271,   -90,   -90,   -90,   -90,  -853,  -853,  -853,  -853,
-
  27837, 27837, 27837, 27837,-25986,-25986,-25986,-25986,  -650,  -650,  -650,  -650,  9134,  9134,  9134,  9134,
 -12442,-12442,-12442,-12442, 16064, 16064, 16064, 16064, 26616, 26616, 26616, 26616,-12796,-12796,-12796,-12796,
   1469,  1469,  1469,  1469,   126,   126,   126,   126, -1162, -1162, -1162, -1162, -1618, -1618, -1618, -1618,
   -666,  -666,  -666,  -666,  -320,  -320,  -320,  -320,    -8,    -8,    -8,    -8,   516,   516,   516,   516,
-
  25080, 25080, 25080, 25080, 20710, 20710, 20710, 20710, 20179, 20179, 20179, 20179,-23565,-23565,-23565,-23565,
  30967, 30967, 30967, 30967,  1496,  1496,  1496,  1496, -6516, -6516, -6516, -6516, -5689, -5689, -5689, -5689,
  -1544, -1544, -1544, -1544,  -282,  -282,  -282,  -282,  1491,  1491,  1491,  1491, -1293, -1293, -1293, -1293,
   1015,  1015,  1015,  1015,  -552,  -552,  -552,  -552,   652,   652,   652,   652,  1223,  1223,  1223,  1223,
-
-// level 2 _ZETAS_EXP_INV+512
 -16163,-16163,-16163,-16163,-16163,-16163,-16163,-16163, 26675, 26675, 26675, 26675, 26675, 26675, 26675, 26675,
   8859,  8859,  8859,  8859,  8859,  8859,  8859,  8859, 18426, 18426, 18426, 18426, 18426, 18426, 18426, 18426,
  -1571, -1571, -1571, -1571, -1571, -1571, -1571, -1571,  -205,  -205,  -205,  -205,  -205,  -205,  -205,  -205,
    411,   411,   411,   411,   411,   411,   411,   411, -1542, -1542, -1542, -1542, -1542, -1542, -1542, -1542,
-
   8800,  8800,  8800,  8800,  8800,  8800,  8800,  8800,-10532,-10532,-10532,-10532,-10532,-10532,-10532,-10532,
  24313, 24313, 24313, 24313, 24313, 24313, 24313, 24313,-28073,-28073,-28073,-28073,-28073,-28073,-28073,-28073,
    608,   608,   608,   608,   608,   608,   608,   608,   732,   732,   732,   732,   732,   732,   732,   732,
   1017,  1017,  1017,  1017,  1017,  1017,  1017,  1017,  -681,  -681,  -681,  -681,  -681,  -681,  -681,  -681,
-
 -26242,-26242,-26242,-26242,-26242,-26242,-26242,-26242, 21438, 21438, 21438, 21438, 21438, 21438, 21438, 21438,
  -1102, -1102, -1102, -1102, -1102, -1102, -1102, -1102,  5571,  5571,  5571,  5571,  5571,  5571,  5571,  5571,
   -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130, -1602, -1602, -1602, -1602, -1602, -1602, -1602, -1602,
   1458,  1458,  1458,  1458,  1458,  1458,  1458,  1458,  -829,  -829,  -829,  -829,  -829,  -829,  -829,  -829,
-
 -29057,-29057,-29057,-29057,-29057,-29057,-29057,-29057,-26360,-26360,-26360,-26360,-26360,-26360,-26360,-26360,
  17363, 17363, 17363, 17363, 17363, 17363, 17363, 17363, -5827, -5827, -5827, -5827, -5827, -5827, -5827, -5827,
    383,   383,   383,   383,   383,   383,   383,   383,   264,   264,   264,   264,   264,   264,   264,   264,
  -1325, -1325, -1325, -1325, -1325, -1325, -1325, -1325,   573,   573,   573,   573,   573,   573,   573,   573,
-
-// level 3 _ZETAS_EXP_INV+768
  31164, 31164, 31164, 31164, 31164, 31164, 31164, 31164, 31164, 31164, 31164, 31164, 31164, 31164, 31164, 31164,
 -11202,-11202,-11202,-11202,-11202,-11202,-11202,-11202,-11202,-11202,-11202,-11202,-11202,-11202,-11202,-11202,
   1468,  1468,  1468,  1468,  1468,  1468,  1468,  1468,  1468,  1468,  1468,  1468,  1468,  1468,  1468,  1468,
  -1474, -1474, -1474, -1474, -1474, -1474, -1474, -1474, -1474, -1474, -1474, -1474, -1474, -1474, -1474, -1474,
-
   1358,  1358,  1358,  1358,  1358,  1358,  1358,  1358,  1358,  1358,  1358,  1358,  1358,  1358,  1358,  1358,
  10690, 10690, 10690, 10690, 10690, 10690, 10690, 10690, 10690, 10690, 10690, 10690, 10690, 10690, 10690, 10690,
  -1202, -1202, -1202, -1202, -1202, -1202, -1202, -1202, -1202, -1202, -1202, -1202, -1202, -1202, -1202, -1202,
    962,   962,   962,   962,   962,   962,   962,   962,   962,   962,   962,   962,   962,   962,   962,   962,
-
 -15690,-15690,-15690,-15690,-15690,-15690,-15690,-15690,-15690,-15690,-15690,-15690,-15690,-15690,-15690,-15690,
  -3799, -3799, -3799, -3799, -3799, -3799, -3799, -3799, -3799, -3799, -3799, -3799, -3799, -3799, -3799, -3799,
    182,   182,   182,   182,   182,   182,   182,   182,   182,   182,   182,   182,   182,   182,   182,   182,
   1577,  1577,  1577,  1577,  1577,  1577,  1577,  1577,  1577,  1577,  1577,  1577,  1577,  1577,  1577,  1577,
-
  27758, 27758, 27758, 27758, 27758, 27758, 27758, 27758, 27758, 27758, 27758, 27758, 27758, 27758, 27758, 27758,
 -20907,-20907,-20907,-20907,-20907,-20907,-20907,-20907,-20907,-20907,-20907,-20907,-20907,-20907,-20907,-20907,
    622,   622,   622,   622,   622,   622,   622,   622,   622,   622,   622,   622,   622,   622,   622,   622,
   -171,  -171,  -171,  -171,  -171,  -171,  -171,  -171,  -171,  -171,  -171,  -171,  -171,  -171,  -171,  -171,
-
-// level 4 _ZETAS_EXP_INV+1024
  -16694,    202,
   28191,    287,
  -12402,   1422,
   13525,   1493,
-
-//level 5 _ZETAS_EXP_INV+1032
     787,  -1517,
   14745,   -359,
-
-//level 6 _ZETAS_EXP_INV+1036
-  31498,   -758,
-};
-inline __GSbutterfly(reg u512 l r zl zh const_q) -> reg u512, reg u512
+  31498,   -758};
+inline fn __GSbutterfly(reg u512 l r zl zh const_q) -> reg u512, reg u512
 {
   reg u512 tmp tmp2;
   tmp = #VPSUB_32u16(r, l);
@@ -1038,28 +1010,10 @@ inline __GSbutterfly(reg u512 l r zl zh const_q) -> reg u512, reg u512
   return l, r;
 
 }
-inline fn __montmul(reg u512 zeta zetaqinv const_q r) -> reg u512 
-{
-  reg u512 tmp tmp1;
-  tmp = #VPMULH_32u16(r, zeta);
-  tmp1 = #VPMULL_32u16(r, zetaqinv);
-  tmp1 = #VPMULH_32u16(r, const_q);
-  r = #VPSUB_32u16(tmp, tmp1);
-  return r;
-}
-inline fn __red16(reg u512 r rv const_q) -> reg u512
-{
-  reg u512 tmp;
-  tmp = #VPMULH_32u16(rv, r);
-  tmp = #VPSRA_32u16(tmp, 10);
-  tmp = #VPMULL_32u16(tmp, const_q);
-  r = #VPSUB_32u16(r, tmp);
-  return r;
 
-} 
 fn _poly_invntt(reg ptr u16[MLKEM_N] rp) -> reg ptr u16[MLKEM_N]
 {
-  reg u512 r1 r2 r3 r4 r5 r6 r7 r8 qx32 zeta zetaqinv vx32;
+  reg u512 r1 r2 r3 r4 r5 r6 r7 r8 r9 r10 r11 r12 r13 r14 r15 r16 qx32 zeta zetaqinv vx32;
   reg ptr u16[1038] zetasp;
   zetasp = jzetas_inv_exp;
   qx32 = jqx32[u512 0];
@@ -1144,7 +1098,7 @@ fn _poly_invntt(reg ptr u16[MLKEM_N] rp) -> reg ptr u16[MLKEM_N]
   r9 = __red16(r9, vx32, qx32);
   r11 = __red16(r11, vx32, qx32);
   r13 = __red16(r13, vx32, qx32);
-  r15 = __red(r15, vx32, qx32);
+  r15 = __red16(r15, vx32, qx32);
 
   //level 3
 
@@ -1169,7 +1123,7 @@ fn _poly_invntt(reg ptr u16[MLKEM_N] rp) -> reg ptr u16[MLKEM_N]
   r9, r10 = __shuffle16(r1, r2);
   r11, r12 = __shuffle16(r3, r4);
   r13, r14 = __shuffle16(r5, r6);
-  r15, r16 = __shuffle116(r7, r8);
+  r15, r16 = __shuffle16(r7, r8);
 
   zeta = #VPBROADCAST_32u16(zetasp[u16 1024]);
   zetaqinv = #VPBROADCAST_32u16(zetasp[u16 1025]);
@@ -1232,30 +1186,30 @@ u8[64] idx2_fbts = {1,  2,  4,  5,  7,  8, 10, 11, 13, 14, 16, 17, 19, 20, 22, 2
 -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
 -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1
 };
-fn _poly_frombytes(reg ptr u16[MLKEM_N] rp, reg u64 ap) -> reg ptr u16[MLKEM_N]
-{
-  inline int i;
-  reg u512 f0 f1 f2 f3 f4 f5;
-  // const __mmask64 mmask1 = _cvtu64_mask64(0x00000000FFFFFFFF);
-  // const __mmask64 mmask2 = _cvtu64_mask64(0x0000FFFFFFFFFFFF);
-  reg u512 mask = mask_fbts[u512 0];
-  reg u512 idx1 idx2;
-  idx1 = idx1_fbts[u512 0];
-  idx2 = idx2_fbts[u512 0];
+// fn _poly_frombytes(reg ptr u16[MLKEM_N] rp, reg u64 ap) -> reg ptr u16[MLKEM_N]
+// {
+//   inline int i;
+//   reg u512 f0 f1 f2 f3 f4 f5;
+//   // const __mmask64 mmask1 = _cvtu64_mask64(0x00000000FFFFFFFF);
+//   // const __mmask64 mmask2 = _cvtu64_mask64(0x0000FFFFFFFFFFFF);
+//   reg u512 mask = mask_fbts[u512 0];
+//   reg u512 idx1 idx2;
+//   idx1 = idx1_fbts[u512 0];
+//   idx2 = idx2_fbts[u512 0];
 
-  for i = 0 to 2
-  {
-    f0 = (u512)[ap + i*128];
-    f1 = (u512)[ap + i*128 + 64];
+//   for i = 0 to 2
+//   {
+//     f0 = (u512)[ap + i*128];
+//     f1 = (u512)[ap + i*128 + 64];
 
-    // f2 = _mm512_maskz_permutexvar_epi8(mmask1, idx1, f0);
-    // f3 = _mm512_maskz_permutexvar_epi8(mmask1, idx2, f0);
-    // f4 = _mm512_maskz_permutexvar_epi8(mmask1, idx1, f1);
-    // f5 = _mm512_maskz_permutexvar_epi8(mmask1, idx2, f1);
-
-
-
-  }
+//     // f2 = _mm512_maskz_permutexvar_epi8(mmask1, idx1, f0);
+//     // f3 = _mm512_maskz_permutexvar_epi8(mmask1, idx2, f0);
+//     // f4 = _mm512_maskz_permutexvar_epi8(mmask1, idx1, f1);
+//     // f5 = _mm512_maskz_permutexvar_epi8(mmask1, idx2, f1);
 
 
-}
+
+//   }
+
+
+// }
