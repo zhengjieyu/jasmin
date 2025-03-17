@@ -56,6 +56,24 @@ fn _poly_csubq(reg ptr u16[MLKEM_N] rp) -> reg ptr u16[MLKEM_N]
 
   return rp;
 }
+export fn poly_csubq_jazz_avx512(reg u64 rp)
+{
+  stack u16[MLKEM_N] r;
+  reg u16 t;
+  inline int i;
+
+  for i = 0 to MLKEM_N {
+    t = (u16)[rp + 2*i];
+    r[i] = t;
+  }
+
+  r = _poly_csubq(r);
+
+  for i = 0 to MLKEM_N {
+    t = r[i];
+    (u16)[rp + 2*i] = t;
+  }
+}
 u16[32] jvx32 = {20159, 20159, 20159, 20159, 20159, 20159, 20159, 20159,
                  20159, 20159, 20159, 20159, 20159, 20159, 20159, 20159,
                  20159, 20159, 20159, 20159, 20159, 20159, 20159, 20159,
@@ -152,6 +170,20 @@ fn _poly_decompress(reg ptr u16[MLKEM_N] rp, reg u64 ap) -> reg ptr u16[MLKEM_N]
   return rp;
 
 }
+export fn poly_decompress_jazz(reg u64 rp, reg u64 ap) 
+{
+  stack u16[MLKEM_N] r;
+  reg u16 t;
+  inline int i;
+
+  r = _poly_decompress(r, ap);
+
+  for i = 0 to MLKEM_N {
+    t = r[i];
+    (u16)[rp + 2*i] = t;
+  }
+}
+
 u32[16] pfm_shift_s = {3, 2, 1, 0, 3, 2, 1, 0, 3, 2, 1, 0, 3, 2, 1, 0};
 u8[64] pfm_idx_s = {0, 1, 4, 5, 8, 9, 12, 13, 2, 3, 6, 7, 10, 11, 14, 15,
 0, 1, 4, 5, 8, 9, 12, 13, 2, 3, 6, 7, 10, 11, 14, 15,
@@ -328,25 +360,42 @@ inline fn __cbd2(reg ptr u16[MLKEM_N] rp, reg ptr u8[MLKEM_ETA2*MLKEM_N/4] buf) 
   stack u32 const_mask55 = 0x55555555;
   stack u32 const_mask33 = 0x33333333;
   stack u32 const_mask0F = 0x0F0F0F0F;
+  stack u32 const_mask03 = 0x03030303;
   idx = idx_cbd2[u512 0];
+  mask55 = #VPBROADCAST_16u32(const_mask55);
+  mask33 = #VPBROADCAST_16u32(const_mask33);
+  mask0F = #VPBROADCAST_16u32(const_mask0F);
+  mask03 = #VPBROADCAST_16u32(const_mask03);
+  () = #spill(mask33);
+  () = #spill(mask0F);
+  () = #spill(mask55);
+  () = #spill(mask03);
   for i = 0 to 2
   {
+    
+    
+    
     f0 = buf[u512 i];
 
     f1 = #VPSRL_32u16(f0, 1);
+    () = #unspill(mask55);
     f0 = #VPAND_512(mask55, f0);
     f1 = #VPAND_512(mask55, f1);
+    
     f0 = #VPADD_64u8(f0, f1);
 
     f1 = #VPSRL_32u16(f0, 2);
+    () = #unspill(mask33);
     f0 = #VPAND_512(mask33, f0);
     f1 = #VPAND_512(mask33, f1);
     f0 = #VPADD_64u8(f0, mask33);
     f0 = #VPSUB_64u8(f0, f1);
 
     f1 = #VPSRL_32u16(f0, 4);
+    () = #unspill(mask0F);
     f0 = #VPAND_512(mask0F, f0);
     f1 = #VPAND_512(mask0F, f1);
+    () = #unspill(mask03);
     f0 = #VPSUB_64u8(f0, mask03);
     f1 = #VPSUB_64u8(f1, mask03);
 
@@ -366,6 +415,7 @@ inline fn __cbd2(reg ptr u16[MLKEM_N] rp, reg ptr u8[MLKEM_ETA2*MLKEM_N/4] buf) 
     f2 = #VPMOVSX_32u8_32u16(t);
     t = #VEXTRACTI32X8(f3, 1);
     f3 = #VPMOVSX_32u8_32u16(t);
+
     rp[u512 4*i] = f0;
     rp[u512 4*i + 1] = f1;
     rp[u512 4*i + 2] = f2;
@@ -381,18 +431,29 @@ fn __poly_cbd_eta1(reg ptr u16[MLKEM_N] rp, reg ptr u8[MLKEM_ETA1*MLKEM_N/4] buf
 }
 fn _poly_getnoise_eta1_8x(reg ptr u16[MLKEM_N] r0 r1 r2 r3 r4 r5 r6 r7, reg ptr u8[MLKEM_SYMBYTES] seed, reg u8 nonce) -> reg ptr u16[MLKEM_N], reg ptr u16[MLKEM_N], reg ptr u16[MLKEM_N], reg ptr u16[MLKEM_N], reg ptr u16[MLKEM_N], reg ptr u16[MLKEM_N], reg ptr u16[MLKEM_N], reg ptr u16[MLKEM_N]
 {
-  reg u512 f;
+  reg u256 f;
   stack u512[25] state;
+  //stack u8[NOISE_NBLOCKS * SHAKE256_RATE] _buf0 _buf1 _buf2 _buf3 _buf4 _buf5 _buf6 _buf7;
   stack u8[NOISE_NBLOCKS * SHAKE256_RATE] buf0 buf1 buf2 buf3 buf4 buf5 buf6 buf7;
-  f = seed[u512 0];
-  buf0[u512 0] = f;
-  buf1[u512 0] = f;
-  buf2[u512 0] = f;
-  buf3[u512 0] = f;
-  buf4[u512 0] = f;
-  buf5[u512 0] = f;
-  buf6[u512 0] = f;
-  buf7[u512 0] = f;
+
+  //buf0 = _buf0;
+  //buf1 = _buf1;
+  //buf2 = _buf2;
+  //buf3 = _buf3;
+  //buf4 = _buf4;
+  //buf5 = _buf5;
+  //buf6 = _buf6;
+  //buf7 = _buf7;
+
+  f = seed.[u256 0];
+  buf0[u256 0] = f;
+  buf1[u256 0] = f;
+  buf2[u256 0] = f;
+  buf3[u256 0] = f;
+  buf4[u256 0] = f;
+  buf5[u256 0] = f;
+  buf6[u256 0] = f;
+  buf7[u256 0] = f;
 
   buf0.[32] = nonce;
   nonce += 1;
@@ -410,52 +471,49 @@ fn _poly_getnoise_eta1_8x(reg ptr u16[MLKEM_N] r0 r1 r2 r3 r4 r5 r6 r7, reg ptr 
   nonce += 1;
   buf7.[32] = nonce;
 
+  () = #spill(r0, r1, r2, r3, r4, r5, r6, r7);
   state = _shake256_absorb8x_33(state, buf0[0:33], buf1[0:33], buf2[0:33], buf3[0:33], buf4[0:33], buf5[0:33], buf6[0:33], buf7[0:33]);
   state, buf0, buf1, buf2, buf3, buf4, buf5, buf6, buf7 = __shake256_squeezenblocks8x(state, buf0, buf1, buf2, buf3, buf4, buf5, buf6, buf7);
+  () = #unspill(r0, r1, r2, r3, r4, r5, r6, r7);
 
   r0 = __poly_cbd_eta1(r0, buf0[0:MLKEM_ETA1*MLKEM_N/4+(MLKEM_ETA1 - 2)*8]);
   r1 = __poly_cbd_eta1(r1, buf1[0:MLKEM_ETA1*MLKEM_N/4+(MLKEM_ETA1 - 2)*8]);
   r2 = __poly_cbd_eta1(r2, buf2[0:MLKEM_ETA1*MLKEM_N/4+(MLKEM_ETA1 - 2)*8]);
   r3 = __poly_cbd_eta1(r3, buf3[0:MLKEM_ETA1*MLKEM_N/4+(MLKEM_ETA1 - 2)*8]);
-  r4 = __poly_cbd_eta1(r4, buf0[0:MLKEM_ETA1*MLKEM_N/4+(MLKEM_ETA1 - 2)*8]);
-  r5 = __poly_cbd_eta1(r5, buf1[0:MLKEM_ETA1*MLKEM_N/4+(MLKEM_ETA1 - 2)*8]);
-  r6 = __poly_cbd_eta1(r6, buf2[0:MLKEM_ETA1*MLKEM_N/4+(MLKEM_ETA1 - 2)*8]);
-  r7 = __poly_cbd_eta1(r7, buf3[0:MLKEM_ETA1*MLKEM_N/4+(MLKEM_ETA1 - 2)*8]);
-
+  
+  r4 = __poly_cbd_eta1(r4, buf4[0:MLKEM_ETA1*MLKEM_N/4+(MLKEM_ETA1 - 2)*8]);
+  r5 = __poly_cbd_eta1(r5, buf5[0:MLKEM_ETA1*MLKEM_N/4+(MLKEM_ETA1 - 2)*8]);
+  r6 = __poly_cbd_eta1(r6, buf6[0:MLKEM_ETA1*MLKEM_N/4+(MLKEM_ETA1 - 2)*8]);
+  r7 = __poly_cbd_eta1(r7, buf7[0:MLKEM_ETA1*MLKEM_N/4+(MLKEM_ETA1 - 2)*8]);
   return r0, r1, r2, r3, r4, r5, r6, r7;
 
 }
-export fn poly_decompress_jazz(reg u64 rp, reg u64 ap) 
+
+export fn poly_getnoise_eta1_8x_jazz(reg u64 rp, reg u64 seedp, reg u8 nonce)
 {
-  stack u16[MLKEM_N] r;
+  stack u16[8 * MLKEM_N] r;
+  stack u8[MLKEM_SYMBYTES] seed;
+  stack u64 srp;
   reg u16 t;
+  reg u8 d;
   inline int i;
 
-  r = _poly_decompress(r, ap);
+  srp = rp;
 
-  for i = 0 to MLKEM_N {
+  for i = 0 to MLKEM_SYMBYTES {
+    d       = (u8)[seedp + i];
+    seed[i] = d;
+  }
+
+  r[0:MLKEM_N], r[MLKEM_N:MLKEM_N], r[2*MLKEM_N:MLKEM_N], r[3*MLKEM_N:MLKEM_N], r[4*MLKEM_N:MLKEM_N], r[5*MLKEM_N:MLKEM_N], r[6*MLKEM_N:MLKEM_N], r[7*MLKEM_N:MLKEM_N] = _poly_getnoise_eta1_8x(r[0:MLKEM_N], r[MLKEM_N:MLKEM_N], r[2*MLKEM_N:MLKEM_N], r[3*MLKEM_N:MLKEM_N], r[4*MLKEM_N:MLKEM_N], r[5*MLKEM_N:MLKEM_N], r[6*MLKEM_N:MLKEM_N], r[7*MLKEM_N:MLKEM_N], seed, nonce);
+
+  rp = srp;
+  for i = 0 to 8*MLKEM_N {
     t = r[i];
     (u16)[rp + 2*i] = t;
   }
 }
-export fn poly_csubq_jazz_avx512(reg u64 rp)
-{
-  stack u16[MLKEM_N] r;
-  reg u16 t;
-  inline int i;
 
-  for i = 0 to MLKEM_N {
-    t = (u16)[rp + 2*i];
-    r[i] = t;
-  }
-
-  r = _poly_csubq(r);
-
-  for i = 0 to MLKEM_N {
-    t = r[i];
-    (u16)[rp + 2*i] = t;
-  }
-}
 
 fn _poly_sub_avx512(reg ptr u16[MLKEM_N] rp bp)  -> reg ptr u16[MLKEM_N]
 {
@@ -489,7 +547,7 @@ export fn poly_sub_jazz_avx512(reg u64 rp, reg u64 bp)
         (u16)[rp + 2*i] = t;
     }
 }
-fn _poly_add_avx512(reg ptr u16[MLKEM_N] rp bp)  -> reg ptr u16[MLKEM_N]
+fn _poly_add_avx512(reg ptr u16[MLKEM_N] rp bp) -> reg ptr u16[MLKEM_N]
 {
     inline int i;
     reg u512 a;
@@ -778,7 +836,7 @@ inline fn __butterfly(reg u512 l r zl zh const_q) -> reg u512, reg u512
 fn _poly_ntt(reg ptr u16[MLKEM_N] rp) -> reg ptr u16[MLKEM_N]
 {
   reg u512 qx32 r0 r1 r2 r3 r4 r5 r6 r7 zeta zetaqinv;
-  reg u512 r8 r9 r10 r11 r12 r13 r14 r15 r16 r17 r18 r19 r20;
+  reg u512 r8 r12 r13 r14 r15 r16 r17 r18 r19;
   reg ptr u16[1038] zetasp;
   
   zetasp = jzetas_exp;
@@ -797,120 +855,120 @@ fn _poly_ntt(reg ptr u16[MLKEM_N] rp) -> reg ptr u16[MLKEM_N]
   zetaqinv = #VPBROADCAST_32u16(zetasp[u16 1]);
 
   
-  __butterfly(r0, r4, zeta, zetaqinv, qx32);
-  __butterfly(r1, r5, zeta, zetaqinv, qx32);
-  __butterfly(r2, r6, zeta, zetaqinv, qx32);
-  __butterfly(r3, r7, zeta, zetaqinv, qx32);
+  r0, r4 = __butterfly(r0, r4, zeta, zetaqinv, qx32);
+  r1, r5 = __butterfly(r1, r5, zeta, zetaqinv, qx32);
+  r2, r6 = __butterfly(r2, r6, zeta, zetaqinv, qx32);
+  r3, r7 = __butterfly(r3, r7, zeta, zetaqinv, qx32);
   //level1
   zeta = #VPBROADCAST_32u16(zetasp[u16 2]);
   zetaqinv = #VPBROADCAST_32u16(zetasp[u16 3]);
   
-  __butterfly(r0, r2, zeta, zetaqinv, qx32);
-  __butterfly(r1, r3, zeta, zetaqinv, qx32);
+  r0, r2 = __butterfly(r0, r2, zeta, zetaqinv, qx32);
+  r1, r3 =__butterfly(r1, r3, zeta, zetaqinv, qx32);
 
   zeta = #VPBROADCAST_32u16(zetasp[u16 4]);
   zetaqinv = #VPBROADCAST_32u16(zetasp[u16 5]);
 
-  __butterfly(r4, r6, zeta, zetaqinv, qx32);
-  __butterfly(r5, r7, zeta, zetaqinv, qx32);
+  r4, r6 = __butterfly(r4, r6, zeta, zetaqinv, qx32);
+  r5, r7 = __butterfly(r5, r7, zeta, zetaqinv, qx32);
 
   //level 2
   zeta = #VPBROADCAST_32u16(zetasp[u16 6]);
   zetaqinv = #VPBROADCAST_32u16(zetasp[u16 7]);
-  __butterfly(r0, r1, zeta, zetaqinv, qx32);
+  r0, r1 = __butterfly(r0, r1, zeta, zetaqinv, qx32);
   zeta = #VPBROADCAST_32u16(zetasp[u16 8]);
   zetaqinv = #VPBROADCAST_32u16(zetasp[u16 9]);
-  __butterfly(r2, r3, zeta, zetaqinv, qx32);
+  r2, r3 = __butterfly(r2, r3, zeta, zetaqinv, qx32);
   zeta = #VPBROADCAST_32u16(zetasp[u16 10]);
   zetaqinv = #VPBROADCAST_32u16(zetasp[u16 11]);
-  __butterfly(r4, r5, zeta, zetaqinv, qx32);
+  r4, r5 = __butterfly(r4, r5, zeta, zetaqinv, qx32);
   zeta = #VPBROADCAST_32u16(zetasp[u16 12]);
   zetaqinv = #VPBROADCAST_32u16(zetasp[u16 13]);
-  __butterfly(r6, r7, zeta, zetaqinv, qx32);
+  r6, r7 = __butterfly(r6, r7, zeta, zetaqinv, qx32);
 
   //level 3
   r12, r13 = __shuffle16(r0, r1);
   zeta = zetasp.[u512 14*64];
   zetaqinv = zetasp.[u512 46*64];
-  __butterfly(r12, r13, zeta, zetaqinv, qx32);
+  r12, r13 = __butterfly(r12, r13, zeta, zetaqinv, qx32);
 
   r14, r15 = __shuffle16(r2, r3);
   zeta = zetasp.[u512 78*64];
   zetaqinv = zetasp.[u512 110*64];
-  __butterfly(r14, r15, zeta, zetaqinv, qx32);
+  r14, r15 = __butterfly(r14, r15, zeta, zetaqinv, qx32);
 
   r16, r17 = __shuffle16(r4, r5);
   zeta = zetasp.[u512 142*64];
   zetaqinv = zetasp.[u512 174*64];
-  __butterfly(r16, r17, zeta, zetaqinv, qx32);
+  r16, r17 = __butterfly(r16, r17, zeta, zetaqinv, qx32);
 
   r18, r19 = __shuffle16(r6, r7);
   zeta = zetasp.[u512 206*64];
   zetaqinv = zetasp.[u512 238*64];
-  __butterfly(r18, r19, zeta, zetaqinv, qx32);
+  r18, r19 = __butterfly(r18, r19, zeta, zetaqinv, qx32);
   
   // level 4
   r1, r2 = __shuffle16(r12, r13);
   zeta = zetasp.[u512 270*64];
   zetaqinv = zetasp.[u512 302*64];
-  __butterfly(r1, r2, zeta, zetaqinv, qx32);
+  r1, r2 = __butterfly(r1, r2, zeta, zetaqinv, qx32);
 
   r3, r4 = __shuffle16(r14, r15);
   zeta = zetasp.[u512 334*64];
   zetaqinv = zetasp.[u512 366*64];
-  __butterfly(r3, r4, zeta, zetaqinv, qx32);
+  r3, r4 = __butterfly(r3, r4, zeta, zetaqinv, qx32);
 
   r5, r6 = __shuffle16(r16, r17);
   zeta = zetasp.[u512 398*64];
   zetaqinv = zetasp.[u512 430*64];
-  __butterfly(r5, r6, zeta, zetaqinv, qx32);
+  r5, r6 = __butterfly(r5, r6, zeta, zetaqinv, qx32);
 
   r7, r8 = __shuffle16(r18, r19);
   zeta = zetasp.[u512 462*64];
   zetaqinv = zetasp.[u512 494*64];
-  __butterfly(r7, r8, zeta, zetaqinv, qx32);
+  r7, r8 = __butterfly(r7, r8, zeta, zetaqinv, qx32);
 
   //level 5
   r12, r13 = __shuffle4(r1, r2);
   zeta = zetasp.[u512 526*64];
   zetaqinv = zetasp.[u512 558*64];
-  __butterfly(r12, r13, zeta, zetaqinv, qx32);
+  r12, r13 = __butterfly(r12, r13, zeta, zetaqinv, qx32);
 
   r14, r15 = __shuffle4(r3, r4);
   zeta = zetasp.[u512 590*64];
   zetaqinv = zetasp.[u512 622*64];
-  __butterfly(r14, r15, zeta, zetaqinv, qx32);
+  r14, r15 = __butterfly(r14, r15, zeta, zetaqinv, qx32);
 
   r16, r17 = __shuffle4(r5, r6);
   zeta = zetasp.[u512 654*64];
   zetaqinv = zetasp.[u512 686*64];
-  __butterfly(r16, r17, zeta, zetaqinv, qx32);
+  r16, r17 = __butterfly(r16, r17, zeta, zetaqinv, qx32);
 
   r18, r19 = __shuffle4(r7, r8);
   zeta = zetasp.[u512 718*64];
   zetaqinv = zetasp.[u512 750*64];
-  __butterfly(r18, r19, zeta, zetaqinv, qx32);
+  r18, r19 =__butterfly(r18, r19, zeta, zetaqinv, qx32);
 
   //level 6
   r1, r2 = __shuffle2(r12, r13);
   zeta = zetasp.[u512 782*64];
   zetaqinv = zetasp.[u512 814*64];
-  __butterfly(r1, r2, zeta, zetaqinv, qx32);
+  r1, r2 = __butterfly(r1, r2, zeta, zetaqinv, qx32);
 
   r3, r4 = __shuffle2(r14, r15);
   zeta = zetasp.[u512 846*64];
   zetaqinv = zetasp.[u512 878*64];
-  __butterfly(r3, r4, zeta, zetaqinv, qx32);
+  r3, r4 = __butterfly(r3, r4, zeta, zetaqinv, qx32);
 
   r5, r6 = __shuffle2(r16, r17);
   zeta = zetasp.[u512 910*64];
   zetaqinv = zetasp.[u512 942*64];
-  __butterfly(r5, r6, zeta, zetaqinv, qx32);
+  r5, r6 = __butterfly(r5, r6, zeta, zetaqinv, qx32);
 
   r7, r8 = __shuffle2(r18, r19);
   zeta = zetasp.[u512 974*64];
   zetaqinv = zetasp.[u512 1006*64];
-  __butterfly(r7, r8, zeta, zetaqinv, qx32);
+  r7, r8 = __butterfly(r7, r8, zeta, zetaqinv, qx32);
 
   r12, r13 = __shuffle1(r1, r2);
   r14, r15 = __shuffle1(r3, r4);
