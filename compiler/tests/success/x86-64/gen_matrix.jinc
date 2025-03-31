@@ -1,0 +1,210 @@
+require "fips202x8.jinc"
+require "rej_uniform.jinc"
+
+inline fn __gen_matrix33(stack u8[MLKEM_N] seed, reg u64 transposed) -> stack u16[MLKEM_K*MLKEM_VECN]
+{
+    stack u8[34] extseed;
+    stack u8[SHAKE128_RATE] buf0 buf1 buf2 buf3 buf4 buf5 buf6 buf7;
+    stack u512[25] state;
+    stack u16[MLKEM_K*MLKEM_VECN] rr;
+
+
+    reg u8 c;
+    reg u16 t;
+    reg u64 ctr k;
+    stack u64 stransposed;
+    inline int j i;
+
+    reg u256 f;
+    reg u64 ctr0 ctr1 ctr2 ctr3 ctr4 ctr5 ctr6 ctr7 tmp;
+
+    stack u64 ctr0_s;
+    reg u8 flg0 flg1 flg2 flg3 bflg;
+    reg bool cf zf;
+
+    
+    stransposed = transposed;
+
+    for j = 0 to MLKEM_SYMBYTES
+    {
+        c = seed[j];
+        extseed[j] = c;
+    }
+    f = extseed[u256 0];
+    buf0[u256 0] = f;
+    buf1[u256 0] = f;
+    buf2[u256 0] = f;
+    buf3[u256 0] = f;
+    buf4[u256 0] = f;
+    buf5[u256 0] = f;
+    buf6[u256 0] = f;
+    buf7[u256 0] = f;
+    () = #spill(f);
+    if(transposed == 0)
+    {
+        buf0[MLKEM_SYMBYTES+0] = 0;
+        buf0[MLKEM_SYMBYTES+1] = 0;
+        buf1[MLKEM_SYMBYTES+0] = 0;
+        buf1[MLKEM_SYMBYTES+1] = 1;
+        buf2[MLKEM_SYMBYTES+0] = 0;
+        buf2[MLKEM_SYMBYTES+1] = 2;
+        buf3[MLKEM_SYMBYTES+0] = 0;
+        buf3[MLKEM_SYMBYTES+1] = 3;
+        buf4[MLKEM_SYMBYTES+0] = 1;
+        buf4[MLKEM_SYMBYTES+1] = 0;
+        buf5[MLKEM_SYMBYTES+0] = 1;
+        buf5[MLKEM_SYMBYTES+1] = 1;
+        buf6[MLKEM_SYMBYTES+0] = 1;
+        buf6[MLKEM_SYMBYTES+1] = 2;
+        buf7[MLKEM_SYMBYTES+0] = 1;
+        buf7[MLKEM_SYMBYTES+1] = 3;
+    }
+    else{
+        buf0[MLKEM_SYMBYTES+0] = 0;
+        buf0[MLKEM_SYMBYTES+1] = 0;
+        buf1[MLKEM_SYMBYTES+0] = 0;
+        buf1[MLKEM_SYMBYTES+1] = 1;
+        buf2[MLKEM_SYMBYTES+0] = 0;
+        buf2[MLKEM_SYMBYTES+1] = 2;
+        buf3[MLKEM_SYMBYTES+0] = 0;
+        buf3[MLKEM_SYMBYTES+1] = 3;
+        buf4[MLKEM_SYMBYTES+0] = 1;
+        buf4[MLKEM_SYMBYTES+1] = 0;
+        buf5[MLKEM_SYMBYTES+0] = 1;
+        buf5[MLKEM_SYMBYTES+1] = 1;
+        buf6[MLKEM_SYMBYTES+0] = 1;
+        buf6[MLKEM_SYMBYTES+1] = 2;
+        buf7[MLKEM_SYMBYTES+0] = 1;
+        buf7[MLKEM_SYMBYTES+1] = 3;
+    }
+    state = _shake128_absorb8x34(state, buf0[0:34], buf1[0:34], buf2[0:34], buf3[0:34], buf4[0:34], buf5[0:34], buf6[0:34], buf7[0:34]);
+    state, buf0, buf1, buf2, buf3, buf4, buf5, buf6, buf7 = __shake128_squeezenblocks8x(state, buf0, buf1, buf2, buf3, buf4, buf5, buf6, buf7);
+    tmp, rr[0*MLKEM_VECN+0*MLKEM_N:MLKEM_N] = _rej_uniform_avx(rr[0*MLKEM_VECN+0*MLKEM_N:MLKEM_N], buf0);
+    ctr0 = tmp;
+    tmp, rr[0*MLKEM_VECN+1*MLKEM_N:MLKEM_N] = _rej_uniform_avx(rr[0*MLKEM_VECN+1*MLKEM_N:MLKEM_N], buf1);
+    ctr1 = tmp;
+    tmp, rr[0*MLKEM_VECN+2*MLKEM_N:MLKEM_N] = _rej_uniform_avx(rr[0*MLKEM_VECN+2*MLKEM_N:MLKEM_N], buf2);
+    ctr2 = tmp;
+    tmp, rr[1*MLKEM_VECN+0*MLKEM_N:MLKEM_N] = _rej_uniform_avx(rr[1*MLKEM_VECN+0*MLKEM_N:MLKEM_N], buf3);
+    ctr3 = tmp;
+    tmp, rr[0*MLKEM_VECN+0*MLKEM_N:MLKEM_N] = _rej_uniform_avx(rr[0*MLKEM_VECN+0*MLKEM_N:MLKEM_N], buf0);
+    ctr4 = tmp;
+    tmp, rr[0*MLKEM_VECN+1*MLKEM_N:MLKEM_N] = _rej_uniform_avx(rr[0*MLKEM_VECN+1*MLKEM_N:MLKEM_N], buf1);
+    ctr5 = tmp;
+    tmp, rr[0*MLKEM_VECN+2*MLKEM_N:MLKEM_N] = _rej_uniform_avx(rr[0*MLKEM_VECN+2*MLKEM_N:MLKEM_N], buf2);
+    ctr6 = tmp;
+    ctr7, rr[1*MLKEM_VECN+0*MLKEM_N:MLKEM_N] = _rej_uniform_avx(rr[1*MLKEM_VECN+0*MLKEM_N:MLKEM_N], buf3);
+    
+    _, cf, _, _, zf = #CMP_64(ctr0, MLKEM_N - 1);
+    flg0 = #SETcc(cf || zf); //SETBE
+
+    _, cf, _, _, zf = #CMP_64(ctr1, MLKEM_N - 1);
+    flg1 = #SETcc(cf || zf);
+
+    _, _, _, _, _, flg0 = #OR_8(flg0, flg1);
+
+    _, cf, _, _, zf = #CMP_64(ctr2, MLKEM_N - 1);
+    flg0 = #SETcc(cf || zf);
+
+    _, cf, _, _, zf = #CMP_64(ctr3, MLKEM_N - 1);
+    flg1 = #SETcc(cf || zf);
+
+    _, _, _, _, _, flg1 = #OR_8(flg0, flg1);
+
+    _, cf, _, _, zf = #CMP_64(ctr4, MLKEM_N - 1);
+    flg2 = #SETcc(cf || zf); //SETBE
+
+    _, cf, _, _, zf = #CMP_64(ctr5, MLKEM_N - 1);
+    flg3 = #SETcc(cf || zf);
+
+    _, _, _, _, _, flg2 = #OR_8(flg2, flg3);
+
+    _, cf, _, _, zf = #CMP_64(ctr6, MLKEM_N - 1);
+    flg2 = #SETcc(cf || zf); //SETBE
+
+    _, cf, _, _, zf = #CMP_64(ctr7, MLKEM_N - 1);
+    flg3 = #SETcc(cf || zf);
+
+    _, _, _, _, _, flg3 = #OR_8(flg2, flg3);
+
+    _, _, _, _, _, flg0 = #OR_8(flg0, flg1);
+    _, _, _, _, _, flg2 = #OR_8(flg2, flg3);
+    _, _, _, _, _, bflg = #OR_8(flg0, flg2);
+
+    while(bflg != 0)
+    {
+        state, buf0, buf1, buf2, buf3, buf4, buf5, buf6, buf7 = __shake128_squeezenblocks8x(state, buf0, buf1, buf2, buf3, buf4, buf5, buf6, buf7);
+        ctr0, rr[0*MLKEM_VECN+0*MLKEM_N:MLKEM_N] = __rej_uniform(rr[0*MLKEM_VECN+0*MLKEM_N:MLKEM_N], ctr0, buf0[0:SHAKE128_RATE], SHAKE128_RATE);
+        ctr1, rr[0*MLKEM_VECN+1*MLKEM_N:MLKEM_N] = __rej_uniform(rr[0*MLKEM_VECN+1*MLKEM_N:MLKEM_N], ctr1, buf1[0:SHAKE128_RATE], SHAKE128_RATE);
+        ctr2, rr[0*MLKEM_VECN+2*MLKEM_N:MLKEM_N] = __rej_uniform(rr[0*MLKEM_VECN+2*MLKEM_N:MLKEM_N], ctr2, buf2[0:SHAKE128_RATE], SHAKE128_RATE);
+        ctr3, rr[1*MLKEM_VECN+0*MLKEM_N:MLKEM_N] = __rej_uniform(rr[1*MLKEM_VECN+0*MLKEM_N:MLKEM_N], ctr3, buf3[0:SHAKE128_RATE], SHAKE128_RATE);
+        ctr4, rr[1*MLKEM_VECN+1*MLKEM_N:MLKEM_N] = __rej_uniform(rr[0*MLKEM_VECN+0*MLKEM_N:MLKEM_N], ctr4, buf4[0:SHAKE128_RATE], SHAKE128_RATE);
+        ctr5, rr[1*MLKEM_VECN+2*MLKEM_N:MLKEM_N] = __rej_uniform(rr[0*MLKEM_VECN+1*MLKEM_N:MLKEM_N], ctr5, buf5[0:SHAKE128_RATE], SHAKE128_RATE);
+        ctr6, rr[2*MLKEM_VECN+0*MLKEM_N:MLKEM_N] = __rej_uniform(rr[0*MLKEM_VECN+2*MLKEM_N:MLKEM_N], ctr6, buf6[0:SHAKE128_RATE], SHAKE128_RATE);
+        ctr7, rr[2*MLKEM_VECN+1*MLKEM_N:MLKEM_N] = __rej_uniform(rr[1*MLKEM_VECN+0*MLKEM_N:MLKEM_N], ctr7, buf7[0:SHAKE128_RATE], SHAKE128_RATE);
+
+        _, cf, _, _, zf = #CMP_64(ctr0, MLKEM_N - 1);
+        flg0 = #SETcc(cf || zf); //SETBE
+
+        _, cf, _, _, zf = #CMP_64(ctr1, MLKEM_N - 1);
+        flg1 = #SETcc(cf || zf);
+
+        _, _, _, _, _, flg0 = #OR_8(flg0, flg1);
+
+        _, cf, _, _, zf = #CMP_64(ctr2, MLKEM_N - 1);
+        flg0 = #SETcc(cf || zf);
+
+        _, cf, _, _, zf = #CMP_64(ctr3, MLKEM_N - 1);
+        flg1 = #SETcc(cf || zf);
+
+        _, _, _, _, _, flg1 = #OR_8(flg0, flg1);
+
+        _, cf, _, _, zf = #CMP_64(ctr4, MLKEM_N - 1);
+        flg2 = #SETcc(cf || zf); //SETBE
+
+        _, cf, _, _, zf = #CMP_64(ctr5, MLKEM_N - 1);
+        flg3 = #SETcc(cf || zf);
+
+        _, _, _, _, _, flg2 = #OR_8(flg2, flg3);
+
+        _, cf, _, _, zf = #CMP_64(ctr6, MLKEM_N - 1);
+        flg2 = #SETcc(cf || zf); //SETBE
+
+        _, cf, _, _, zf = #CMP_64(ctr7, MLKEM_N - 1);
+        flg3 = #SETcc(cf || zf);
+
+        _, _, _, _, _, flg3 = #OR_8(flg2, flg3);
+
+        _, _, _, _, _, flg0 = #OR_8(flg0, flg1);
+        _, _, _, _, _, flg2 = #OR_8(flg2, flg3);
+        _, _, _, _, _, bflg = #OR_8(flg0, flg2);
+    }
+    
+
+    for i = 0 to MLKEM_K
+    {
+        for j = 0 to MLKEM_K
+        {
+            rr[i*MLKEM_VECN+j*MLKEM_N:MLKEM_N] = _nttunpack(rr[i*MLKEM_VECN+j*MLKEM_N:MLKEM_N]);
+        }
+    }
+    () = #unspill(f);
+    buf0[u256 0] = f;
+    buf0[MLKEM_SYMBYTES] = 2;
+    buf0[MLKEM_SYMBYTES+1] = 2;
+    state[u64 0:25] = _shake128_absorb34(state[u64 0:25], buf0[0:34]);
+    ctr0, rr[2*MLKEM_VECN+2*MLKEM_N:MLKEM_N] = _rej_uniform_avx(rr[2*MLKEM_VECN+2*MLKEM_N:MLKEM_N], buf0);
+    _, cf, _, _, zf = #CMP_64(ctr0, MLKEM_N - 1);
+    bflg = #SETcc(cf || zf);
+    while(bflg != 0) {
+        ctr0_s = ctr0;
+        state[u64 0:25], buf0[0:SHAKE128_RATE] = _shake128_squeezeblock(state[u64 0:25], buf0[0:SHAKE128_RATE]);
+        ctr0 = ctr0_s;
+
+        ctr0, rr[2*MLKEM_VECN+2*MLKEM_N:MLKEM_N] = __rej_uniform(rr[2*MLKEM_VECN+2*MLKEM_N:MLKEM_N], ctr0, buf0[0:SHAKE128_RATE], SHAKE128_RATE);
+
+        _, cf, _, _, zf = #CMP_64(ctr0, MLKEM_N - 1);
+        bflg = #SETcc(cf || zf);
+    }
+}
+

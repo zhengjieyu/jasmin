@@ -1,0 +1,244 @@
+require "poly.jazz"
+inline
+fn __polyvec_ntt(stack u16[MLKEM_VECN] r) -> stack u16[MLKEM_VECN]
+{
+  inline int i;
+  for i=0 to MLKEM_K
+  {
+    r[i*MLKEM_N:MLKEM_N] = _poly_ntt(r[i*MLKEM_N:MLKEM_N]);
+  }
+
+  return r;
+}
+
+
+inline
+fn __polyvec_pointwise_acc(stack u16[MLKEM_N] r, stack u16[MLKEM_VECN] a b) -> stack u16[MLKEM_N]
+{
+  stack u16[MLKEM_N] t;
+  inline int i;
+
+  r = _poly_basemul(r, a[0:MLKEM_N], b[0:MLKEM_N]);
+  for i=1 to MLKEM_K
+  {
+    t = _poly_basemul(t, a[i*MLKEM_N:MLKEM_N], b[i*MLKEM_N:MLKEM_N]);
+    r = _poly_add_avx512(r, t);
+  }
+
+  // r = __poly_reduce(r);
+  
+  return r;
+}
+
+inline
+fn __polyvec_add(stack u16[MLKEM_VECN] r, stack u16[MLKEM_VECN] b) -> stack u16[MLKEM_VECN]
+{
+  inline int i;
+
+  for i=0 to MLKEM_K
+  {
+    r[i*MLKEM_N:MLKEM_N] = _poly_add_avx512(r[i*MLKEM_N:MLKEM_N], b[i*MLKEM_N:MLKEM_N]);
+  }
+
+  return r;
+}
+inline
+fn __polyvec_reduce(stack u16[MLKEM_VECN] r) -> stack u16[MLKEM_VECN]
+{
+  inline int i;
+
+  for i=0 to MLKEM_K
+  {
+    r[i*MLKEM_N:MLKEM_N] = __poly_reduce(r[i*MLKEM_N:MLKEM_N]);
+  }
+
+  return r;
+}
+
+inline
+fn __polyvec_tobytes(reg u64 rp, stack u16[MLKEM_VECN] a)
+{
+  reg u64 pp;
+  inline int i;
+
+  pp = rp;
+  for i=0 to MLKEM_K
+  {
+    a[i*MLKEM_N:MLKEM_N] = _poly_tobytes(pp, a[i*MLKEM_N:MLKEM_N]);
+    pp += MLKEM_POLYBYTES;
+  }
+}
+
+
+inline
+fn __polyvec_frombytes(reg u64 ap) -> stack u16[MLKEM_VECN]
+{
+  stack u16[MLKEM_VECN] r;
+  reg u64 pp;
+  inline int i;
+
+  pp = ap;
+  for i=0 to MLKEM_K
+  {
+    r[i*MLKEM_N:MLKEM_N] = _poly_frombytes(r[i*MLKEM_N:MLKEM_N], pp);
+    pp += MLKEM_POLYBYTES;
+  }
+
+  return r;
+}
+inline
+fn __polyvec_invntt(stack u16[MLKEM_VECN] r) -> stack u16[MLKEM_VECN]
+{
+  inline int i;
+
+  for i=0 to MLKEM_K
+  {
+    r[i*MLKEM_N:MLKEM_N] = _poly_invntt(r[i*MLKEM_N:MLKEM_N]);
+  }
+
+  return r;
+}
+u8[64] shufbidx_cmprs = {
+    0, 1, 2, 3, 4, 8, 9, 10, 11, 12, 16, 17, 18, 19, 20, 24,
+25, 26, 27, 28, 32, 33, 34, 35, 36, 40, 41, 42, 43, 44, 48, 49,
+50, 51, 52, 56, 57, 58, 59, 60, 7, 7, 7, 7, 7, 7, 7, 7,
+7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7
+};
+inline fn __polyvec_compress10_1(reg ptr u8[MLKEM_POLYVECCOMPRESSEDBYTES] rp, stack u16[MLKEM_VECN] a) -> reg ptr u8[MLKEM_POLYVECCOMPRESSEDBYTES]
+{
+    inline int i;
+    inline int i;
+    reg u512 f0, f1, f2;
+    reg u512 v v8 off shift1 mask shift2 sllvidx shufbidx;
+    // const __mmask64 k = _cvtu64_mask64(0x000000FFFFFFFFFF);
+    v = jvx32[u512 0];
+    v8 = #VPSLL_32u16(v, 3);
+    off = #VPBROADCAST_32u16(15);
+    shift1 = #VPBROADCAST_32u16(4096);
+    mask = #VPBROADCAST_32u16(1023);
+    shift2 = #VPBROADCAST_8u64((1024LL << 48) + (1LL << 32) + (1024 << 16) + 1);
+    sllvdidx = #VPBROADCAST_8u64(12);
+    shufbidx = shufbidx_cmprs[u512 0];
+    for i = 0 to 7
+    {
+        f0 = a[u512 i];
+        f1 = #VPMULL_32u16(f0, v8);
+        f2 = #VPADD_32u16(f0, off);
+        f0 = #VPSLL_32u16(f0, 3);
+        f0 = #VPMULH_32u16(f0, v);
+        f2 = #VPSUB_32u16(f1, f2);
+        f1 = #VPANDN_512(f1, f2);
+        f1 = #VPSRL_32u16(f1, 15);
+        f0 = #VPSUB_32u16(f0, f1);
+        f0 = #VPMULHRS_32u16(f0, shift1);
+        f0 = #VPAND(f0, mask);
+        f0 = #VPMADDWD_512(f0, shift2);
+        f0 = #VPSLLV_16u32(f0, sllvdidx);
+        f0 = #VPSRL_8u64(f0, 12);
+        f0 = #VPERMB_512(shufbidx, f0);
+        (u512)[rp + 40*i] = f0;
+    }
+    f0 = a[u512 7];
+    f1 = #VPMULL_32u16(f0, v8);
+    f2 = #VPADD_32u16(f0, off);
+    f0 = #VPSLL_32u16(f0, 3);
+    f0 = #VPMULH_32u16(f0, v);
+    f2 = #VPSUB_32u16(f1, f2);
+    f1 = #VPANDN_512(f1, f2);
+    f1 = #VPSRL_32u16(f1, 15);
+    f0 = #VPSUB_32u16(f0, f1);
+    f0 = #VPMULHRS_32u16(f0, shift1);
+    f0 = #VPMADDWD_512(f0, mask);
+    f0 = #VPSLLV_16u32(f0, sllvidx);
+    f0 = #VPSRL_8u64(f0, 12);
+    f0 = #VPERMB_512(shufbidx, f0);
+    // _mm512_mask_storeu_epi8(&r[280], k, f0);
+    // store to rp;
+
+    return rp;
+
+}
+inline
+fn __polyvec_compress10(reg u64 rp, stack u16[MLKEM_VECN] a)
+{
+    inline int i;
+    reg u512 f0, f1, f2;
+    reg u512 v v8 off shift1 mask shift2 sllvidx shufbidx;
+    // const __mmask64 k = _cvtu64_mask64(0x000000FFFFFFFFFF);
+    v = jvx32[u512 0];
+    v8 = #VPSLL_32u16(v, 3);
+    off = #VPBROADCAST_32u16(15);
+    shift1 = #VPBROADCAST_32u16(4096);
+    mask = #VPBROADCAST_32u16(1023);
+    shift2 = #VPBROADCAST_8u64((1024LL << 48) + (1LL << 32) + (1024 << 16) + 1);
+    sllvdidx = #VPBROADCAST_8u64(12);
+    shufbidx = shufbidx_cmprs[u512 0];
+    for i = 0 to 7
+    {
+        f0 = a[u512 i];
+        f1 = #VPMULL_32u16(f0, v8);
+        f2 = #VPADD_32u16(f0, off);
+        f0 = #VPSLL_32u16(f0, 3);
+        f0 = #VPMULH_32u16(f0, v);
+        f2 = #VPSUB_32u16(f1, f2);
+        f1 = #VPANDN_512(f1, f2);
+        f1 = #VPSRL_32u16(f1, 15);
+        f0 = #VPSUB_32u16(f0, f1);
+        f0 = #VPMULHRS_32u16(f0, shift1);
+        f0 = #VPAND(f0, mask);
+        f0 = #VPMADDWD_512(f0, shift2);
+        f0 = #VPSLLV_16u32(f0, sllvdidx);
+        f0 = #VPSRL_8u64(f0, 12);
+        f0 = #VPERMB_512(shufbidx, f0);
+        (u512)[rp + 40*i] = f0;
+    }
+    f0 = a[u512 7];
+    f1 = #VPMULL_32u16(f0, v8);
+    f2 = #VPADD_32u16(f0, off);
+    f0 = #VPSLL_32u16(f0, 3);
+    f0 = #VPMULH_32u16(f0, v);
+    f2 = #VPSUB_32u16(f1, f2);
+    f1 = #VPANDN_512(f1, f2);
+    f1 = #VPSRL_32u16(f1, 15);
+    f0 = #VPSUB_32u16(f0, f1);
+    f0 = #VPMULHRS_32u16(f0, shift1);
+    f0 = #VPMADDWD_512(f0, mask);
+    f0 = #VPSLLV_16u32(f0, sllvidx);
+    f0 = #VPSRL_8u64(f0, 12);
+    f0 = #VPERMB_512(shufbidx, f0);
+    // _mm512_mask_storeu_epi8(&r[280], k, f0);
+    //store to rp;
+
+}
+
+u8[64] shufbidx_dcmprs = {0, 1, 1, 2, 2, 3, 3, 4, 5, 6, 6, 7, 7, 8, 8, 9,
+10, 11, 11, 12, 12, 13, 13, 14, 15, 16, 16, 17, 17, 18, 18, 19,
+20, 21, 21, 22, 22, 23, 23, 24, 25, 26, 26, 27, 27, 28, 28, 29,
+30, 31, 31, 32, 32, 33, 33, 34, 35, 36, 36, 37, 37, 38, 38, 39};
+inline
+fn __polyvec_decompress10(reg u64 rp) -> stack u16[MLKEM_VECN]
+{
+    inline int i;
+    reg u512 f;
+    reg u512 q shufbidx sllvdidx mask;
+    stack u16[MLKEM_VECN] r;
+    q = #VPBROADCAST_16u32(MLKEM_Q << 16 + 4 * MLKEM_Q);
+    sllvbidx = #VPBROADCAST_8u64(4);
+    shufbidx = shufbidx_dcmprs[u512 0];
+    mask = #VPBROADCAST_16u32(32736 << 16) + 8184);
+
+    for k=0 to MLKEM_K
+    {
+        for i=0 to MLKEM_N/32
+        {
+            f = (u512)[rp + 320 * k + 40 * i];
+            f = #VPERMB_512(shufbidx, f);
+            f = #VPSRL_32u16(f, 1);
+            f = #VPAND_512(f, mask);
+            f = #VPMULHRS_32u16(f, q);
+            r[u512 8*k + i] = f;
+        
+        }
+    }
+    return r;
+}

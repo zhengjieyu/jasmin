@@ -23,6 +23,10 @@ fn __csubq(reg u512 r qx16) -> reg u512
   r = #VPADD_32u16(t, r);
   return r;
 }
+u16[32] jvx32 = {20159, 20159, 20159, 20159, 20159, 20159, 20159, 20159,
+                 20159, 20159, 20159, 20159, 20159, 20159, 20159, 20159,
+                 20159, 20159, 20159, 20159, 20159, 20159, 20159, 20159,
+                 20159, 20159, 20159, 20159, 20159, 20159, 20159, 20159};
 u16[32] jqx32 = {MLKEM_Q, MLKEM_Q, MLKEM_Q, MLKEM_Q, MLKEM_Q, MLKEM_Q, MLKEM_Q, MLKEM_Q,
                  MLKEM_Q, MLKEM_Q, MLKEM_Q, MLKEM_Q, MLKEM_Q, MLKEM_Q, MLKEM_Q, MLKEM_Q,
                  MLKEM_Q, MLKEM_Q, MLKEM_Q, MLKEM_Q, MLKEM_Q, MLKEM_Q, MLKEM_Q, MLKEM_Q,
@@ -41,6 +45,25 @@ u16[128] jzetasmul_exp  = {
   -1185,   1185,  -1530,   1530,  -1278,   1278,    794,   -794,  -1510,   1510,   -854,    854,   -870,    870,    478,   -478,
    -108,    108,   -308,    308,    996,   -996,    991,   -991,    958,   -958,  -1460,   1460,   1522,  -1522,   1628,  -1628
 };
+
+inline
+fn __poly_reduce(reg ptr u16[MLKEM_N] rp) -> reg ptr u16[MLKEM_N]
+{
+  inline int i;
+  reg u512 r qx32 vx32;
+  
+  qx32 = jqx32[u512 0];
+  vx32 = jvx32[u512 0];
+
+  for i=0 to 8 
+  {
+    r = rp.[u512 64*i];
+    r = __red16(r, vx32, qx32);
+    rp.[u512 64*i] = r;
+  }
+  return rp;
+}
+
 fn _poly_csubq(reg ptr u16[MLKEM_N] rp) -> reg ptr u16[MLKEM_N]
 {
   reg u512 r qx16;
@@ -56,14 +79,107 @@ fn _poly_csubq(reg ptr u16[MLKEM_N] rp) -> reg ptr u16[MLKEM_N]
 
   return rp;
 }
-u16[32] jvx32 = {20159, 20159, 20159, 20159, 20159, 20159, 20159, 20159,
-                 20159, 20159, 20159, 20159, 20159, 20159, 20159, 20159,
-                 20159, 20159, 20159, 20159, 20159, 20159, 20159, 20159,
-                 20159, 20159, 20159, 20159, 20159, 20159, 20159, 20159};
+export fn poly_csubq_jazz_avx512(reg u64 rp)
+{
+  stack u16[MLKEM_N] r;
+  reg u16 t;
+  inline int i;
+
+  for i = 0 to MLKEM_N {
+    t = (u16)[rp + 2*i];
+    r[i] = t;
+  }
+
+  r = _poly_csubq(r);
+
+  for i = 0 to MLKEM_N {
+    t = r[i];
+    (u16)[rp + 2*i] = t;
+  }
+}
+fn _poly_frommont(reg ptr u16[MLKEM_N] pr) -> reg ptr u16[MLKEM_N]
+{
+  reg u512 qx32 qinvx32 dmontx32;
+  inline int i;
+  reg ptr u16[32] x32p;
+  x32p = jqx32;
+  qx32 = x32p[u512 0];
+  x32p = jqinvx32;
+  qinvx32 = x32p[u512 0];
+  dmontx32 = #VPBROADCAST_32u16(DMONT);
+
+  for i = 0 to MLKEM_N/32
+  {
+    t = rp[u512 i];
+    t = __montmul(t, dmontx32, qx32, qinvx32);
+    rp[u512 i] = t;
+  }
+
+}
+
+export fn poly_frommont_jazz(reg u64 rp) 
+{
+  inline int i;
+  reg u16 t;
+  stack u16[MLKEM_N] r;
+
+  for i = 0 to MLKEM_N {
+    t = (u16)[rp + 2*i];
+    r[i] = t;
+  }
+
+  r = _poly_frommont(r);
+
+  for i = 0 to MLKEM_N {
+    t = r[i];
+    (u16)[rp + 2*i] = t;
+  }
+}
+
 u16 pc_shift1_s = 0x200;
 u16 pc_mask_s = 0x0F;
 u16 pc_shift2_s = 0x1001;
 u32[16] pc_permidx_s = {0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15};
+fn _poly_compress_1(reg ptr u8[MLKEM_POLYCOMPRESSEDBYTES] rp, reg ptr u16[MLKEM_N] a) -> reg ptr u8[MLKEM_POLYCOMPRESSEDBYTES], reg ptr u16[MLKEM_N]
+{
+    inline int i;
+    reg u512 v shift1 shift2 mask permidx f0 f1 f2 f3;
+    reg ptr u16[32] x32p;
+    a = _poly_csubq(a);
+    x32p = jvx32;
+    v = x32p[u512 0];
+    shift1 = #VPBROADCAST_32u16(pc_shift1_s);
+    mask = #VPBROADCAST_32u16(pc_mask_s);
+    shift2 = #VPBROADCAST_32u16(pc_shift2_s);
+    permidx = pc_permidx_s[u512 0];
+    for i=0 to MLKEM_N/128
+    {
+        f0 = a[u512 4*i];
+        f1 = a[u512 4*i + 1];
+        f2 = a[u512 4*i + 2];
+        f3 = a[u512 4*i + 3];
+        f0 = #VPMULH_32u16(f0, v);
+        f1 = #VPMULH_32u16(f1, v);
+        f2 = #VPMULH_32u16(f2, v);
+        f3 = #VPMULH_32u16(f3, v); 
+        f0 = #VPMULHRS_32u16(f0, shift1);
+        f1 = #VPMULHRS_32u16(f1, shift1);
+        f2 = #VPMULHRS_32u16(f2, shift1);
+        f3 = #VPMULHRS_32u16(f3, shift1);
+        f0 = #VPAND_512(f0, mask);
+        f1 = #VPAND_512(f1, mask);
+        f2 = #VPAND_512(f2, mask);
+        f3 = #VPAND_512(f3, mask);
+        f0 = #VPACKUS_32u16(f0, f1);
+        f2 = #VPACKUS_32u16(f2, f3);
+        f0 = #VPMADDUBSW_512(f0, shift2);
+        f2 = #VPMADDUBSW_512(f2, shift2);
+        f0 = #VPACKUS_32u16(f0, f2);
+        f0 = #VPERMD_512(permidx, f0);
+        rp.[u512 64*i] = f0;
+    }
+    return rp, a;
+}
 fn _poly_compress(reg u64 rp, reg ptr u16[MLKEM_N] a) -> reg ptr u16[MLKEM_N]
 {
     inline int i;
@@ -152,6 +268,20 @@ fn _poly_decompress(reg ptr u16[MLKEM_N] rp, reg u64 ap) -> reg ptr u16[MLKEM_N]
   return rp;
 
 }
+export fn poly_decompress_jazz(reg u64 rp, reg u64 ap) 
+{
+  stack u16[MLKEM_N] r;
+  reg u16 t;
+  inline int i;
+
+  r = _poly_decompress(r, ap);
+
+  for i = 0 to MLKEM_N {
+    t = r[i];
+    (u16)[rp + 2*i] = t;
+  }
+}
+
 u32[16] pfm_shift_s = {3, 2, 1, 0, 3, 2, 1, 0, 3, 2, 1, 0, 3, 2, 1, 0};
 u8[64] pfm_idx_s = {0, 1, 4, 5, 8, 9, 12, 13, 2, 3, 6, 7, 10, 11, 14, 15,
 0, 1, 4, 5, 8, 9, 12, 13, 2, 3, 6, 7, 10, 11, 14, 15,
@@ -283,40 +413,68 @@ export fn poly_frommsg_jazz(reg u64 rp, reg u64 ap)
   }
 }
 // not done yet, because of the _mm512_movepi8_mask needs mask register.
-// u64[8] idx_tmsg = {0, 2, 4, 6, 1, 3, 5, 7};
-// fn _poly_tomsg(reg u64 rp, reg ptr u16[MLKEM_N] a) -> reg ptr u16[MLKEM_N]
-// {
-//   inline int i;
-//   reg u512 f0 f1 g0 g1 hq hhq idx;
-//   stack u16 const_hq = (MLKEM_Q - 1)/2;
-//   stack u16 const_hhq = (MLKEM_Q - 1)/4;
-//   hq = #VPBROADCAST_32u16(const_hq);
-//   hhq = #VPBROADCAST_32u16(const_hhq);
-//   reg u64 s;
-//   idx = idx_tmsg.[u512 0];
-//   for i=0 to 4
-//   {
-//     f0 = a.[u512 2*i];
-//     f1 = a.[u512 2*i + 1];
-//     f0 = #VPSUB_32u16(hq, f0);
-//     f1 = #VPSUB_32u16(hq, f1);
-//     g0 = #VPSRA_32u16(f0, 15);
-//     g1 = #VPSRA_32u16(f1, 15);
-//     f0 = #VPXOR_512(f0, g0);
-//     f1 = #VPXOR_512(f1, g1);
-//     f0 = #VPSUB_32u16(f0, hhq);
-//     f1 = #VPSUB_32u16(f1, hhq);
-//     f0 = #VPACKSS_32u16(f0, f1);
-//     f0 = #VPERMQ512(idx, f0);
+u64[8] idx_tmsg = {0, 2, 4, 6, 1, 3, 5, 7};
+fn _poly_tomsg(reg u64 rp, reg ptr u16[MLKEM_N] a) -> reg ptr u16[MLKEM_N]
+{
+  inline int i;
+  reg u512 f0 f1 g0 g1 hq hhq idx;
+  stack u16 const_hq = (MLKEM_Q - 1)/2;
+  stack u16 const_hhq = (MLKEM_Q - 1)/4;
+  hq = #VPBROADCAST_32u16(const_hq);
+  hhq = #VPBROADCAST_32u16(const_hhq);
+  reg u64 s;
+  idx = idx_tmsg.[u512 0];
+  for i=0 to 4
+  {
+    f0 = a.[u512 2*i];
+    f1 = a.[u512 2*i + 1];
+    f0 = #VPSUB_32u16(hq, f0);
+    f1 = #VPSUB_32u16(hq, f1);
+    g0 = #VPSRA_32u16(f0, 15);
+    g1 = #VPSRA_32u16(f1, 15);
+    f0 = #VPXOR_512(f0, g0);
+    f1 = #VPXOR_512(f1, g1);
+    f0 = #VPSUB_32u16(f0, hhq);
+    f1 = #VPSUB_32u16(f1, hhq);
+    f0 = #VPACKSS_32u16(f0, f1);
+    f0 = #VPERMQ512(idx, f0);
+    //  s = _mm512_movepi8_mask(f0);
+    rp[u64 i] = s;
+  }
+  return a;
 
-    
+}
 
+fn _poly_tomsg_1(reg ptr u8[MLKEM_INDCPA_MSGBYTES] rp, reg ptr u16[MLKEM_N] a) -> reg ptr u8[MLKEM_INDCPA_MSGBYTES], reg ptr u16[MLKEM_N]
+{
+  inline int i;
+  reg u512 f0 f1 g0 g1 hq hhq idx;
+  stack u16 const_hq = (MLKEM_Q - 1)/2;
+  stack u16 const_hhq = (MLKEM_Q - 1)/4;
+  hq = #VPBROADCAST_32u16(const_hq);
+  hhq = #VPBROADCAST_32u16(const_hhq);
+  reg u64 s;
+  idx = idx_tmsg.[u512 0];
+  for i=0 to 4
+  {
+    f0 = a.[u512 2*i];
+    f1 = a.[u512 2*i + 1];
+    f0 = #VPSUB_32u16(hq, f0);
+    f1 = #VPSUB_32u16(hq, f1);
+    g0 = #VPSRA_32u16(f0, 15);
+    g1 = #VPSRA_32u16(f1, 15);
+    f0 = #VPXOR_512(f0, g0);
+    f1 = #VPXOR_512(f1, g1);
+    f0 = #VPSUB_32u16(f0, hhq);
+    f1 = #VPSUB_32u16(f1, hhq);
+    f0 = #VPACKSS_32u16(f0, f1);
+    f0 = #VPERMQ512(idx, f0);
+    //  s = _mm512_movepi8_mask(f0);
+    rp[u64 i] = s;
+  }
+  return rp, a;
 
-    
-//   }
-//   return a;
-
-// }
+}
 u64[8] idx_cbd2 = {0, 1, 4, 5, 2, 3, 6, 7};
 inline fn __cbd2(reg ptr u16[MLKEM_N] rp, reg ptr u8[MLKEM_ETA2*MLKEM_N/4] buf) -> reg ptr u16[MLKEM_N]
 {
@@ -328,25 +486,39 @@ inline fn __cbd2(reg ptr u16[MLKEM_N] rp, reg ptr u8[MLKEM_ETA2*MLKEM_N/4] buf) 
   stack u32 const_mask55 = 0x55555555;
   stack u32 const_mask33 = 0x33333333;
   stack u32 const_mask0F = 0x0F0F0F0F;
+  stack u32 const_mask03 = 0x03030303;
   idx = idx_cbd2[u512 0];
+  mask55 = #VPBROADCAST_16u32(const_mask55);
+  mask33 = #VPBROADCAST_16u32(const_mask33);
+  mask0F = #VPBROADCAST_16u32(const_mask0F);
+  mask03 = #VPBROADCAST_16u32(const_mask03);
+  () = #spill(mask33);
+  () = #spill(mask0F);
+  () = #spill(mask55);
+  () = #spill(mask03);
   for i = 0 to 2
   {
     f0 = buf[u512 i];
 
     f1 = #VPSRL_32u16(f0, 1);
+    () = #unspill(mask55);
     f0 = #VPAND_512(mask55, f0);
     f1 = #VPAND_512(mask55, f1);
+    
     f0 = #VPADD_64u8(f0, f1);
 
     f1 = #VPSRL_32u16(f0, 2);
+    () = #unspill(mask33);
     f0 = #VPAND_512(mask33, f0);
     f1 = #VPAND_512(mask33, f1);
     f0 = #VPADD_64u8(f0, mask33);
     f0 = #VPSUB_64u8(f0, f1);
 
     f1 = #VPSRL_32u16(f0, 4);
+    () = #unspill(mask0F);
     f0 = #VPAND_512(mask0F, f0);
     f1 = #VPAND_512(mask0F, f1);
+    () = #unspill(mask03);
     f0 = #VPSUB_64u8(f0, mask03);
     f1 = #VPSUB_64u8(f1, mask03);
 
@@ -366,6 +538,7 @@ inline fn __cbd2(reg ptr u16[MLKEM_N] rp, reg ptr u8[MLKEM_ETA2*MLKEM_N/4] buf) 
     f2 = #VPMOVSX_32u8_32u16(t);
     t = #VEXTRACTI32X8(f3, 1);
     f3 = #VPMOVSX_32u8_32u16(t);
+
     rp[u512 4*i] = f0;
     rp[u512 4*i + 1] = f1;
     rp[u512 4*i + 2] = f2;
@@ -381,18 +554,21 @@ fn __poly_cbd_eta1(reg ptr u16[MLKEM_N] rp, reg ptr u8[MLKEM_ETA1*MLKEM_N/4] buf
 }
 fn _poly_getnoise_eta1_8x(reg ptr u16[MLKEM_N] r0 r1 r2 r3 r4 r5 r6 r7, reg ptr u8[MLKEM_SYMBYTES] seed, reg u8 nonce) -> reg ptr u16[MLKEM_N], reg ptr u16[MLKEM_N], reg ptr u16[MLKEM_N], reg ptr u16[MLKEM_N], reg ptr u16[MLKEM_N], reg ptr u16[MLKEM_N], reg ptr u16[MLKEM_N], reg ptr u16[MLKEM_N]
 {
-  reg u512 f;
+  reg u256 f;
   stack u512[25] state;
   stack u8[NOISE_NBLOCKS * SHAKE256_RATE] buf0 buf1 buf2 buf3 buf4 buf5 buf6 buf7;
-  f = seed[u512 0];
-  buf0[u512 0] = f;
-  buf1[u512 0] = f;
-  buf2[u512 0] = f;
-  buf3[u512 0] = f;
-  buf4[u512 0] = f;
-  buf5[u512 0] = f;
-  buf6[u512 0] = f;
-  buf7[u512 0] = f;
+
+
+
+  f = seed.[u256 0];
+  buf0[u256 0] = f;
+  buf1[u256 0] = f;
+  buf2[u256 0] = f;
+  buf3[u256 0] = f;
+  buf4[u256 0] = f;
+  buf5[u256 0] = f;
+  buf6[u256 0] = f;
+  buf7[u256 0] = f;
 
   buf0.[32] = nonce;
   nonce += 1;
@@ -410,52 +586,49 @@ fn _poly_getnoise_eta1_8x(reg ptr u16[MLKEM_N] r0 r1 r2 r3 r4 r5 r6 r7, reg ptr 
   nonce += 1;
   buf7.[32] = nonce;
 
+  () = #spill(r0, r1, r2, r3, r4, r5, r6, r7);
   state = _shake256_absorb8x_33(state, buf0[0:33], buf1[0:33], buf2[0:33], buf3[0:33], buf4[0:33], buf5[0:33], buf6[0:33], buf7[0:33]);
   state, buf0, buf1, buf2, buf3, buf4, buf5, buf6, buf7 = __shake256_squeezenblocks8x(state, buf0, buf1, buf2, buf3, buf4, buf5, buf6, buf7);
+  () = #unspill(r0, r1, r2, r3, r4, r5, r6, r7);
 
   r0 = __poly_cbd_eta1(r0, buf0[0:MLKEM_ETA1*MLKEM_N/4+(MLKEM_ETA1 - 2)*8]);
   r1 = __poly_cbd_eta1(r1, buf1[0:MLKEM_ETA1*MLKEM_N/4+(MLKEM_ETA1 - 2)*8]);
   r2 = __poly_cbd_eta1(r2, buf2[0:MLKEM_ETA1*MLKEM_N/4+(MLKEM_ETA1 - 2)*8]);
   r3 = __poly_cbd_eta1(r3, buf3[0:MLKEM_ETA1*MLKEM_N/4+(MLKEM_ETA1 - 2)*8]);
-  r4 = __poly_cbd_eta1(r4, buf0[0:MLKEM_ETA1*MLKEM_N/4+(MLKEM_ETA1 - 2)*8]);
-  r5 = __poly_cbd_eta1(r5, buf1[0:MLKEM_ETA1*MLKEM_N/4+(MLKEM_ETA1 - 2)*8]);
-  r6 = __poly_cbd_eta1(r6, buf2[0:MLKEM_ETA1*MLKEM_N/4+(MLKEM_ETA1 - 2)*8]);
-  r7 = __poly_cbd_eta1(r7, buf3[0:MLKEM_ETA1*MLKEM_N/4+(MLKEM_ETA1 - 2)*8]);
-
+  
+  r4 = __poly_cbd_eta1(r4, buf4[0:MLKEM_ETA1*MLKEM_N/4+(MLKEM_ETA1 - 2)*8]);
+  r5 = __poly_cbd_eta1(r5, buf5[0:MLKEM_ETA1*MLKEM_N/4+(MLKEM_ETA1 - 2)*8]);
+  r6 = __poly_cbd_eta1(r6, buf6[0:MLKEM_ETA1*MLKEM_N/4+(MLKEM_ETA1 - 2)*8]);
+  r7 = __poly_cbd_eta1(r7, buf7[0:MLKEM_ETA1*MLKEM_N/4+(MLKEM_ETA1 - 2)*8]);
   return r0, r1, r2, r3, r4, r5, r6, r7;
 
 }
-export fn poly_decompress_jazz(reg u64 rp, reg u64 ap) 
+
+export fn poly_getnoise_eta1_8x_jazz(reg u64 rp, reg u64 seedp, reg u8 nonce)
 {
-  stack u16[MLKEM_N] r;
+  stack u16[8 * MLKEM_N] r;
+  stack u8[MLKEM_SYMBYTES] seed;
+  stack u64 srp;
   reg u16 t;
+  reg u8 d;
   inline int i;
 
-  r = _poly_decompress(r, ap);
+  srp = rp;
 
-  for i = 0 to MLKEM_N {
+  for i = 0 to MLKEM_SYMBYTES {
+    d       = (u8)[seedp + i];
+    seed[i] = d;
+  }
+
+  r[0:MLKEM_N], r[MLKEM_N:MLKEM_N], r[2*MLKEM_N:MLKEM_N], r[3*MLKEM_N:MLKEM_N], r[4*MLKEM_N:MLKEM_N], r[5*MLKEM_N:MLKEM_N], r[6*MLKEM_N:MLKEM_N], r[7*MLKEM_N:MLKEM_N] = _poly_getnoise_eta1_8x(r[0:MLKEM_N], r[MLKEM_N:MLKEM_N], r[2*MLKEM_N:MLKEM_N], r[3*MLKEM_N:MLKEM_N], r[4*MLKEM_N:MLKEM_N], r[5*MLKEM_N:MLKEM_N], r[6*MLKEM_N:MLKEM_N], r[7*MLKEM_N:MLKEM_N], seed, nonce);
+
+  rp = srp;
+  for i = 0 to 8*MLKEM_N {
     t = r[i];
     (u16)[rp + 2*i] = t;
   }
 }
-export fn poly_csubq_jazz_avx512(reg u64 rp)
-{
-  stack u16[MLKEM_N] r;
-  reg u16 t;
-  inline int i;
 
-  for i = 0 to MLKEM_N {
-    t = (u16)[rp + 2*i];
-    r[i] = t;
-  }
-
-  r = _poly_csubq(r);
-
-  for i = 0 to MLKEM_N {
-    t = r[i];
-    (u16)[rp + 2*i] = t;
-  }
-}
 
 fn _poly_sub_avx512(reg ptr u16[MLKEM_N] rp bp)  -> reg ptr u16[MLKEM_N]
 {
@@ -489,7 +662,7 @@ export fn poly_sub_jazz_avx512(reg u64 rp, reg u64 bp)
         (u16)[rp + 2*i] = t;
     }
 }
-fn _poly_add_avx512(reg ptr u16[MLKEM_N] rp bp)  -> reg ptr u16[MLKEM_N]
+fn _poly_add_avx512(reg ptr u16[MLKEM_N] rp bp) -> reg ptr u16[MLKEM_N]
 {
     inline int i;
     reg u512 a;
@@ -522,44 +695,7 @@ export fn poly_add_jazz_avx512(reg u64 rp, reg u64 bp)
         (u16)[rp + 2*i] = t;
     }
 }
-fn _poly_add2(reg ptr u16[MLKEM_N] rp bp) -> reg ptr u16[MLKEM_N]
-{
-  inline int i;
-  reg u256 a;
-  reg u256 b;
-  reg u256 r;
 
-  for i = 0 to 16 {
-    a = rp.[u256 32*i];
-    b = bp.[u256 32*i];
-    r = #VPADD_16u16(a, b);
-    rp.[u256 32*i] = r;
-  }
-
-  return rp;
-}
-
-export fn poly_add2_jazz(reg u64 rp,  reg u64 bp) 
-{
-  stack u16[MLKEM_N] r;
-  stack u16[MLKEM_N] b;
-  reg u16 t;
-  inline int i;
-
-  for i = 0 to MLKEM_N {
-    t = (u16)[rp + 2*i];
-    r[i] = t;
-    t = (u16)[bp + 2*i];
-    b[i] = t;
-  }
-
-  r = _poly_add2(r, b);
-
-  for i = 0 to MLKEM_N {
-    t = r[i];
-    (u16)[rp + 2*i] = t;
-  }
-}
 inline fn __karatsuba32x(reg u512 al ah bl bh const_q const_qinv zeta) -> reg u512, reg u512
 {
     reg u512 f0 f1 f2 f3 f4 f5 f6;
@@ -778,7 +914,7 @@ inline fn __butterfly(reg u512 l r zl zh const_q) -> reg u512, reg u512
 fn _poly_ntt(reg ptr u16[MLKEM_N] rp) -> reg ptr u16[MLKEM_N]
 {
   reg u512 qx32 r0 r1 r2 r3 r4 r5 r6 r7 zeta zetaqinv;
-  reg u512 r8 r9 r10 r11 r12 r13 r14 r15 r16 r17 r18 r19 r20;
+  reg u512 r8 r12 r13 r14 r15 r16 r17 r18 r19;
   reg ptr u16[1038] zetasp;
   
   zetasp = jzetas_exp;
@@ -797,120 +933,120 @@ fn _poly_ntt(reg ptr u16[MLKEM_N] rp) -> reg ptr u16[MLKEM_N]
   zetaqinv = #VPBROADCAST_32u16(zetasp[u16 1]);
 
   
-  __butterfly(r0, r4, zeta, zetaqinv, qx32);
-  __butterfly(r1, r5, zeta, zetaqinv, qx32);
-  __butterfly(r2, r6, zeta, zetaqinv, qx32);
-  __butterfly(r3, r7, zeta, zetaqinv, qx32);
+  r0, r4 = __butterfly(r0, r4, zeta, zetaqinv, qx32);
+  r1, r5 = __butterfly(r1, r5, zeta, zetaqinv, qx32);
+  r2, r6 = __butterfly(r2, r6, zeta, zetaqinv, qx32);
+  r3, r7 = __butterfly(r3, r7, zeta, zetaqinv, qx32);
   //level1
   zeta = #VPBROADCAST_32u16(zetasp[u16 2]);
   zetaqinv = #VPBROADCAST_32u16(zetasp[u16 3]);
   
-  __butterfly(r0, r2, zeta, zetaqinv, qx32);
-  __butterfly(r1, r3, zeta, zetaqinv, qx32);
+  r0, r2 = __butterfly(r0, r2, zeta, zetaqinv, qx32);
+  r1, r3 =__butterfly(r1, r3, zeta, zetaqinv, qx32);
 
   zeta = #VPBROADCAST_32u16(zetasp[u16 4]);
   zetaqinv = #VPBROADCAST_32u16(zetasp[u16 5]);
 
-  __butterfly(r4, r6, zeta, zetaqinv, qx32);
-  __butterfly(r5, r7, zeta, zetaqinv, qx32);
+  r4, r6 = __butterfly(r4, r6, zeta, zetaqinv, qx32);
+  r5, r7 = __butterfly(r5, r7, zeta, zetaqinv, qx32);
 
   //level 2
   zeta = #VPBROADCAST_32u16(zetasp[u16 6]);
   zetaqinv = #VPBROADCAST_32u16(zetasp[u16 7]);
-  __butterfly(r0, r1, zeta, zetaqinv, qx32);
+  r0, r1 = __butterfly(r0, r1, zeta, zetaqinv, qx32);
   zeta = #VPBROADCAST_32u16(zetasp[u16 8]);
   zetaqinv = #VPBROADCAST_32u16(zetasp[u16 9]);
-  __butterfly(r2, r3, zeta, zetaqinv, qx32);
+  r2, r3 = __butterfly(r2, r3, zeta, zetaqinv, qx32);
   zeta = #VPBROADCAST_32u16(zetasp[u16 10]);
   zetaqinv = #VPBROADCAST_32u16(zetasp[u16 11]);
-  __butterfly(r4, r5, zeta, zetaqinv, qx32);
+  r4, r5 = __butterfly(r4, r5, zeta, zetaqinv, qx32);
   zeta = #VPBROADCAST_32u16(zetasp[u16 12]);
   zetaqinv = #VPBROADCAST_32u16(zetasp[u16 13]);
-  __butterfly(r6, r7, zeta, zetaqinv, qx32);
+  r6, r7 = __butterfly(r6, r7, zeta, zetaqinv, qx32);
 
   //level 3
   r12, r13 = __shuffle16(r0, r1);
   zeta = zetasp.[u512 14*64];
   zetaqinv = zetasp.[u512 46*64];
-  __butterfly(r12, r13, zeta, zetaqinv, qx32);
+  r12, r13 = __butterfly(r12, r13, zeta, zetaqinv, qx32);
 
   r14, r15 = __shuffle16(r2, r3);
   zeta = zetasp.[u512 78*64];
   zetaqinv = zetasp.[u512 110*64];
-  __butterfly(r14, r15, zeta, zetaqinv, qx32);
+  r14, r15 = __butterfly(r14, r15, zeta, zetaqinv, qx32);
 
   r16, r17 = __shuffle16(r4, r5);
   zeta = zetasp.[u512 142*64];
   zetaqinv = zetasp.[u512 174*64];
-  __butterfly(r16, r17, zeta, zetaqinv, qx32);
+  r16, r17 = __butterfly(r16, r17, zeta, zetaqinv, qx32);
 
   r18, r19 = __shuffle16(r6, r7);
   zeta = zetasp.[u512 206*64];
   zetaqinv = zetasp.[u512 238*64];
-  __butterfly(r18, r19, zeta, zetaqinv, qx32);
+  r18, r19 = __butterfly(r18, r19, zeta, zetaqinv, qx32);
   
   // level 4
   r1, r2 = __shuffle16(r12, r13);
   zeta = zetasp.[u512 270*64];
   zetaqinv = zetasp.[u512 302*64];
-  __butterfly(r1, r2, zeta, zetaqinv, qx32);
+  r1, r2 = __butterfly(r1, r2, zeta, zetaqinv, qx32);
 
   r3, r4 = __shuffle16(r14, r15);
   zeta = zetasp.[u512 334*64];
   zetaqinv = zetasp.[u512 366*64];
-  __butterfly(r3, r4, zeta, zetaqinv, qx32);
+  r3, r4 = __butterfly(r3, r4, zeta, zetaqinv, qx32);
 
   r5, r6 = __shuffle16(r16, r17);
   zeta = zetasp.[u512 398*64];
   zetaqinv = zetasp.[u512 430*64];
-  __butterfly(r5, r6, zeta, zetaqinv, qx32);
+  r5, r6 = __butterfly(r5, r6, zeta, zetaqinv, qx32);
 
   r7, r8 = __shuffle16(r18, r19);
   zeta = zetasp.[u512 462*64];
   zetaqinv = zetasp.[u512 494*64];
-  __butterfly(r7, r8, zeta, zetaqinv, qx32);
+  r7, r8 = __butterfly(r7, r8, zeta, zetaqinv, qx32);
 
   //level 5
   r12, r13 = __shuffle4(r1, r2);
   zeta = zetasp.[u512 526*64];
   zetaqinv = zetasp.[u512 558*64];
-  __butterfly(r12, r13, zeta, zetaqinv, qx32);
+  r12, r13 = __butterfly(r12, r13, zeta, zetaqinv, qx32);
 
   r14, r15 = __shuffle4(r3, r4);
   zeta = zetasp.[u512 590*64];
   zetaqinv = zetasp.[u512 622*64];
-  __butterfly(r14, r15, zeta, zetaqinv, qx32);
+  r14, r15 = __butterfly(r14, r15, zeta, zetaqinv, qx32);
 
   r16, r17 = __shuffle4(r5, r6);
   zeta = zetasp.[u512 654*64];
   zetaqinv = zetasp.[u512 686*64];
-  __butterfly(r16, r17, zeta, zetaqinv, qx32);
+  r16, r17 = __butterfly(r16, r17, zeta, zetaqinv, qx32);
 
   r18, r19 = __shuffle4(r7, r8);
   zeta = zetasp.[u512 718*64];
   zetaqinv = zetasp.[u512 750*64];
-  __butterfly(r18, r19, zeta, zetaqinv, qx32);
+  r18, r19 =__butterfly(r18, r19, zeta, zetaqinv, qx32);
 
   //level 6
   r1, r2 = __shuffle2(r12, r13);
   zeta = zetasp.[u512 782*64];
   zetaqinv = zetasp.[u512 814*64];
-  __butterfly(r1, r2, zeta, zetaqinv, qx32);
+  r1, r2 = __butterfly(r1, r2, zeta, zetaqinv, qx32);
 
   r3, r4 = __shuffle2(r14, r15);
   zeta = zetasp.[u512 846*64];
   zetaqinv = zetasp.[u512 878*64];
-  __butterfly(r3, r4, zeta, zetaqinv, qx32);
+  r3, r4 = __butterfly(r3, r4, zeta, zetaqinv, qx32);
 
   r5, r6 = __shuffle2(r16, r17);
   zeta = zetasp.[u512 910*64];
   zetaqinv = zetasp.[u512 942*64];
-  __butterfly(r5, r6, zeta, zetaqinv, qx32);
+  r5, r6 = __butterfly(r5, r6, zeta, zetaqinv, qx32);
 
   r7, r8 = __shuffle2(r18, r19);
   zeta = zetasp.[u512 974*64];
   zetaqinv = zetasp.[u512 1006*64];
-  __butterfly(r7, r8, zeta, zetaqinv, qx32);
+  r7, r8 = __butterfly(r7, r8, zeta, zetaqinv, qx32);
 
   r12, r13 = __shuffle1(r1, r2);
   r14, r15 = __shuffle1(r3, r4);
@@ -1186,30 +1322,281 @@ u8[64] idx2_fbts = {1,  2,  4,  5,  7,  8, 10, 11, 13, 14, 16, 17, 19, 20, 22, 2
 -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
 -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1
 };
-// fn _poly_frombytes(reg ptr u16[MLKEM_N] rp, reg u64 ap) -> reg ptr u16[MLKEM_N]
-// {
-//   inline int i;
-//   reg u512 f0 f1 f2 f3 f4 f5;
-//   // const __mmask64 mmask1 = _cvtu64_mask64(0x00000000FFFFFFFF);
-//   // const __mmask64 mmask2 = _cvtu64_mask64(0x0000FFFFFFFFFFFF);
-//   reg u512 mask = mask_fbts[u512 0];
-//   reg u512 idx1 idx2;
-//   idx1 = idx1_fbts[u512 0];
-//   idx2 = idx2_fbts[u512 0];
+fn _poly_frombytes(reg ptr u16[MLKEM_N] rp, reg u64 ap) -> reg ptr u16[MLKEM_N]
+{
+  inline int i;
+  reg u512 f0 f1 f2 f3 f4 f5;
+  reg u512 tmp;
+  // const __mmask64 mmask1 = _cvtu64_mask64(0x00000000FFFFFFFF);
+  // const __mmask64 mmask2 = _cvtu64_mask64(0x0000FFFFFFFFFFFF);
+  reg u512 mask = mask_fbts[u512 0];
+  reg u512 idx1 idx2;
+  idx1 = idx1_fbts[u512 0];
+  idx2 = idx2_fbts[u512 0];
 
-//   for i = 0 to 2
-//   {
-//     f0 = (u512)[ap + i*128];
-//     f1 = (u512)[ap + i*128 + 64];
+  for i = 0 to 2
+  {
+    f0 = (u512)[ap + i*128];
+    f1 = (u512)[ap + i*128 + 64];
+    // need mask registers
+    // f2 = _mm512_maskz_permutexvar_epi8(mmask1, idx1, f0);
+    // f3 = _mm512_maskz_permutexvar_epi8(mmask1, idx2, f0);
+    // f4 = _mm512_maskz_permutexvar_epi8(mmask1, idx1, f1);
+    // f5 = _mm512_maskz_permutexvar_epi8(mmask1, idx2, f1);
 
-//     // f2 = _mm512_maskz_permutexvar_epi8(mmask1, idx1, f0);
-//     // f3 = _mm512_maskz_permutexvar_epi8(mmask1, idx2, f0);
-//     // f4 = _mm512_maskz_permutexvar_epi8(mmask1, idx1, f1);
-//     // f5 = _mm512_maskz_permutexvar_epi8(mmask1, idx2, f1);
+    tmp = #VPEXTRACTI64X4(f4, 0);
+    f0 = #VINSERTI64X4(f2, tmp, 1);
+    tmp = #VPEXTRACTI64X4(f5, 0);
+    f1 = #VINSERTI64X4(f3, tmp, 1);
+    f0 = #VPAND_512(f0, mask);
+    f1 = #VPSRL_32u16(f1, 4);
+
+    rp[u512 2*i + 0] = f0;
+    rp[u512 2*i + 1] = f1;
 
 
+  }
+  // f0 = _mm512_mask_loadu_epi8(f0,mmask2,&a[288]);
+  // f1 = _mm512_mask_loadu_epi8(f1,mmask2,&a[336]);
+  // f2 = _mm512_maskz_permutexvar_epi8(mmask1, idx1, f0);
+  // f3 = _mm512_maskz_permutexvar_epi8(mmask1, idx2, f0);
+  // f4 = _mm512_maskz_permutexvar_epi8(mmask1, idx1, f1);
+  // f5 = _mm512_maskz_permutexvar_epi8(mmask1, idx2, f1);
+  tmp = #VPEXTRACTI64X4(f4, 0);
+  f0 = #VINSERTI64X4(f2, tmp, 1);
+  tmp = #VPEXTRACTI64X4(f5, 0);
+  f1 = #VINSERTI64X4(f3, tmp, 1);
+  f0 = #VPAND_512(f0, mask);
+  f1 = #VPSRL_32u16(f1, 4);
+  rp[u512 6] = f0;
+  rp[u512 7] = f1;
+}
+export fn poly_frombytes_jazz(reg u64 rp, reg u64 ap) 
+{
+  stack u16[MLKEM_N] r;
+  reg u16 t;
+  inline int i;
 
-//   }
+  r = _poly_frombytes(r, ap);
 
+  r = _nttpack(r);
 
-// }
+  for i = 0 to MLKEM_N {
+    t = r[i];
+    (u16)[rp + 2*i] = t;
+  }
+}
+
+u8[64] idx1_tbts = { 0, 1,-1, 2, 3,-1, 4, 5,-1, 6, 7,-1, 8, 9,-1,10,11,-1,12,13,-1,14,15,-1,16,17,-1,18,19,-1,20,21,-1,22,23,-1,24,25,-1,26,27,-1,28,29,-1,30,31,-1,
+-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1};
+u8[64] idx2_tbts = {-1,-1, 0,-1,-1, 2,-1,-1, 4,-1,-1, 6,-1,-1, 8,-1,-1,10,-1,-1,12,-1,-1,14,-1,-1,16,-1,-1,18,-1,-1,20,-1,-1,22,-1,-1,24,-1,-1,26,-1,-1,28,-1,-1,30,
+-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1};
+fn _poly_tobytes(reg u64 rp, reg ptr u16[MLKEM_N] a) -> reg ptr u16[MLKEM_N]
+{
+  inline int i;
+  reg u512 f0 f1 f2 f3 f4 f5;
+  reg u512 const_q = jqx32[u512 0];
+  reg u512 idx1 idx2;
+  idx1 = idx1_tbts[u512 0];
+  idx2 = idx2_tbts[u512 0];
+  reg u256 g;
+  f4 = #set0_512();
+  f5 = #set0_512();
+  // const __mmask64 mmask_s = _cvtu64_mask64(0x0000FFFFFFFFFFFF);
+  // const __mmask64 mmask1 = _cvtu64_mask64(0x00006DB6DB6DB6DB);
+  // const __mmask64 mmask2 = _cvtu64_mask64(0x0000924924924924);
+
+  for i= 0 to 2
+  {
+    f0 = a[u512 2*i + 0];
+    f1 = a[u512 2*i + 1];
+    f0 = #VPSUB_32u16(f0, const_q);
+    f1 = #VPSUB_32u16(f1, const_q);
+    f2 = #VPSRA_32u16(f0, 15);
+    f3 = #VPSRA_32u16(f1, 15);
+    f2 = #VPAND_512(f2, vec_q);
+    f3 = #VPAND_512(f3, vec_q);
+    f0 = #VPADD_32u16(f0, f2);
+    f1 = #VPADD_32u16(f1, f3);
+
+    f2 = #VPSLL_32u16(f1, 12);
+    f2 = #VPOR_512(f0, f2);
+    f3 = #VPSRL_32u16(f1, 4);
+    g = #VPEXTRACTI64X4(f2, 1);
+    f4 = #VINSERTI64X4(f4, g, 0);
+    g = #VPEXTRACTI64X4(f3, 1);
+    f5 = #VINSERTI64X4(f5, g, 0);
+    // f0 = _mm512_maskz_permutexvar_epi8(mmask1, idx1, f2);
+    // f1 = _mm512_maskz_permutexvar_epi8(mmask2, idx2, f3);
+    f0 = #VPOR_512(f0, f1);
+    // f2 = _mm512_maskz_permutexvar_epi8(mmask1, idx1, f4);
+    // f3 = _mm512_maskz_permutexvar_epi8(mmask2, idx2, f5);
+    f2 = #VPOR_512(f2, f3);
+
+    (u512)[rp + 96*i] = f0;
+    (u512)[rp + 96*i + 48]  = f0;
+
+  }
+  f0 = a[u512 6];
+  f1 = a[u512 7];
+  f0 = #VPSUB_32u16(f0, const_q);
+  f1 = #VPSUB_32u16(f1, const_q);
+  f2 = #VPSRA_32u16(f0, 15);
+  f3 = #VPSRA_32u16(f1, 15);
+  f2 = #VPAND_512(f2, const_q);
+  f3 = #VPAND_512(f3, const_q);
+  f0 = #VPADD_32u16(f0, f2);
+  f1 = #VPADD_32u16(f1, f3);
+  f2 = #VPSLL_32u16(f1, 12);
+  f2 = #VPOR_512(f0, f2);
+  f3 = #VPSRL_32u16(f1, 4);
+  g = #VPEXTRACTI64X4(f2, 1);
+  f4 = #VINSERTI64X4(f4, g, 0);
+  g = #VPEXTRACTI64X4(f3, 1);
+  f5 = #VINSERTI64X4(f5, g, 0);
+  // f0 = _mm512_maskz_permutexvar_epi8(mmask1, idx1, f2);
+  // f1 = _mm512_maskz_permutexvar_epi8(mmask2, idx2, f3);
+  f0 = #VPOR_512(f0, f1);
+  // f2 = _mm512_maskz_permutexvar_epi8(mmask1, idx1, f4);
+  // f3 = _mm512_maskz_permutexvar_epi8(mmask2, idx2, f5);
+  f2 = #VPOR_512(f2, f3);
+
+  (u512)[rp + 576] = f0;
+  (u512)[rp + 672]  = f0;
+
+}
+
+export fn poly_tobytes_jazz(reg u64 rp, reg u64 ap) 
+{
+  stack u16[MLKEM_N] a;
+  reg u16 t;
+  inline int i;
+
+  for i = 0 to MLKEM_N {
+    t = (u16)[ap + 2*i];
+    a[i] = t;
+  }
+  
+  a = _nttunpack(a);
+  a = _poly_tobytes(rp, a);
+}
+// Transform from AVX order to bitreversed order
+inline 
+fn __nttpack256(reg u512 r0 r1 r2 r3 r4 r5 r6 r7)
+    -> reg u512, reg u512, reg u512, reg u512, reg u512, reg u512, reg u512, reg u512
+{
+  reg u512 r8, r9;
+  r8, r9 = __shuffle1(r0, r1);
+  r0, r1 = __shuffle1(r2, r3);
+  r2, r3 = __shuffle1(r4, r5);
+  r4, r5 = __shuffle1(r6, r7);
+
+  r6, r7 = __shuffle2(r8, r9);
+  r8, r9 = __shuffle2(r0, r1);
+  r0, r1 = __shuffle2(r2, r3);
+  r2, r3 = __shuffle2(r4, r5);
+
+  r4, r5 = __shuffle4(r6, r7);
+  r6, r7 = __shuffle4(r8, r9);
+  r8, r9 = __shuffle4(r0, r1);
+  r0, r1 = __shuffle4(r2, r3);
+
+  r2, r3 = __shuffle8(r4, r5);
+  r4, r5 = __shuffle8(r6, r7);
+  r6, r7 = __shuffle8(r8, r9);
+  r8, r9 = __shuffle8(r0, r1);
+
+  r0, r1 = __shuffle16(r2, r3);
+  r2, r3 = __shuffle16(r4, r5);
+  r4, r5 = __shuffle16(r6, r7);
+  r6, r7 = __shuffle16(r8, r9);
+
+  return r0, r1, r2, r3, r4, r5, r6, r7;
+}
+// Transform from bitreversed order to AVX order
+inline
+fn __nttunpack256(reg u512 r0 r1 r2 r3 r4 r5 r6 r7)
+    -> reg u512, reg u512, reg u512, reg u512, reg u512, reg u512, reg u512, reg u512
+{
+  reg u512 r8 r9;
+  r8, r9 = __shuffle16(r0, r1);
+  r0, r1 = __shuffle16(r2, r3);
+  r2, r3 = __shuffle16(r4, r5);
+  r4, r5 = __shuffle16(r6, r7);
+
+  r6, r7 = __shuffle8(r8, r9);
+  r8, r9 = __shuffle8(r0, r1);
+  r0, r1 = __shuffle8(r2, r3);
+  r2, r3 = __shuffle8(r4, r5);
+
+  r4, r5 = __shuffle4(r6, r7);
+  r6, r7 = __shuffle4(r8, r9);
+  r8, r9 = __shuffle4(r0, r1);
+  r0, r1 = __shuffle4(r2, r3);
+
+  r2, r3 = __shuffle2(r4, r5);
+  r4, r5 = __shuffle2(r6, r7);
+  r6, r7 = __shuffle2(r8, r9);
+  r8, r9 = __shuffle2(r0, r1);
+
+  r0, r1 = __shuffle1(r2, r3);
+  r2, r3 = __shuffle1(r4, r5);
+  r4, r5 = __shuffle1(r6, r7);
+  r6, r7 = __shuffle1(r8, r9);
+
+  return r0, r1, r2, r3, r4, r5, r6, r7;
+}
+
+export fn poly_nttpack(reg ptr u16[MLKEM_N] rp) -> reg ptr u16[MLKEM_N]
+{
+  reg u512 r0 r1 r2 r3 r4 r5 r6 r7;
+
+  r0 = rp.[u512 64*0];
+  r1 = rp.[u512 64*1];
+  r2 = rp.[u512 64*2];
+  r3 = rp.[u512 64*3];
+  r4 = rp.[u512 64*4];
+  r5 = rp.[u512 64*5];
+  r6 = rp.[u512 64*6];
+  r7 = rp.[u512 64*7];
+
+  r0, r1, r2, r3, r4, r5, r6, r7 = __nttpack256(r0, r1, r2, r3, r4, r5, r6, r7);
+
+  rp.[u512 64*0] = r0;
+  rp.[u512 64*1] = r1;
+  rp.[u512 64*2] = r2;
+  rp.[u512 64*3] = r3;
+  rp.[u512 64*4] = r4;
+  rp.[u512 64*5] = r5;
+  rp.[u512 64*6] = r6;
+  rp.[u512 64*7] = r7;
+
+  return rp;
+}
+
+export fn poly_nttunpack(reg ptr u16[MLKEM_N] rp) -> reg ptr u16[MLKEM_N]
+{
+  reg u512 r0 r1 r2 r3 r4 r5 r6 r7;
+
+  r0 = rp.[u512 64*0];
+  r1 = rp.[u512 64*1];
+  r2 = rp.[u512 64*2];
+  r3 = rp.[u512 64*3];
+  r4 = rp.[u512 64*4];
+  r5 = rp.[u512 64*5];
+  r6 = rp.[u512 64*6];
+  r7 = rp.[u512 64*7];
+
+  r0, r1, r2, r3, r4, r5, r6, r7 = __nttunpack256(r0, r1, r2, r3, r4, r5, r6, r7);
+
+  rp.[u512 64*0] = r0;
+  rp.[u512 64*1] = r1;
+  rp.[u512 64*2] = r2;
+  rp.[u512 64*3] = r3;
+  rp.[u512 64*4] = r4;
+  rp.[u512 64*5] = r5;
+  rp.[u512 64*6] = r6;
+  rp.[u512 64*7] = r7;
+
+  return rp;
+}

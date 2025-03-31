@@ -328,7 +328,7 @@ Definition prim_8_64 := prim_range [:: U64; U32; U16; U8 ].
 Definition prim_16_64 := prim_range [:: U64; U32; U16 ].
 Definition prim_32_64 := prim_range [:: U64; U32 ].
 Definition prim_128_256 := prim_range [:: U128; U256 ].
-Definition prim_128_512 := prim_range [:: U128; U256; U512 ].
+Definition prim_128_512 := prim_range [:: U128; U512 ].
 Definition prim_512 := prim_range [:: U512 ].
 Definition prim_256_512 := prim_range [:: U256; U512 ].
 Let prim_movxx range (f: wsize → wsize → x86_op) :=
@@ -630,32 +630,6 @@ let (name, ext) :=
 {| pp_aop_name := name;
   pp_aop_ext  := ext;
   pp_aop_args := map_sz sz args; |}.
-
-
-Definition pp_vpor sz (args: asm_args) :=
-let (name, ext) :=
-    match sz with
-    | U128 => ("vpor"%string, PP_name)
-    | U256 => ("vpor"%string, PP_name)
-    | U512 => ("vpord"%string, PP_name)
-    | _   => (""%string, PP_error)
-    end in
-{| pp_aop_name := name;
-  pp_aop_ext  := ext;
-  pp_aop_args := map_sz sz args; |}.
-
-
-  Definition pp_vpandn sz (args: asm_args) :=
-  let (name, ext) :=
-      match sz with
-      | U128 => ("vpandn"%string, PP_name)
-      | U256 => ("vpandn"%string, PP_name)
-      | U512 => ("vpandnd"%string, PP_name)
-      | _   => (""%string, PP_error)
-      end in
-  {| pp_aop_name := name;
-    pp_aop_ext  := ext;
-    pp_aop_args := map_sz sz args; |}.
 
 
 Definition pp_vmovdqu sz (args: asm_args) :=
@@ -1462,11 +1436,11 @@ Definition Ox86_VPAND_instr  := mk_instr_w2_w_120    "VPAND"   x86_VPAND  check_
 
 Definition x86_VPANDN sz := x86_u128_binop (@wandn sz).
 
-Definition Ox86_VPANDN_instr := mk_instr_w2_w_120    "VPANDN"  x86_VPANDN check_xmm_xmm_xmmm (prim_128_512 VPANDN) size_128_512 pp_vpandn.
+Definition Ox86_VPANDN_instr := mk_instr_w2_w_120    "VPANDN"  x86_VPANDN check_xmm_xmm_xmmm (prim_128_512 VPANDN) size_128_512 (pp_name "vpandn").
 
 Definition x86_VPOR sz := x86_u128_binop (@wor sz).
 
-Definition Ox86_VPOR_instr   := mk_instr_w2_w_120    "VPOR"    x86_VPOR   check_xmm_xmm_xmmm (prim_128_512 VPOR) size_128_512 pp_vpor.
+Definition Ox86_VPOR_instr   := mk_instr_w2_w_120    "VPOR"    x86_VPOR   check_xmm_xmm_xmmm (prim_128_512 VPOR) size_128_512 (pp_name "vpor").
 
 Definition x86_VPXOR sz := x86_u128_binop (@wxor sz).
 
@@ -1914,7 +1888,7 @@ Definition x86_VPERMQ512 (v1 v2: u512) : tpl (w_ty U512) :=
 
 Definition Ox86_VPERMQ512_instr :=
   mk_instr_pp "VPERMQ512" w512x2_ty w512_ty [:: Eu 1; Eu 2] [:: Eu 0] MSB_CLEAR x86_VPERMQ512
-              (check_xmm_xmm_xmmm U512) 3 (primM VPERMQ512) (pp_name_ty "vpermq" [::U512;U512;U512]).
+              (check_xmm_xmmm U512) 3 (primM VPERMQ512) (pp_name_ty "vpermq" [::U512;U512;U512]).
 
 Definition x86_VPMOVMSKB ssz dsz (v : word ssz): tpl (w_ty dsz) :=
   wpmovmskb dsz v.
