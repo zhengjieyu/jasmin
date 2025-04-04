@@ -28,3 +28,25 @@ inline fn __fqmulx32(reg u512 a b qx32 qinvx32) -> reg u512
 
   return rd;
 }
+
+inline
+fn mont_red(reg u512 lo hi qx32 qinvx32) -> reg u512 {
+  reg u512 m;
+
+  m  = #VPMULL_32u16(lo, qinvx32);
+  m  = #VPMULH_32u16(m, qx32);
+  lo = #VPSUB_32u16(hi, m);
+
+  return lo;
+}
+
+inline 
+fn __csubq(reg u512 r qx16) -> reg u512
+{
+  reg u512 t;
+  r = #VPSUB_32u16(r, qx16);
+  t = #VPSRA_32u16(r, 15);
+  t = #VPAND_512(t, qx16);
+  r = #VPADD_32u16(t, r);
+  return r;
+}

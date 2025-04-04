@@ -1,12 +1,5 @@
-param int SHAKE128_RATE = 168;
-param int SHAKE256_RATE = 136;
-param int SHA3_256_RATE = 136;
-param int SHA3_512_RATE = 72;
-
-param int SHAKE128_RATE = 168;
-param int SHAKE256_RATE = 136;
-param int SHA3_512_RATE = 72;
-
+require "params.jinc"
+require "fips202_common.jinc"
 inline
 fn __index(inline int x, inline int y) -> inline int {
   inline int r;
@@ -400,7 +393,7 @@ fn __shake256(reg u64 out outlen in inlen)
 }
 
 
-fn _shake256_128_33(reg ptr u8[128] out, reg const ptr u8[33] in) -> stack u8[128]
+fn _shake256_128_33(reg ptr u8[128] out, reg const ptr u8[33] in) -> reg ptr u8[128]
 {
   stack u64[25] state;
   reg u8 c;
@@ -430,7 +423,7 @@ fn _shake256_128_33(reg ptr u8[128] out, reg const ptr u8[33] in) -> stack u8[12
   return out;
 }
 
-fn _sha3512_32(reg ptr u8[64] out, reg const ptr u8[32] in) -> stack u8[64]
+fn _sha3512_32(reg ptr u8[64] out, reg const ptr u8[32] in) -> reg ptr u8[64]
 {
   stack u64[25] state;
   reg u8 c;
@@ -536,7 +529,7 @@ fn _isha3_256(reg ptr u8[32] out, reg u64 in inlen) -> reg ptr u8[32]
 }
 
 #[returnaddress="stack"]
-fn _isha3_256_32(reg ptr u8[32] out, reg ptr u8[KYBER_SYMBYTES] in) -> reg ptr u8[32]
+fn _isha3_256_32(reg ptr u8[32] out, reg ptr u8[MLKEM_SYMBYTES] in) -> reg ptr u8[32]
 {
   stack u64[25] state;
   stack ptr u8[32] s_out;
@@ -547,13 +540,13 @@ fn _isha3_256_32(reg ptr u8[32] out, reg ptr u8[KYBER_SYMBYTES] in) -> reg ptr u
 
   state = __st0(state);
 
-  for i=0 to KYBER_SYMBYTES/8
+  for i=0 to MLKEM_SYMBYTES/8
   {
     t64 = in[u64 i];
     state[u64 i] = t64;
   }
 
-  state[u8 KYBER_SYMBYTES] ^= 0x06;
+  state[u8 MLKEM_SYMBYTES] ^= 0x06;
   state[u8 SHA3_256_RATE - 1] = 0x80;
 
   state = __keccakf1600_ref(state);
@@ -571,7 +564,7 @@ fn _isha3_256_32(reg ptr u8[32] out, reg ptr u8[KYBER_SYMBYTES] in) -> reg ptr u
 
 
 #[returnaddress="stack"]
-fn _sha3_512_64(reg ptr u8[64] out, reg const ptr u8[64] in) -> stack u8[64]
+fn _sha3_512_64(reg ptr u8[64] out, reg const ptr u8[64] in) -> reg ptr u8[64]
 {
   stack u64[25] state;
   stack ptr u8[64] out_s;

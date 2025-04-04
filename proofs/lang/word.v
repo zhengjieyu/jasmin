@@ -1568,6 +1568,10 @@ Definition wpinsr ve (v: u128) (w: word ve) (i: u8) : u128 :=
 Definition winserti128 (v: u256) (w: u128) (i: u8) : u256 :=
   let v := split_vec U128 v in
   make_vec U256 (if lsb i then [:: v`_0 ; w ] else [:: w ; v`_1 ])%R.
+(* -------------------------------------------------------------------*)
+Definition winserti64x4 (v: u512) (w: u256) (i: u8) : u512 :=
+  let v := split_vec U256 v in
+  make_vec U512 (if lsb i then [:: v`_0 ; w ] else [:: w ; v`_1 ])%R.
 
 (* -------------------------------------------------------------------*)
 Definition wpblendd sz (w1 w2: word sz) (m: u8) : word sz :=

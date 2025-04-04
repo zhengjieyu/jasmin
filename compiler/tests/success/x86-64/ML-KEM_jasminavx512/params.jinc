@@ -4,6 +4,7 @@ param int DMONT = 1353;
 param int MLKEM_K = 3;
 
 param int MLKEM_Q = 3329;
+param int MLKEM_QINV = -3327;
 param int MLKEM_N = 256;
 param int MLKEM_VECN = MLKEM_K * MLKEM_N;
 

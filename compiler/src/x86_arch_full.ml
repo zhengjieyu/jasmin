@@ -138,8 +138,10 @@ module X86_core = struct
     | VBROADCASTI64X4 -> true
     | VEXTRACTI128 -> true
     | VEXTRACTI64X2 -> true
+    | VEXTRACTI64X4 -> true
     | VEXTRACTI32X8 -> true
     | VINSERTI128 -> true
+    | VINSERTI64X4 -> true
     | VMOV _ -> true
     | VMOVDQA _ -> true
     | VMOVDQU _ -> true

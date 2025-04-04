@@ -1,0 +1,142 @@
+require "params.jinc"
+
+fn _poly_add_avx512(reg ptr u16[MLDSA_N] rp bp) -> reg ptr u16[MLDSA_N]
+{
+    inline int i;
+    reg u512 a;
+    reg u512 b;
+    reg u512 r;
+    for i = 0 to 8 {
+        a = rp.[u512 64*i];
+        b = bp.[u512 64*i];
+        r = #VPADD_32u16(a, b);
+        rp.[u512 64*i] = r;
+    }
+    return rp;
+}
+export fn poly_add_jazz_avx512(reg u64 rp, reg u64 bp)
+{
+    stack u16[MLDSA_N] r;
+    stack u16[MLDSA_N] b;
+    reg u16 t;
+    inline int i;
+    for i = 0 to MLDSA_N {
+        t = (u16)[rp + 2*i];
+        r[i] = t;
+        t = (u16)[bp + 2*i];
+        b[i] = t;
+    }
+    r = _poly_add_avx512(r, b);
+    for i = 0 to MLDSA_N {
+        t = r[i];
+        (u16)[rp + 2*i] = t;
+    }
+}
+
+fn _poly_sub_avx512(reg ptr u16[MLDSA_N] rp bp)  -> reg ptr u16[MLDSA_N]
+{
+    inline int i;
+    reg u512 a;
+    reg u512 b;
+    reg u512 r;
+    for i = 0 to 8 {
+        a = rp.[u512 64*i];
+        b = bp.[u512 64*i];
+        r = #VPSUB_32u16(a, b);
+        rp.[u512 64*i] = r;
+    }
+    return rp;
+}
+export fn poly_sub_jazz_avx512(reg u64 rp, reg u64 bp)
+{
+    stack u16[MLDSA_N] r;
+    stack u16[MLDSA_N] b;
+    reg u16 t;
+    inline int i;
+    for i = 0 to MLDSA_N {
+        t = (u16)[rp + 2*i];
+        r[i] = t;
+        t = (u16)[bp + 2*i];
+        b[i] = t;
+    }
+    r = _poly_sub_avx512(r, b);
+    for i = 0 to MLDSA_N {
+        t = r[i];
+        (u16)[rp + 2*i] = t;
+    }
+}
+
+fn _poly_shiftl(reg ptr u16[MLDSA_N] rp) -> reg ptr u16[MLDSA_N]
+{
+  reg u512 f;
+  inline int i;
+  for i = 0 to MLDSA_N/16
+  {
+    f = rp[u512 i];
+    f = #VPSLL_16u32(f, MLDSA_D);
+    rp[u512 i] = f;
+  }
+}
+
+export fn poly_shiftl_jazz(reg u64 rp) 
+{
+  inline int i;
+  reg u16 t;
+  stack u16[MLDSA_N] r;
+
+  for i = 0 to MLDSA_N {
+    t = (u16)[rp + 2*i];
+    r[i] = t;
+  }
+
+  r = _poly_shiftl(r);
+
+  for i = 0 to MLDSA_N {
+    t = r[i];
+    (u16)[rp + 2*i] = t;
+  }
+}
+u8[64] idx64_etapack = {0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40, 42, 44, 46, 48, 50, 52, 54, 56, 58, 60, 62, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63};
+fn _polyeta_pack(reg u64 rp, reg ptr u16[MLDSA_N] a) -> reg ptr u16[MLDSA_N]
+{
+    inline int i;
+    reg u8[MLDSA_N] t;
+    for i = 0 to MLDSA_N
+    {
+        t[i] = a[i];
+    }
+    reg u512 idx64 s_vec mask_vec eta tmp;
+    mask_vec = #VPBROADCAST_32u16(0xff);
+    eta = #VPBROADCAST_64u8(4);
+    idx64 = idx64_etapack[u512 0];
+    for i = 0 to 4
+    {
+        s_vec = t[u512 i];
+        s_vec = #VPSUB_64u8(eta, s_vec);
+        tmp = #VPSRL_32u16(s_vec, 4);
+        s_vec = #VPXOR_512(s_vec, tmp);
+        s_vec = #VPAND_512(s_vec, mask_vec);
+        s_vec =#VPERMB_512(idx64, s_vec);
+        rp[u512 i] = s_vec;
+    }
+    return rp; 
+}
+
+export fn polyeta_pack_jazz(reg u64 rp, reg u64 ap) 
+{
+  stack u16[MLDSA_N] a;
+  reg u16 t;
+  inline int i;
+
+  for i = 0 to MLDSA_N {
+    t = (u16)[ap + 2*i];
+    a[i] = t;
+  }
+  
+  a = _polyeta_pack(rp, a);
+}
+u8[64] idx64_etaunpack = 
+fn _polyeta_unpack(reg ptr u16[MLDSA_N] rp, reg u64 ap) -> reg ptr u16[MLDSA_N]
+{
+    
+}

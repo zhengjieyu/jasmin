@@ -146,8 +146,10 @@ Variant x86_op : Type :=
 | VPUNPCKL `(velem) `(wsize)
 | VEXTRACTI128
 | VEXTRACTI64X2
+| VEXTRACTI64X4
 | VEXTRACTI32X8
 | VINSERTI128
+| VINSERTI64X4
 | VSHUFI32X4
 | VPERM2I128
 | VPERMD `(wsize)
@@ -243,6 +245,7 @@ Definition w128ww8_ty sz    := [:: sword128; sword sz; sword8].
 Definition w256w8_ty        := [:: sword256; sword8].
 Definition w512w8_ty        := [:: sword512; sword8].
 Definition w256w128w8_ty    := [:: sword256; sword128; sword8].
+Definition w512w256w8_ty    := [:: sword512; sword256; sword8].
 Definition w256x2w8_ty      := [:: sword256; sword256; sword8].
 Definition w256w512_ty      := [:: sword256; sword512].
 Definition w512x2w8_ty      := [:: sword512; sword512; sword8].
@@ -1834,6 +1837,14 @@ mk_instr_pp "VEXTRACTI64X2" w512w8_ty w128_ty [:: Eu 1; Eu 2] [:: Eu 0] MSB_CLEA
             (check_xmmm_xmm_imm8 U512) 3 (primM VEXTRACTI64X2) (pp_name_ty "vextracti64x2" [::U128; U512; U8]).
 
 
+Definition x86_VEXTRACTI64X4 (v: u512) (i: u8) : tpl (w_ty U256) :=
+let r := if lsb i then wshr v (Z.of_nat U256) else v in
+zero_extend U256 r.              
+Definition Ox86_VEXTRACTI64X4_instr :=
+mk_instr_pp "VEXTRACTI64X4" w512w8_ty w256_ty [:: Eu 1; Eu 2] [:: Eu 0] MSB_CLEAR x86_VEXTRACTI64X4
+            (check_xmmm_xmm_imm8 U512) 3 (primM VEXTRACTI64X4) (pp_name_ty "vextracti64x4" [::U256; U512; U8]).
+
+
 
 Definition x86_VEXTRACTI32X8 (v: u512) (i: u8) : tpl (w_ty U256) :=
   let r := if lsb i then wshr v (Z.of_nat U256) else v in
@@ -1850,6 +1861,13 @@ Definition x86_VINSERTI128 (v1: u256) (v2: u128) (m: u8) : tpl (w_ty U256) :=
 Definition Ox86_VINSERTI128_instr :=
   mk_instr_pp "VINSERTI128" w256w128w8_ty w256_ty [:: Eu 1; Eu 2; Eu 3] [:: Eu 0] MSB_CLEAR x86_VINSERTI128
               (check_xmm_xmm_xmmm_imm8 U256) 4 (primM VINSERTI128) (pp_name_ty "vinserti128" [::U256;U256; U128; U8]).
+
+Definition x86_VINSERTI64X4 (v1: u512) (v2: u256) (m: u8) : tpl (w_ty U512) :=
+  winserti64x4 v1 v2 m.
+
+Definition Ox86_VINSERTI64X4_instr :=
+  mk_instr_pp "VINSERTI64X4" w512w256w8_ty w512_ty [:: Eu 1; Eu 2; Eu 3] [:: Eu 0] MSB_CLEAR x86_VINSERTI64X4
+              (check_xmm_xmm_xmmm_imm8 U512) 4 (primM VINSERTI64X4) (pp_name_ty "vinserti64x4" [::U512;U512; U256; U8]).
 
 Definition x86_VPERM2I128 (v1 v2: u256) (m: u8) : tpl (w_ty U256) :=
   wperm2i128 v1 v2 m.
@@ -1888,7 +1906,7 @@ Definition x86_VPERMQ512 (v1 v2: u512) : tpl (w_ty U512) :=
 
 Definition Ox86_VPERMQ512_instr :=
   mk_instr_pp "VPERMQ512" w512x2_ty w512_ty [:: Eu 1; Eu 2] [:: Eu 0] MSB_CLEAR x86_VPERMQ512
-              (check_xmm_xmmm U512) 3 (primM VPERMQ512) (pp_name_ty "vpermq" [::U512;U512;U512]).
+              (check_xmm_xmm_xmmm U512) 3 (primM VPERMQ512) (pp_name_ty "vpermq" [::U512;U512;U512]).
 
 Definition x86_VPMOVMSKB ssz dsz (v : word ssz): tpl (w_ty dsz) :=
   wpmovmskb dsz v.
@@ -2323,6 +2341,7 @@ Definition x86_instr_desc o : instr_desc_t :=
   | VPINSR sz          => Ox86_VPINSR_instr.1 sz
   | VEXTRACTI128       => Ox86_VEXTRACTI128_instr.1
   | VEXTRACTI64X2       => Ox86_VEXTRACTI64X2_instr.1
+  | VEXTRACTI64X4       => Ox86_VEXTRACTI64X4_instr.1
   | VEXTRACTI32X8       => Ox86_VEXTRACTI32X8_instr.1
   | VMOVDQA sz         => Ox86_VMOVDQA_instr.1 sz
   | VMOVDQU sz         => Ox86_VMOVDQU_instr.1 sz
@@ -2375,6 +2394,7 @@ Definition x86_instr_desc o : instr_desc_t :=
   | VPERMQ sz            => Ox86_VPERMQ_instr.1 sz
   | VPERMQ512             => Ox86_VPERMQ512_instr.1
   | VINSERTI128        => Ox86_VINSERTI128_instr.1
+  | VINSERTI64X4        => Ox86_VINSERTI64X4_instr.1
   | VSHUFI32X4         => Ox86_VSHUFI32X4_instr.1
   | VPEXTR ve          => Ox86_VPEXTR_instr.1 ve
   | VPMOVMSKB sz sz'   => Ox86_PMOVMSKB_instr.1 sz sz'
@@ -2487,6 +2507,7 @@ Definition x86_prim_string :=
    Ox86_VPINSR_instr.2;
    Ox86_VEXTRACTI128_instr.2;
    Ox86_VEXTRACTI64X2_instr.2;
+   Ox86_VEXTRACTI64X4_instr.2;
    Ox86_VEXTRACTI32X8_instr.2;
    Ox86_VMOVDQA_instr.2;
    Ox86_VMOVDQU_instr.2;
@@ -2537,6 +2558,7 @@ Definition x86_prim_string :=
    Ox86_VPERMQ_instr.2;
    Ox86_VPERMQ512_instr.2;
    Ox86_VINSERTI128_instr.2;
+   Ox86_VINSERTI64X4_instr.2;
    Ox86_VSHUFI32X4_instr.2;
    Ox86_VSHUFPS_instr.2;
    Ox86_VPEXTR_instr.2;
