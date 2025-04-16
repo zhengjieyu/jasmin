@@ -4,7 +4,7 @@ open Wsize
 
 module type X86_input = sig
 
- val call_conv : (register, register_ext, xmm_register, rflag, condt) calling_convention
+ val call_conv : (register, register_ext, xmm_register, register_mask, rflag, condt) calling_convention
  val lowering_opt : X86_lowering.lowering_options
 
 end
@@ -24,6 +24,7 @@ module X86_core = struct
   type reg = register
   type regx = register_ext
   type xreg = xmm_register
+  type regmask = register_mask
   type nonrec rflag = rflag
   type cond = condt
   type asm_op = X86_instr_decl.x86_op
@@ -234,6 +235,7 @@ module X86 (Lowering_params : X86_input) :
     with type reg = register
      and type regx = register_ext
      and type xreg = xmm_register
+     and type regmask = register_mask
      and type rflag = rflag
      and type cond = condt
      and type asm_op = X86_instr_decl.x86_op

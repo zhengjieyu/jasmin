@@ -153,11 +153,11 @@ Definition assemble_extra
 
 #[ export ]
 Instance riscv_extra {atoI : arch_toIdent} :
-  asm_extra register register_ext xregister rflag condt riscv_op riscv_extra_op :=
+  asm_extra register register_ext xregister register_mask rflag condt riscv_op riscv_extra_op :=
   { to_asm := assemble_extra }.
 
 (* This concise name is convenient in OCaml code. *)
 Definition riscv_extended_op {atoI : arch_toIdent} :=
-  @extended_op _ _ _ _ _ _ _ riscv_extra.
+  extended_op (asm_e := riscv_extra).
 
 Definition Oriscv {atoI : arch_toIdent} o : @sopn riscv_extended_op _ := Oasm (BaseOp (None, o)).

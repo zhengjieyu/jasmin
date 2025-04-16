@@ -4,7 +4,7 @@ open Riscv_decl
 open Riscv_extra
 
 module type Riscv_input = sig
-  val call_conv : (register, Arch_utils.empty, Arch_utils.empty, Arch_utils.empty, condt) calling_convention
+  val call_conv : (register, Arch_utils.empty, Arch_utils.empty, Arch_utils.empty, Arch_utils.empty, condt) calling_convention
 
 end
 
@@ -12,6 +12,7 @@ module Riscv_core = struct
   type reg = register
   type regx = Arch_utils.empty
   type xreg = Arch_utils.empty
+  type regmask = Arch_utils.empty
   type rflag =  Arch_utils.empty
   type cond = condt
   type asm_op = Riscv_instr_decl.riscv_op

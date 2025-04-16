@@ -22,9 +22,10 @@ val run :
       and type extra_op = 'extra_op
       and type reg = 'reg
       and type regx = 'regx
+      and type regmask = 'regmask
       and type rflag = 'rflag
       and type xreg = 'xreg) ->
-  ('reg, 'regx, 'xreg, 'rflag, 'cond, 'asm_op, 'extra_op) Arch_extra.extended_op
+  ('reg, 'regx, 'xreg, 'regmask, 'rflag, 'cond, 'asm_op, 'extra_op) Arch_extra.extended_op
   Expr.uprog ->
   Expr.instr_info ->
   CoreIdent.funname ->

@@ -42,5 +42,5 @@ Definition x86_eval_cond (get : rflag -> result error bool) (c : condt) :=
   end.
 
 #[global]
-Instance x86 : asm register register_ext xmm_register rflag condt x86_op :=
+Instance x86 : asm register register_ext xmm_register register_mask rflag condt x86_op :=
   {| eval_cond := fun _ => x86_eval_cond |}.

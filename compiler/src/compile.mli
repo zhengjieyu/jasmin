@@ -13,14 +13,15 @@ val preprocess : wsize -> 'asm asmOp -> (unit, 'asm) pprog -> (unit, 'asm) prog
  *)
 
 val parse_file :
-  ('reg, 'regx, 'xreg, 'rflag, 'cond, 'asm_op, 'extra_op) Pretyping.arch_info ->
+  ('reg, 'regx, 'xreg, 'regmask, 'rflag, 'cond, 'asm_op, 'extra_op) Pretyping.arch_info ->
   string ->
-  ('reg, 'regx, 'xreg, 'rflag, 'cond, 'asm_op, 'extra_op) Arch_extra.extended_op
+  ('reg, 'regx, 'xreg, 'regmask, 'rflag, 'cond, 'asm_op, 'extra_op) Arch_extra.extended_op
   Pretyping.Env.env
   * ( unit,
       ( 'reg,
         'regx,
         'xreg,
+        'regmask,
         'rflag,
         'cond,
         'asm_op,
@@ -55,6 +56,7 @@ val compile :
     ( 'reg,
       'regx,
       'xreg,
+      'regmask,
       'rflag,
       'cond,
       'asm_op,
@@ -64,7 +66,7 @@ val compile :
   prog ->
   unit) ->
   _ prog ->
-  ('reg, 'regx, 'xreg, 'rflag, 'cond, 'asm_op, 'extra_op) Arch_extra.extended_op
+  ('reg, 'regx, 'xreg, 'regmask, 'rflag, 'cond, 'asm_op, 'extra_op) Arch_extra.extended_op
   Expr._uprog ->
-  ('reg, 'regx, 'xreg, 'rflag, 'cond, 'asm_op) Arch_decl.asm_prog
+  ('reg, 'regx, 'xreg, 'regmask, 'rflag, 'cond, 'asm_op) Arch_decl.asm_prog
   Compiler_util.cexec

@@ -94,12 +94,13 @@ let pp_address addr =
   | Areg ra -> pp_reg_address ra
   | Arip r -> pp_rip_address r
 
-let pp_asm_arg (arg : (register, Arch_utils.empty, Arch_utils.empty, rflag, condt) asm_arg) =
+let pp_asm_arg (arg : (register, Arch_utils.empty, Arch_utils.empty, Arch_utils.empty, rflag, condt) asm_arg) =
   match arg with
   | Condt _ -> None
   | Imm (ws, w) -> Some (pp_imm (Conv.z_unsigned_of_word ws w))
   | Reg r -> Some (pp_register r)
   | Regx _ -> .
+  | Regmask _ -> .
   | Addr addr -> Some (pp_address addr)
   | XReg _ -> .
 
@@ -156,7 +157,7 @@ module ArgChecker : sig
      Raise an error if the arguments are invalid. *)
   val check_args :
     arm_op ->
-    (Wsize.wsize * (register, Arch_utils.empty, Arch_utils.empty, rflag, condt) asm_arg)
+    (Wsize.wsize * (register, Arch_utils.empty, Arch_utils.empty,  Arch_utils.empty, rflag, condt) asm_arg)
     list ->
     string
 end = struct

@@ -327,6 +327,7 @@ Definition arm_linux_call_conv : calling_convention :=
    ; callee_saved_not_bool := erefl true
    ; call_reg_args  := [:: R00; R01; R02; R03 ]
    ; call_xreg_args := [::]
+   ; call_regmask_args := [::]
    ; call_reg_ret   := [:: R00; R01 ]
    ; call_xreg_ret  := [::]
    ; call_reg_ret_uniq := erefl true;

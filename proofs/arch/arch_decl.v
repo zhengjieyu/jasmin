@@ -207,13 +207,13 @@ Definition Imm_inj sz sz' w w' (e: @Imm sz w = @Imm sz' w') :
 
 Lemma asm_arg_eq_axiom : Equality.axiom asm_arg_beq.
 Proof.
-Admitted.
-  (* case => [t1 | sz1 w1 | r1 | r1 | a1 | xr1] [t2 | sz2 w2 | r2 | r2 | a2 | xr2] /=;
+  case => [t1 | sz1 w1 | r1 | r1 | r1 | a1 | xr1] [t2 | sz2 w2 | r2 | r2 | r2 | a2 | xr2] /=;
     try by (constructor || apply: reflect_inj eqP => ?? []).
   apply: (iffP idP) => //=.
   + by move=> /andP [] /eqP ? /eqP; subst => /wunsigned_inj ->.
   by move=> /Imm_inj [? ];subst => /= ->;rewrite !eqxx.
-Qed. *)
+Qed.
+
 
 HB.instance Definition _ := hasDecEq.Build asm_arg asm_arg_eq_axiom.
 
@@ -661,6 +661,7 @@ Class calling_convention :=
   ; callee_saved_not_bool : all (fun r => ~~is_ABReg r) callee_saved
   ; call_reg_args  : seq reg_t
   ; call_xreg_args : seq xreg_t
+  ; call_regmask_args : seq regmask_t
   ; call_reg_ret   : seq reg_t
   ; call_xreg_ret  : seq xreg_t
   ; call_reg_ret_uniq : uniq (T:= @ceqT_eqType _ _) call_reg_ret

@@ -161,6 +161,7 @@ Instance riscv_fcp : FlagCombinationParams :=
 Notation register_ext := empty.
 Notation xregister := empty.
 Notation rflag := empty.
+Notation register_mask := empty.
 
 Definition riscv_check_CAimm (checker : caimm_checker_s) ws (w : word ws) : bool :=
   match checker with
@@ -175,13 +176,14 @@ Definition riscv_check_CAimm (checker : caimm_checker_s) ws (w : word ws) : bool
   end.
 
 #[ export ]
-Instance riscv_decl : arch_decl register register_ext xregister rflag condt :=
+Instance riscv_decl : arch_decl register register_ext xregister register_mask rflag condt :=
   { reg_size  := riscv_reg_size
   ; xreg_size := riscv_xreg_size
   ; cond_eqC  := eqTC_condt
   ; toS_r     := reg_toS
   ; toS_rx    := empty_toS sword32
   ; toS_x     := empty_toS sword64
+  ; toS_regmask    := empty_toS sword32
   ; toS_f     := empty_toS sbool
   ; reg_size_neq_xreg_size := refl_equal
   ; ad_rsp := SP
@@ -197,6 +199,7 @@ Instance riscv_decl : arch_decl register register_ext xregister rflag condt :=
    ; callee_saved_not_bool := erefl true
    ; call_reg_args  := [:: X10; X11; X12; X13; X14; X15; X16; X17 ]
    ; call_xreg_args := [::]
+   ; call_regmask_args := [::]
    ; call_reg_ret   := [:: X10; X11]
    ; call_xreg_ret  := [::]
    ; call_reg_ret_uniq := erefl true;

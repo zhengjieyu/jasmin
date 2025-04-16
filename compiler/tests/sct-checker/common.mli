@@ -7,6 +7,7 @@ val load_file :
     ( Arch.reg,
       Arch.regx,
       Arch.xreg,
+      Arch.regmask,
       Arch.rflag,
       Arch.cond,
       Arch.asm_op,

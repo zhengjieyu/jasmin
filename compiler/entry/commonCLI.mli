@@ -22,6 +22,7 @@ val parse_and_compile :
     ( 'reg,
       'regx,
       'xreg,
+      'regmask,
       'rflag,
       'cond,
       'asm_op,

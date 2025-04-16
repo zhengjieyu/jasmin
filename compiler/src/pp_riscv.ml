@@ -119,12 +119,13 @@ let pp_address addr =
   | Areg ra -> pp_reg_address ra
   | Arip r -> pp_rip_address r
 
-let pp_asm_arg (arg : (register, Arch_utils.empty, Arch_utils.empty, Arch_utils.empty, condt) asm_arg) =
+let pp_asm_arg (arg : (register, Arch_utils.empty, Arch_utils.empty, Arch_utils.empty, Arch_utils.empty, condt) asm_arg) =
   match arg with
   | Condt _ -> None
   | Imm (ws, w) -> Some (pp_imm (Conv.z_of_word ws w))
   | Reg r -> Some (pp_register r)
   | Regx _ -> .
+  | Regmask _ -> .
   | Addr addr -> Some (pp_address addr)
   | XReg _ -> .
 

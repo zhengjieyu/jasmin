@@ -640,4 +640,4 @@ Instance riscv_op_decl : asm_op_decl riscv_op :=
     prim_string := riscv_prim_string;
   |}.
 
-Definition riscv_prog := @asm_prog _ _ _ _ _ _ _ riscv_op_decl.
+  Definition riscv_prog := @asm_prog _ _ _ _ _ _ _ _ riscv_op_decl.

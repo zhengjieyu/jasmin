@@ -7,6 +7,7 @@ val print_instr :
     Arch_utils.empty,
     Arch_utils.empty,
     Arch_utils.empty,
+    Arch_utils.empty,
     Riscv_decl.condt,
     Riscv_instr_decl.riscv_op )
   Arch_decl.asm_i_r ->

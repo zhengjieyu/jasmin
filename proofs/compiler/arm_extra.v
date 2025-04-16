@@ -242,7 +242,7 @@ Instance arm_extra {atoI : arch_toIdent} :
   asm_extra register register_ext xregister register_mask rflag condt arm_op arm_extra_op :=
   { to_asm := assemble_extra }.
 
-About extended_op.
+
 (* This concise name is convenient in OCaml code. *)
 Definition arm_extended_op {atoI : arch_toIdent} :=
   extended_op (asm_e := arm_extra).

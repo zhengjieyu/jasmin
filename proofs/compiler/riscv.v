@@ -33,7 +33,7 @@ Definition riscv_eval_cond (get: register -> word riscv_reg_size) (c: condt) :
       (sem_cond_arg get c.(cond_snd))).
 
 #[ export ]
-Instance riscv : asm register register_ext xregister rflag condt riscv_op :=
+Instance riscv : asm register register_ext xregister register_mask rflag condt riscv_op :=
   {
     eval_cond := fun r _ => riscv_eval_cond r;
   }.
