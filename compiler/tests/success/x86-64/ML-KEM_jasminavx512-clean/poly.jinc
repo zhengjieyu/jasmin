@@ -65,7 +65,7 @@ u16 pc_shift1_s = 0x200;
 u16 pc_mask_s = 0x0F;
 u16 pc_shift2_s = 0x1001;
 u32[16] pc_permidx_s = {0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15};
-fn _poly_compress_1(reg ptr u8[MLKEM_POLYCOMPRESSEDBYTES] rp, reg ptr u16[MLKEM_N] a) -> reg ptr u8[MLKEM_POLYCOMPRESSEDBYTES], reg ptr u16[MLKEM_N]
+fn _poly_compress(reg ptr u8[MLKEM_POLYCOMPRESSEDBYTES] rp, reg ptr u16[MLKEM_N] a) -> reg ptr u8[MLKEM_POLYCOMPRESSEDBYTES], reg ptr u16[MLKEM_N]
 {
     inline int i;
     reg u512 v shift1 shift2 mask permidx f0 f1 f2 f3;
@@ -101,50 +101,11 @@ fn _poly_compress_1(reg ptr u8[MLKEM_POLYCOMPRESSEDBYTES] rp, reg ptr u16[MLKEM_
         f2 = #VPMADDUBSW_512(f2, shift2);
         f0 = #VPACKUS_32u16(f0, f2);
         f0 = #VPERMD_512(permidx, f0);
-        rp.[u512 64*i] = f0;
+        rp[u512 i] = f0;
     }
     return rp, a;
 }
-fn _poly_compress(reg u64 rp, reg ptr u16[MLKEM_N] a) -> reg ptr u16[MLKEM_N]
-{
-    inline int i;
-    reg u512 v shift1 shift2 mask permidx f0 f1 f2 f3;
-    reg ptr u16[32] x32p;
-    a = _poly_csubq(a);
-    x32p = jvx32;
-    v = x32p[u512 0];
-    shift1 = #VPBROADCAST_32u16(pc_shift1_s);
-    mask = #VPBROADCAST_32u16(pc_mask_s);
-    shift2 = #VPBROADCAST_32u16(pc_shift2_s);
-    permidx = pc_permidx_s[u512 0];
-    for i=0 to MLKEM_N/128
-    {
-        f0 = a[u512 4*i];
-        f1 = a[u512 4*i + 1];
-        f2 = a[u512 4*i + 2];
-        f3 = a[u512 4*i + 3];
-        f0 = #VPMULH_32u16(f0, v);
-        f1 = #VPMULH_32u16(f1, v);
-        f2 = #VPMULH_32u16(f2, v);
-        f3 = #VPMULH_32u16(f3, v); 
-        f0 = #VPMULHRS_32u16(f0, shift1);
-        f1 = #VPMULHRS_32u16(f1, shift1);
-        f2 = #VPMULHRS_32u16(f2, shift1);
-        f3 = #VPMULHRS_32u16(f3, shift1);
-        f0 = #VPAND_512(f0, mask);
-        f1 = #VPAND_512(f1, mask);
-        f2 = #VPAND_512(f2, mask);
-        f3 = #VPAND_512(f3, mask);
-        f0 = #VPACKUS_32u16(f0, f1);
-        f2 = #VPACKUS_32u16(f2, f3);
-        f0 = #VPMADDUBSW_512(f0, shift2);
-        f2 = #VPMADDUBSW_512(f2, shift2);
-        f0 = #VPACKUS_32u16(f0, f2);
-        f0 = #VPERMD_512(permidx, f0);
-        (u512)[rp + 64*i] = f0;
-    }
-    return a;
-}
+
 
 u8[64] pd_jshufbidx = {0,  0,  0,  0,  1,  1,  1,  1,  2,  2,  2,  2,  3,  3,  3,  3,  
 4,  4,  4,  4,  5,  5,  5,  5,  6,  6,  6,  6,  7,  7,  7,  7,  

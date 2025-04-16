@@ -198,8 +198,8 @@ Record compiler_params
 }.
 
 Context
-  {reg regx xreg rflag cond asm_op extra_op : Type}
-  {asm_e : asm_extra reg regx xreg rflag cond asm_op extra_op}
+  {reg regx xreg regmask rflag cond asm_op extra_op : Type}
+  {asm_e : asm_extra reg regx xreg regmask rflag cond asm_op extra_op}
   {syscall_state : Type}.
 
 Context

@@ -461,6 +461,7 @@ Definition pp_arg_kind c :=
   | CAcond => pp_s "cond"
   | CAreg => pp_s "reg"
   | CAregx => pp_s "regx"
+  | CAregmask => pp_s "regmask"
   | CAxmm => pp_s "xreg"
   end.
 
@@ -637,7 +638,7 @@ End ASM_EXTRA.
 
 Section OVM_I.
 
-Context {reg regx xreg rflag cond} {ad : arch_decl reg regx xreg rflag cond} {atoI : arch_toIdent} {call_conv: calling_convention}.
+Context {reg regx xreg regmask rflag cond} {ad : arch_decl reg regx xreg regmask rflag cond} {atoI : arch_toIdent} {call_conv: calling_convention}.
 
 Definition vflags := sv_of_list to_var rflags.
 

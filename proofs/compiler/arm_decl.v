@@ -25,7 +25,6 @@ Require Export arm_expand_imm.
 (* --------------------------------------------- *)
 Definition arm_reg_size  := U32.
 Definition arm_xreg_size := U64.
-
 (* -------------------------------------------------------------------- *)
 (* Registers. *)
 
@@ -295,6 +294,7 @@ Instance arm_fcp : FlagCombinationParams :=
 
 Notation register_ext := empty.
 Notation xregister := empty.
+Notation register_mask := empty.
 
 Definition arm_check_CAimm (checker : caimm_checker_s) ws (w : word ws) : bool :=
   match checker with
@@ -306,13 +306,14 @@ Definition arm_check_CAimm (checker : caimm_checker_s) ws (w : word ws) : bool :
   end.
 
 #[ export ]
-Instance arm_decl : arch_decl register register_ext xregister rflag condt :=
+Instance arm_decl : arch_decl register register_ext xregister register_mask rflag condt :=
   { reg_size  := arm_reg_size
   ; xreg_size := arm_xreg_size
   ; cond_eqC  := eqTC_condt
   ; toS_r     := reg_toS
   ; toS_rx    := empty_toS sword32
   ; toS_x     := empty_toS sword64
+  ; toS_regmask := empty_toS sword32
   ; toS_f     := rflag_toS
   ; reg_size_neq_xreg_size := refl_equal
   ; ad_rsp := SP

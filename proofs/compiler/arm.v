@@ -54,7 +54,7 @@ Definition arm_eval_cond (get: rflag -> result error bool) (c: condt) :
   end.
 
 #[ export ]
-Instance arm : asm register register_ext xregister rflag condt arm_op :=
+Instance arm : asm register register_ext xregister register_mask rflag condt arm_op :=
   {
     eval_cond := fun _ => arm_eval_cond;
   }.

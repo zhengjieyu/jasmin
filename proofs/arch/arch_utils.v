@@ -44,8 +44,8 @@ Instance empty_toS t : ToString t empty :=
 Section WITH_ARCH.
 
 Context
-  {reg regx xreg rflag cond : Type}
-  {ad : arch_decl reg regx xreg rflag cond}.
+  {reg regx xreg regmask rflag cond : Type}
+  {ad : arch_decl reg regx xreg regmask rflag cond}.
 
 Definition ak_reg_reg : i_args_kinds :=
     [:: [:: [:: CAreg ]; [:: CAreg ] ] ].
@@ -240,8 +240,8 @@ Proof. move=> /andP [-> hsize]. exact: size_beheadn. Qed.
 Section WITH_ARCH.
 
 Context
-  {reg regx xreg rflag cond : Type}
-  {ad : arch_decl reg regx xreg rflag cond}.
+  {reg regx xreg regmask rflag cond : Type}
+  {ad : arch_decl reg regx xreg regmask rflag cond}.
 
 Notation idt_dropn semi_dropn semi_errtyp semi_safe :=
   (fun idt =>

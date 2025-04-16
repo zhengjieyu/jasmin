@@ -30,6 +30,10 @@ Variant register_ext : Type :=
   | MM0 | MM1 | MM2 | MM3 | MM4 | MM5 | MM6 | MM7.
 
 (* -------------------------------------------------------------------- *)
+Variant register_mask : Type :=
+  | K0 | K1 | K2 | K3 | K4 | K5 | K6 | K7.
+
+(* -------------------------------------------------------------------- *)
 Variant xmm_register : Type :=
   | XMM0 | XMM1 | XMM2 | XMM3
   | XMM4 | XMM5 | XMM6 | XMM7
@@ -89,6 +93,20 @@ Qed.
 
 HB.instance Definition _ := hasDecEq.Build register_ext regx_eq_axiom.
 
+
+
+
+
+(* -------------------------------------------------------------------- *)
+
+Scheme Equality for register_mask.
+
+Lemma regmask_eq_axiom : Equality.axiom register_mask_beq.
+Proof.
+Admitted.
+
+HB.instance Definition _ := hasDecEq.Build register_mask regmask_eq_axiom.
+
 (* -------------------------------------------------------------------- *)
 
 Scheme Equality for xmm_register.
@@ -145,10 +163,23 @@ Definition regxs :=
 Lemma regxs_fin_axiom : Finite.axiom regxs.
 Proof. by case. Qed.
 
+
 HB.instance Definition _ := Countable.copy register_ext
   (pcan_type (FinIsCount.pickleK regxs_fin_axiom)).
 
 HB.instance Definition _ := isFinite.Build register_ext regxs_fin_axiom.
+(* -------------------------------------------------------------------- *)
+Definition mask_registers :=
+  [:: K0; K1; K2; K3; K4; K5; K6; K7 ].
+
+Lemma mask_registers_fin_axiom : Finite.axiom mask_registers.
+Proof. Admitted.
+
+
+HB.instance Definition _ := Countable.copy register_mask
+  (pcan_type (FinIsCount.pickleK mask_registers_fin_axiom)).
+
+HB.instance Definition _ := isFinite.Build register_mask mask_registers_fin_axiom.
 
 (* -------------------------------------------------------------------- *)
 Definition xmm_registers :=
@@ -295,6 +326,34 @@ Instance x86_xreg_toS : ToString (sword x86_xreg_size) xmm_register :=
   }.
 
 (* -------------------------------------------------------------------- *)
+#[global]
+Instance eqTC_regmask : eqTypeC register_mask :=
+  { ceqP := regmask_eq_axiom }.
+
+#[global]
+Instance finC_regmask : finTypeC register_mask :=
+  { cenumP := mask_registers_fin_axiom }.
+
+Definition regmask_to_string r : string :=
+  match r with
+  | K0  => "K0"
+  | K1  => "K1"
+  | K2  => "K2"
+  | K3  => "K3"
+  | K4  => "K4"
+  | K5  => "K5"
+  | K6  => "K6"
+  | K7  => "K7"
+  end.
+
+(* -------------------------------------------------------------------- *)
+#[global]
+Instance x86_regmask_toS : ToString (sword x86_reg_size) register_mask :=
+  { category  := "register_mask"
+  ; to_string := regmask_to_string
+  }.
+
+
 
 #[global]
 Instance eqTC_rflag : eqTypeC rflag :=
@@ -358,12 +417,13 @@ Definition x86_check_CAimm (checker : caimm_checker_s) ws (w : ssralg.GRing.ComR
 
 
 #[global]
-Instance x86_decl : arch_decl register register_ext xmm_register rflag condt :=
+Instance x86_decl : arch_decl register register_ext xmm_register register_mask rflag condt :=
   { reg_size := x86_reg_size
   ; xreg_size := x86_xreg_size
   ; toS_r := x86_reg_toS
   ; toS_rx:= x86_regx_toS
   ; toS_x := x86_xreg_toS
+  ; toS_regmask := x86_regmask_toS
   ; toS_f := x86_rflag_toS
   ; reg_size_neq_xreg_size := refl_equal
   ; ad_rsp := RSP

@@ -38,10 +38,12 @@ export fn poly_frommont_jazz(reg u64 rp)
   }
 }
 
-export fn poly_compress_jazz(reg u64 rp, reg u64 ap) 
+export fn poly_compress_jazz(reg u64 rp, reg u64 ap)
 {
   stack u16[MLKEM_N] a;
+  stack u8[MLKEM_POLYCOMPRESSEDBYTES] r;
   reg u16 t;
+  reg u8 t2;
   inline int i;
 
   for i = 0 to MLKEM_N {
@@ -49,7 +51,11 @@ export fn poly_compress_jazz(reg u64 rp, reg u64 ap)
     a[i] = t;
   }
 
-  a = _poly_compress(rp, a);
+  r, a = _poly_compress(r, a);
+  for i = 0 to MLKEM_N {
+    t2 = r[i];
+    (u8)[rp + i] = t2;
+  }
 }
 export fn poly_decompress_jazz(reg u64 rp, reg u64 ap) 
 {

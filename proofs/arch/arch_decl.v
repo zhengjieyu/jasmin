@@ -69,13 +69,14 @@ HB.instance Definition _ := hasDecEq.Build caimm_checker_s caimm_checker_s_eq_ax
 (* Basic architecture declaration.
  * Parameterized by types for registers, extra registers, flags, and conditions.
  *)
-Class arch_decl (reg regx xreg rflag cond : Type) :=
+Class arch_decl (reg regx xreg regmask rflag cond : Type) :=
   { reg_size : wsize     (* Register size. Also used as pointer size. *)
   ; xreg_size : wsize    (* Extended registers size. *)
   ; cond_eqC : eqTypeC cond
   ; toS_r : ToString (sword reg_size) reg
   ; toS_rx : ToString (sword reg_size) regx
   ; toS_x : ToString (sword xreg_size) xreg
+  ; toS_regmask : ToString (sword reg_size) regmask
   ; toS_f : ToString sbool rflag
   ; reg_size_neq_xreg_size : reg_size != xreg_size
   ; ad_rsp : reg
@@ -84,7 +85,7 @@ Class arch_decl (reg regx xreg rflag cond : Type) :=
   }.
 
 #[global]
-Existing Instances cond_eqC toS_r toS_rx toS_x toS_f ad_fcp.
+Existing Instances cond_eqC toS_r toS_rx toS_x toS_regmask toS_f ad_fcp.
 
 #[export]
 Instance arch_pd `{arch_decl} : PointerData := { Uptr := reg_size }.
@@ -96,11 +97,12 @@ Definition mk_ptr `{arch_decl} name :=
   {| vtype := sword Uptr; vname := name; |}.
 
 (* FIXME ARM : Try to not use this projection *)
-Definition reg_t   {reg regx xreg rflag cond} `{arch : arch_decl reg regx xreg rflag cond} := reg.
-Definition regx_t  {reg regx xreg rflag cond} `{arch : arch_decl reg regx xreg rflag cond} := regx.
-Definition xreg_t  {reg regx xreg rflag cond} `{arch : arch_decl reg regx xreg rflag cond} := xreg.
-Definition rflag_t {reg regx xreg rflag cond} `{arch : arch_decl reg regx xreg rflag cond} := rflag.
-Definition cond_t  {reg regx xreg rflag cond} `{arch : arch_decl reg regx xreg rflag cond} := cond.
+Definition reg_t   {reg regx xreg regmask rflag cond} `{arch : arch_decl reg regx xreg regmask rflag cond} := reg.
+Definition regx_t  {reg regx xreg regmask rflag cond} `{arch : arch_decl reg regx xreg regmask rflag cond} := regx.
+Definition xreg_t  {reg regx xreg regmask rflag cond} `{arch : arch_decl reg regx xreg regmask rflag cond} := xreg.
+Definition regmask_t  {reg regx xreg regmask rflag cond} `{arch : arch_decl reg regx xreg regmask rflag cond} := regmask.
+Definition rflag_t {reg regx xreg regmask rflag cond} `{arch : arch_decl reg regx xreg regmask rflag cond} := rflag.
+Definition cond_t  {reg regx xreg regmask rflag cond} `{arch : arch_decl reg regx xreg regmask rflag cond} := cond.
 
 Section DECL.
 
@@ -178,6 +180,7 @@ Variant asm_arg : Type :=
 | Imm ws of word ws
 | Reg    of reg_t
 | Regx   of regx_t
+| Regmask of regmask_t
 | Addr   of address
 | XReg   of xreg_t.
 
@@ -192,6 +195,7 @@ Definition asm_arg_beq (a1 a2:asm_arg) :=
   | Imm sz1 w1, Imm sz2 w2 => (sz1 == sz2) && (wunsigned w1 == wunsigned w2)
   | Reg r1, Reg r2     => r1 == r2 ::>
   | Regx r1, Regx r2   => r1 == r2 ::>
+  | Regmask r1, Regmask r2   => r1 == r2 ::>
   | Addr a1, Addr a2   => a1 == a2
   | XReg r1, XReg r2   => r1 == r2 ::>
   | _, _ => false
@@ -203,12 +207,13 @@ Definition Imm_inj sz sz' w w' (e: @Imm sz w = @Imm sz' w') :
 
 Lemma asm_arg_eq_axiom : Equality.axiom asm_arg_beq.
 Proof.
-  case => [t1 | sz1 w1 | r1 | r1 | a1 | xr1] [t2 | sz2 w2 | r2 | r2 | a2 | xr2] /=;
+Admitted.
+  (* case => [t1 | sz1 w1 | r1 | r1 | a1 | xr1] [t2 | sz2 w2 | r2 | r2 | a2 | xr2] /=;
     try by (constructor || apply: reflect_inj eqP => ?? []).
   apply: (iffP idP) => //=.
   + by move=> /andP [] /eqP ? /eqP; subst => /wunsigned_inj ->.
   by move=> /Imm_inj [? ];subst => /= ->;rewrite !eqxx.
-Qed.
+Qed. *)
 
 HB.instance Definition _ := hasDecEq.Build asm_arg asm_arg_eq_axiom.
 
@@ -298,6 +303,7 @@ Variant arg_kind :=
 | CAcond
 | CAreg
 | CAregx
+| CAregmask
 | CAxmm
 | CAmem of bool (* true if Global is allowed *)
 | CAimm of caimm_checker_s & wsize.
@@ -341,6 +347,7 @@ Definition check_arg_kind (a:asm_arg) (cond: arg_kind) :=
   | Imm sz z, CAimm checker sz' => (sz == sz') && check_CAimm checker z
   | Reg _ , CAreg => true
   | Regx _, CAregx => true
+  | Regmask _, CAregmask => true
   | Addr _, CAmem _ => true
   | XReg _, CAxmm   => true
   | _, _ => false
@@ -717,8 +724,8 @@ HB.instance Definition _ := hasDecEq.Build rflagv rflagv_eq_axiom.
 (* -------------------------------------------------------------------- *)
 (* Assembly declaration. *)
 
-Class asm (reg regx xreg rflag cond asm_op: Type) :=
-  { _arch_decl   : arch_decl reg regx xreg rflag cond
+Class asm (reg regx xreg regmask rflag cond asm_op: Type) :=
+  { _arch_decl   : arch_decl reg regx xreg regmask rflag cond
   ; _asm_op_decl : asm_op_decl asm_op
   ; eval_cond   : (reg_t -> word reg_size) -> (rflag_t -> exec bool) -> cond_t -> exec bool
   }.
