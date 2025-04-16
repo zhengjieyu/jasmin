@@ -36,13 +36,15 @@ Lemma xreg_of_varI {ii x y} :
   | Reg r => of_var x = Some r
   | Regx r => of_var x = Some r
   | XReg r => of_var x = Some r
+  | Regmask r => of_var x = Some r
   | _ => False
   end.
 Proof.
   rewrite /xreg_of_var.
   case heqxr: (to_xreg x) => [ r | ]; first by move=> [<-].
   case heqrx: (to_reg x) => [ r | ]; first by move=> [<-].
-  by case heqr: (to_regx x) => [ r | // ]; move=> [<-].
+  case heqr: (to_regx x) => [ r | // ]; move=> [<-].
+  by case heqrmask: (to_regmask x) => [ r | // ]; move=> [<-].
 Qed.
 
 (* -------------------------------------------------------------------- *)

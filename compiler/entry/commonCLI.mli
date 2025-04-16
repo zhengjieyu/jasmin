@@ -14,6 +14,7 @@ val parse_and_compile :
       and type extra_op = 'extra_op
       and type reg = 'reg
       and type regx = 'regx
+      and type regmask = 'regmask
       and type rflag = 'rflag
       and type xreg = 'xreg) ->
   Compiler.compiler_step ->

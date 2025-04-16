@@ -61,6 +61,7 @@ module type Arch = sig
   val reg_vars  : var list
   val regx_vars : var list
   val xreg_vars : var list
+  val regmask_vars : var list
   val flag_vars : var list
   val argument_vars : var list
   val xmm_argument_vars : var list
@@ -119,6 +120,11 @@ module Arch_from_Core_arch (A : Core_arch) :
 
   let xreg_vars : var list = List.map var_of_xreg arch_decl.toS_x._finC.cenum
 
+  let var_of_regmask (r:regmask) : var = atoI.toI_regmask.to_ident r
+
+  let regmask_vars : var list = List.map var_of_regmask arch_decl.toS_regmask._finC.cenum
+
+
   let var_of_flag (f:rflag) : var = atoI.toI_f.to_ident f
 
   let flag_vars : var list = List.map var_of_flag  arch_decl.toS_f._finC.cenum
@@ -133,6 +139,7 @@ module Arch_from_Core_arch (A : Core_arch) :
   let callee_save_regx = List.filter_map (Arch_decl.get_ARegX arch_decl) callee_save
   let callee_save_xreg = List.filter_map (Arch_decl.get_AXReg arch_decl) callee_save
 
+  let callee_save_regmask = List.filter_map (Arch_decl.get_ARegmask arch_decl) callee_save
   let rsp = arch_decl.ad_rsp
 
   let mk_allocatable regs callee_save =
@@ -186,12 +193,13 @@ module Arch_from_Core_arch (A : Core_arch) :
       | ARReg r -> var_of_reg  r
       | ARegX r -> var_of_regx r
       | AXReg r -> var_of_xreg r
+      | ARegmask r -> var_of_regmask r
       | ABReg r -> var_of_flag r in
     List.map var_of_typed callee_save
 
   let rsp_var = var_of_reg rsp
 
-  let all_registers = reg_vars @ regx_vars @ xreg_vars @ flag_vars
+  let all_registers = reg_vars @ regx_vars @ xreg_vars @ regmask_vars @ flag_vars
 
   let syscall_kill = Sv.diff (Sv.of_list all_registers) (Sv.of_list callee_save_vars)
 

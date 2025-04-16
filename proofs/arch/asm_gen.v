@@ -93,11 +93,15 @@ End TOIDENT.
 
 Section OF_TO.
 
-Context {reg regx xreg rflag cond} `{arch : arch_decl reg regx xreg rflag cond} {atoI : arch_toIdent}.
+Context {reg regx xreg regmask rflag cond} {arch : arch_decl reg regx regmask xreg rflag cond} {atoI : arch_toIdent}.
 
 Definition to_reg   : var -> option reg_t   := of_var.
 Definition to_regx  : var -> option regx_t  := of_var.
 Definition to_xreg  : var -> option xreg_t  := of_var.
+About regmask_t.
+About regx_t.
+About of_var.
+Definition to_regmask  : var -> option regmask_t := of_var.
 Definition to_rflag : var -> option rflag_t := of_var.
 
 Definition asm_typed_reg_of_var (x: var) : cexec asm_typed_reg :=
@@ -110,16 +114,20 @@ Definition asm_typed_reg_of_var (x: var) : cexec asm_typed_reg :=
   match to_xreg x with
   | Some r => ok (AXReg r)
   | None =>
+  match to_regmask x with
+  | Some r => ok (ARegmask r)
+  | None =>
   match to_rflag x with
   | Some f => ok (ABReg f)
   | None =>  Error (E.gen_error true None None (pp_s "can not map variable to a register"))
-  end end end end.
+  end end end end end.
 
 Definition var_of_asm_typed_reg (x : asm_typed_reg) : var :=
   match x with
   | ARReg r => to_var r
   | ARegX r => to_var r
   | AXReg r => to_var r
+  | ARegmask r => to_var r
   | ABReg r => to_var r
   end.
 
@@ -133,6 +141,8 @@ Proof.
   case heqrx: (to_regx x) => [ ? | ].
   + by move=> [<-]; apply: of_varI.
   case heqx: (to_xreg x) => [ ? | ].
+  + by move=> [<-]; apply: of_varI.
+  case heqm: (to_regmask x) => [ ? | ].
   + by move=> [<-]; apply: of_varI.
   case heqf: (to_rflag x) => [ ? | //].
   by move=> [<-]; apply: of_varI.

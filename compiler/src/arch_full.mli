@@ -63,6 +63,7 @@ module type Arch = sig
   val reg_vars  : var list
   val regx_vars : var list
   val xreg_vars : var list
+  val regmask_vars : var list
   val flag_vars : var list
   val argument_vars : var list
   val xmm_argument_vars : var list
@@ -88,6 +89,7 @@ module Arch_from_Core_arch (A : Core_arch) : Arch
        with type reg = A.reg
         and type regx =  A.regx
         and type xreg = A.xreg
+        and type regmask = A.regmask
         and type rflag = A.rflag
         and type cond = A.cond
         and type asm_op = A.asm_op

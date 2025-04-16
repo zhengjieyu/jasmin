@@ -153,12 +153,13 @@ Class arch_toIdent :=
   { toI_r  : ToIdent reg
   ; toI_rx : ToIdent regx
   ; toI_x  : ToIdent xreg
+  ; toI_regmask  : ToIdent regmask
   ; toI_f  : ToIdent rflag
   ; inj_toI_reg_regx : forall (r:reg) (rx:regx), to_ident r <> to_ident rx
   }.
 
 #[global]
-Existing Instances toI_r toI_rx toI_x toI_f.
+Existing Instances toI_r toI_rx toI_x toI_regmask toI_f.
 
 End ARCH.
 
@@ -199,12 +200,14 @@ Module MkAToIdent : AToIdent_T.
     Let toI_r  := MkToIdent.mk (T:= reg) (toid Normal (sword reg_size)) in
     Let toI_rx := MkToIdent.mk (T:= regx) (toid Extra (sword reg_size)) in
     Let toI_x  := MkToIdent.mk (T:= xreg) (toid Normal (sword xreg_size)) in
+    Let toI_regmask  := MkToIdent.mk (T:= regmask) (toid Normal (sword reg_size)) in
     Let toI_f  := MkToIdent.mk (T:= rflag) (toid Normal sbool) in
     match @idP _inj_toI_reg_regx with
     | ReflectT h =>
         ok {| toI_r := toI_r
             ; toI_rx := toI_rx
             ; toI_x  := toI_x
+            ; toI_regmask := toI_regmask
             ; toI_f  := toI_f
             ; inj_toI_reg_regx := inj_toI_reg_regxP h
            |}

@@ -10,7 +10,7 @@ val pp_ptype : Format.formatter -> pty -> unit
 val pp_plval : Format.formatter -> plval -> unit
 val pp_pexpr : Format.formatter -> pexpr -> unit
 val pp_pprog : Wsize.wsize -> ('reg, 'regx, 'xreg, 'regmask, 'rflag, 'cond, 'asm_op, 'extra_op) Arch_extra.extended_op Sopn.asmOp ->
-               Format.formatter -> ('info, ('reg, 'regx, 'regmask, 'xreg, 'rflag, 'cond, 'asm_op, 'extra_op) Arch_extra.extended_op) pprog -> unit
+               Format.formatter -> ('info, ('reg, 'regx, 'xreg, 'regmask, 'rflag, 'cond, 'asm_op, 'extra_op) Arch_extra.extended_op) pprog -> unit
 
 val pp_var   : debug:bool -> Format.formatter -> var -> unit
 val pp_dvar   : debug:bool -> Format.formatter -> var -> unit

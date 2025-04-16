@@ -97,16 +97,16 @@ Definition mk_ptr `{arch_decl} name :=
   {| vtype := sword Uptr; vname := name; |}.
 
 (* FIXME ARM : Try to not use this projection *)
-Definition reg_t   {reg regx xreg regmask rflag cond} `{arch : arch_decl reg regx xreg regmask rflag cond} := reg.
-Definition regx_t  {reg regx xreg regmask rflag cond} `{arch : arch_decl reg regx xreg regmask rflag cond} := regx.
-Definition xreg_t  {reg regx xreg regmask rflag cond} `{arch : arch_decl reg regx xreg regmask rflag cond} := xreg.
-Definition regmask_t  {reg regx xreg regmask rflag cond} `{arch : arch_decl reg regx xreg regmask rflag cond} := regmask.
-Definition rflag_t {reg regx xreg regmask rflag cond} `{arch : arch_decl reg regx xreg regmask rflag cond} := rflag.
-Definition cond_t  {reg regx xreg regmask rflag cond} `{arch : arch_decl reg regx xreg regmask rflag cond} := cond.
+Definition reg_t   {reg regx xreg regmask rflag cond} {arch : arch_decl reg regx xreg regmask rflag cond} := reg.
+Definition regx_t  {reg regx xreg regmask rflag cond} {arch : arch_decl reg regx xreg regmask rflag cond} := regx.
+Definition xreg_t  {reg regx xreg regmask rflag cond} {arch : arch_decl reg regx xreg regmask rflag cond} := xreg.
+Definition regmask_t  {reg regx xreg regmask rflag cond} {arch : arch_decl reg regx xreg regmask rflag cond} := regmask.
+Definition rflag_t {reg regx xreg regmask rflag cond} {arch : arch_decl reg regx xreg regmask rflag cond} := rflag.
+Definition cond_t  {reg regx xreg regmask rflag cond} {arch : arch_decl reg regx xreg regmask rflag cond} := cond.
 
 Section DECL.
 
-Context {reg regx xreg rflag cond} `{arch : arch_decl reg regx xreg rflag cond}.
+Context {reg regx xreg regmask rflag cond} {arch : arch_decl reg regx xreg regmask rflag cond}.
 
 Definition sreg := sword reg_size.
 Definition wreg := sem_t sreg.
@@ -611,6 +611,7 @@ Variant asm_typed_reg :=
   | ARReg of reg_t
   | ARegX of regx_t
   | AXReg of xreg_t
+  | ARegmask of regmask_t
   | ABReg of rflag_t.
 Notation asm_typed_regs := (seq asm_typed_reg).
 
@@ -619,6 +620,7 @@ Definition asm_typed_reg_beq r1 r2 :=
   | ARReg r1, ARReg r2 => r1 == r2 ::>
   | ARegX r1, ARegX r2 => r1 == r2 ::>
   | AXReg r1, AXReg r2 => r1 == r2 ::>
+  | ARegmask r1, ARegmask r2 => r1 == r2 ::>
   | ABReg r1, ABReg r2 => r1 == r2 ::>
   | _       , _        => false
   end.
@@ -646,7 +648,7 @@ Record asm_prog : Type :=
   ; asm_glob_names : seq (var * wsize * Z)
   ; asm_funcs : seq (funname * asm_fundef)
   }.
-
+About asm_prog.
 (* -------------------------------------------------------------------- *)
 (* Calling Convention                                                   *)
 
@@ -679,6 +681,12 @@ Definition get_ARegX (a:asm_typed_reg) :=
   | _ => None
   end.
 
+  Definition get_ARegmask (a:asm_typed_reg) :=
+  match a with
+  | ARegmask r => Some r
+  | _ => None
+  end.
+
 Definition get_AXReg (a:asm_typed_reg) :=
   match a with
   | AXReg r => Some r
@@ -693,6 +701,7 @@ Definition check_call_conv {call_conv:calling_convention} (fd:asm_fundef) :=
   implb fd.(asm_fd_export)
     [&& check_list get_ARReg fd.(asm_fd_arg) call_reg_args,
         check_list get_AXReg fd.(asm_fd_arg) call_xreg_args,
+        check_list get_ARegmask fd.(asm_fd_arg) call_regmask_args,
         check_list get_ARReg fd.(asm_fd_res) call_reg_ret &
         check_list get_AXReg fd.(asm_fd_res) call_xreg_ret].
 
@@ -706,6 +715,8 @@ Section ENUM.
   Definition registerxs : seq regx_t := cenum.
 
   Definition xregisters : seq xreg_t := cenum.
+
+  Definition registermasks : seq regmask_t := cenum.
 
   Definition rflags : seq rflag_t := cenum.
 End ENUM.
