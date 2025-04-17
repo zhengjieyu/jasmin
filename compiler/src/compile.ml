@@ -58,11 +58,12 @@ let do_spill_unspill asmop ?(debug = false) cp =
 
 (*--------------------------------------------------------------------- *)
 
-let compile (type reg regx xreg rflag cond asm_op extra_op)
+let compile (type reg regx xreg regmask rflag cond asm_op extra_op)
     (module Arch : Arch_full.Arch
       with type reg = reg
        and type regx = regx
        and type xreg = xreg
+       and type regmask = regmask
        and type rflag = rflag
        and type cond = cond
        and type asm_op = asm_op

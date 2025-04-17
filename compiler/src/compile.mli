@@ -46,6 +46,7 @@ val compile :
      with type reg = 'reg
       and type regx = 'regx
       and type xreg = 'xreg
+      and type regmask = 'regmask
       and type rflag = 'rflag
       and type cond = 'cond
       and type asm_op = 'asm_op
