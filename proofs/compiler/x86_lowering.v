@@ -229,7 +229,7 @@ Definition lower_cassgn_classify ty e x : lower_cassgn_t :=
     if (sz ≤ U64)%CMP
     then LowerMov (if is_var_in_memory v then is_lval_in_memory x else false)
     else if ty is sword szo
-    then if (U512 == szo)%CMP then LowerCopn (Ox86 (VMOVDQA32 szo)) [:: e ]
+    then if (U512 == szo)%CMP then LowerCopn (Ox86 (VMOVDQU szo)) [:: e ]
     else if (U128 ≤ szo)%CMP then LowerCopn (Ox86 (VMOVDQU szo)) [:: e ]
     else if (U32 ≤ szo)%CMP then LowerCopn (Ox86 (MOVV szo)) [:: e ]
     else LowerAssgn
@@ -238,7 +238,7 @@ Definition lower_cassgn_classify ty e x : lower_cassgn_t :=
       if (sz ≤ U64)%CMP
       then LowerMov (is_lval_in_memory x)
       else if (sz ≤ U256)%CMP then kb true sz (LowerCopn (Ox86 (VMOVDQU sz)) [:: e ])
-      else kb true sz (LowerCopn (Ox86 (VMOVDQA32 sz)) [:: e ])
+      else kb true sz (LowerCopn (Ox86 (VMOVDQU sz)) [:: e ])
 
   | Papp1 (Oword_of_int sz) (Pconst z) =>
       if ty is sword sz' then

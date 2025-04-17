@@ -99,7 +99,6 @@ Variant x86_op : Type :=
 | VMOV     of wsize
 | VMOVDQA  of wsize
 | VMOVDQU  `(wsize)
-| VMOVDQA32 `(wsize)
 | VPMOVSX of velem & wsize & velem & wsize (* parallel sign-extension: sizes are source, source, target, target *)
 | VPMOVZX of velem & wsize & velem & wsize (* parallel zero-extension: sizes are source, source, target, target *)
 | VPAND    `(wsize)
@@ -1383,8 +1382,6 @@ Definition Ox86_VMOVDQU_instr :=
   mk_instr_w_w "VMOVDQU" x86_VMOVDQ [:: Eu 1] [:: Eu 0] 2 check_vmovdq (prim_128_512 VMOVDQU) size_128_512 pp_vmovdqu.
 
 
-Definition Ox86_VMOVDQA32_instr :=
-mk_instr_w_w "VMOVDQA32" x86_VMOVDQ [:: Ea 1] [:: Ea 0] 2 check_vmovdq (prim_512 VMOVDQA32) size_512 (pp_name "vmovdqa32").
 
 
 
@@ -2345,7 +2342,6 @@ Definition x86_instr_desc o : instr_desc_t :=
   | VEXTRACTI32X8       => Ox86_VEXTRACTI32X8_instr.1
   | VMOVDQA sz         => Ox86_VMOVDQA_instr.1 sz
   | VMOVDQU sz         => Ox86_VMOVDQU_instr.1 sz
-  | VMOVDQA32 sz         => Ox86_VMOVDQA32_instr.1 sz
   | VPMOVSX ve sz ve' sz' => Ox86_VPMOVSX_instr.1 ve sz ve' sz'
   | VPMOVZX ve sz ve' sz' => Ox86_VPMOVZX_instr.1 ve sz ve' sz'
   | VPAND sz           => Ox86_VPAND_instr.1 sz
@@ -2511,7 +2507,6 @@ Definition x86_prim_string :=
    Ox86_VEXTRACTI32X8_instr.2;
    Ox86_VMOVDQA_instr.2;
    Ox86_VMOVDQU_instr.2;
-   Ox86_VMOVDQA32_instr.2;
    Ox86_VPAND_instr.2;
    Ox86_VPANDN_instr.2;
    Ox86_VPOR_instr.2;

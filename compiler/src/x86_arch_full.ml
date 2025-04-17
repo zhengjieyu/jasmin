@@ -205,7 +205,6 @@ module X86_core = struct
     | VPUNPCKH _ -> true
     | VPUNPCKL _ -> true
     | VPXOR _ -> true
-    | VMOVDQA32 _ -> true
     | VSHUFI32X4 -> true
     | VSHUFPS _ -> false (* Not DOIT *)
     | XCHG _ -> false (* Not DOIT *)
