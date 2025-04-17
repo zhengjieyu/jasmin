@@ -103,7 +103,8 @@ Scheme Equality for register_mask.
 
 Lemma regmask_eq_axiom : Equality.axiom register_mask_beq.
 Proof.
-Admitted.
+  exact: (eq_axiom_of_scheme internal_register_mask_dec_bl internal_register_mask_dec_lb).
+Qed.
 
 HB.instance Definition _ := hasDecEq.Build register_mask regmask_eq_axiom.
 
@@ -173,7 +174,7 @@ Definition mask_registers :=
   [:: K0; K1; K2; K3; K4; K5; K6; K7 ].
 
 Lemma mask_registers_fin_axiom : Finite.axiom mask_registers.
-Proof. Admitted.
+Proof. by case. Qed.
 
 
 HB.instance Definition _ := Countable.copy register_mask
