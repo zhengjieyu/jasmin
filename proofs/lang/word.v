@@ -1741,6 +1741,9 @@ Definition wpack sz pe (arg: seq Z) : word sz :=
 (* -------------------------------------------------------------------*)
 Definition wpmovmskb (dsz ssz: wsize) (w : word ssz) : word dsz :=
   wrepr dsz (t2w_def [tuple of map msb (split_vec U8 w)]).
+(* -------------------------------------------------------------------*)
+Definition wpmovb2m (dsz ssz: wsize) (w : word ssz) : word dsz :=
+  wrepr dsz (t2w_def [tuple of map msb (split_vec U8 w)]).
 
 (* -------------------------------------------------------------------*)
 Definition blendv (ve: velem) sz (w1 w2 m: word sz): word sz :=

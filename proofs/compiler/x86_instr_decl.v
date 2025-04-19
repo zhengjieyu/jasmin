@@ -156,6 +156,7 @@ Variant x86_op : Type :=
 | VPERMQ `(wsize)
 | VPERMQ512
 | VPMOVMSKB of wsize & wsize (* source size (U128/256) & dest. size (U32/64) *)
+| VPMOVB2M of wsize & wsize (* source size (U128/512) & dest. size (U16/32/64) *)
 | VPCMPEQ of velem & wsize
 | VPCMPGT of velem & wsize
 | VPSIGN of velem & wsize
@@ -330,7 +331,7 @@ Definition prim_8_64 := prim_range [:: U64; U32; U16; U8 ].
 Definition prim_16_64 := prim_range [:: U64; U32; U16 ].
 Definition prim_32_64 := prim_range [:: U64; U32 ].
 Definition prim_128_256 := prim_range [:: U128; U256 ].
-Definition prim_128_512 := prim_range [:: U128; U512 ].
+Definition prim_128_512 := prim_range [:: U128; U256; U512 ].
 Definition prim_512 := prim_range [:: U512 ].
 Definition prim_256_512 := prim_range [:: U256; U512 ].
 Let prim_movxx range (f: wsize → wsize → x86_op) :=
@@ -384,6 +385,10 @@ Definition primSV_8_32 (f: signedness → velem → wsize → x86_op) : prim_con
 Definition primX (f: wsize → wsize → x86_op) : prim_constructor x86_op :=
   PrimX86 [seq PVx ssz dsz | ssz <- [:: U128; U256 ], dsz <- [:: U64; U32 ] ]
     (fun s => if s is PVx ssz dsz then Some (f ssz dsz) else None).
+
+Definition primXK (f: wsize → wsize → x86_op) : prim_constructor x86_op :=
+PrimX86 [seq PVx ssz dsz | ssz <- [:: U128; U512 ], dsz <- [:: U64; U32; U16 ] ]
+  (fun s => if s is PVx ssz dsz then Some (f ssz dsz) else None).
 
 End PRIM_RANGE.
 
@@ -649,6 +654,7 @@ Definition pp_vmovdqu sz (args: asm_args) :=
 Definition c := [::CAcond].
 Definition r := [:: CAreg].
 Definition rx := [:: CAregx].
+Definition k := [:: CAregmask].
 Definition m b := [:: CAmem b].
 Definition i sz := [:: CAimm CAimmC_none sz].
 Definition rm b := [:: CAreg; CAmem b].
@@ -664,9 +670,13 @@ Definition r_rm := [:: r; rm true].
 Definition r_rmi sz := [:: r; rmi sz].
 Definition m_ri sz := [:: m false; ri sz].
 
+
+
 Definition xmm := [:: CAxmm ].
 Definition xmmm b := [:: CAxmm; CAmem b].
 Definition xmmmi sz := [:: CAxmm; CAmem true; CAimm CAimmC_none sz].
+
+Definition xmmk := [:: CAxmm; CAregmask].
 
 Definition xmm_xmmm := [::xmm; xmmm true].
 Definition xmmm_xmm := [::xmmm false; xmm].
@@ -1924,6 +1934,28 @@ Definition Ox86_PMOVMSKB_instr :=
   , ("VPMOVMSKB"%string, primX VPMOVMSKB) (* jasmin concrete syntax *)
   ).
 
+Definition x86_VPMOVB2M ssz dsz (v : word ssz): tpl (w_ty dsz) :=
+wpmovb2m dsz v.
+
+Definition Ox86_VPMOVB2M_instr :=
+  (fun ssz dsz => mk_instr_safe
+    (pp_sz_sz "VPMOVB2M"%string false ssz dsz) (* Jasmin name *)
+    (w_ty ssz) (* args type *)
+    (w_ty dsz) (* result type *)
+    [:: Eu 1 ] (* args *)
+    [:: Eu 0 ]  (* results *)
+    MSB_CLEAR (* clear MostSignificantBits *)
+    (@x86_VPMOVB2M ssz dsz) (* semantics *)
+    [:: [:: k ; xmm ] ] (* arg checks *)
+    2 (* nargs *)
+    (size_16_64 dsz && size_128_512 ssz)
+    (pp_name_ty "vpmovb2m" [:: dsz; ssz]) (* asm pprinter *)
+  , ("VPMOVB2M"%string, primXK VPMOVB2M) (* jasmin concrete syntax *)
+  ).
+
+
+
+
 Definition x86_VPCMPEQ (ve: velem) sz (v1 v2: word sz): tpl(w_ty sz) :=
   wpcmpeq ve v1 v2.
 
@@ -2394,6 +2426,7 @@ Definition x86_instr_desc o : instr_desc_t :=
   | VSHUFI32X4         => Ox86_VSHUFI32X4_instr.1
   | VPEXTR ve          => Ox86_VPEXTR_instr.1 ve
   | VPMOVMSKB sz sz'   => Ox86_PMOVMSKB_instr.1 sz sz'
+  | VPMOVB2M sz sz'   => Ox86_VPMOVB2M_instr.1 sz sz'
   | VPCMPEQ ve sz      => Ox86_VPCMPEQ_instr.1 ve sz
   | VPCMPGT ve sz      => Ox86_VPCMPGT_instr.1 ve sz
   | VPSIGN ve sz       => Ox86_VPSIGN_instr.1 ve sz
@@ -2558,6 +2591,7 @@ Definition x86_prim_string :=
    Ox86_VSHUFPS_instr.2;
    Ox86_VPEXTR_instr.2;
    Ox86_PMOVMSKB_instr.2;
+   Ox86_VPMOVB2M_instr.2;
    Ox86_VPCMPEQ_instr.2;
    Ox86_VPCMPGT_instr.2;
    Ox86_VPSIGN_instr.2;

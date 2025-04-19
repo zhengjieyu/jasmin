@@ -72,6 +72,7 @@ module type Arch = sig
   val allocatable_vars : var list
   val extra_allocatable_vars : var list
   val xmm_allocatable_vars : var list
+  val regmask_allocatable_vars : var list
   val callee_save_vars : var list
   val not_saved_stack : var list
   val rsp_var : var

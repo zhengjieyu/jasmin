@@ -1,3 +1,0 @@
-export fn test (reg u512 a b){
-    reg u512 
-}

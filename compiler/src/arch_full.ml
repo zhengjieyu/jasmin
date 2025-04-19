@@ -70,6 +70,7 @@ module type Arch = sig
   val allocatable_vars : var list
   val extra_allocatable_vars : var list
   val xmm_allocatable_vars : var list
+  val regmask_allocatable_vars : var list
   val callee_save_vars : var list
   val not_saved_stack : var list
   val rsp_var : var
@@ -157,6 +158,8 @@ module Arch_from_Core_arch (A : Core_arch) :
 
   let xmm_allocatable =
     mk_allocatable (Arch_decl.xregisters arch_decl) callee_save_xreg
+  let regmask_allocatable =
+    mk_allocatable (Arch_decl.registermasks arch_decl) callee_save_regmask
 
   let arguments = call_conv.call_reg_args
 
@@ -187,6 +190,9 @@ module Arch_from_Core_arch (A : Core_arch) :
 
   let xmm_allocatable_vars =
     List.map var_of_xreg xmm_allocatable
+
+  let regmask_allocatable_vars =
+    List.map var_of_regmask regmask_allocatable
 
   let callee_save_vars =
     let var_of_typed = function
