@@ -65,6 +65,7 @@ module type Arch = sig
   val flag_vars : var list
   val argument_vars : var list
   val xmm_argument_vars : var list
+  val mask_argument_vars : var list
   val ret_vars : var list
   val xmm_ret_vars : var list
   val allocatable_vars : var list
@@ -165,6 +166,8 @@ module Arch_from_Core_arch (A : Core_arch) :
 
   let xmm_arguments = call_conv.call_xreg_args
 
+  let mask_arguments = call_conv.call_regmask_args
+
   let ret = call_conv.call_reg_ret
 
   let xmm_ret = call_conv.call_xreg_ret
@@ -175,6 +178,9 @@ module Arch_from_Core_arch (A : Core_arch) :
 
   let xmm_argument_vars =
     List.map var_of_xreg xmm_arguments
+  
+  let mask_argument_vars =
+    List.map var_of_regmask mask_arguments
 
   let ret_vars =
     List.map var_of_reg ret

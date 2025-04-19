@@ -169,7 +169,8 @@ Definition pp_sz_sz (s: string) (sign:bool) (sz sz': wsize) (_: unit) : string :
 (* -------------------------------------------------------------------- *)
 Variant reg_kind : Type :=
 | Normal
-| Extra.
+| Extra
+| Mask.
 
 Variant writable : Type := Constant | Writable.
 

@@ -43,12 +43,13 @@ let fill_in_missing_names (f: ('info, 'asm) func) : ('info, 'asm) func =
   let f_body = fill_stmt f.f_body in
   { f with f_body }
 
-type kind = Word | Extra | Vector | Flag | Unknown of ty
+type kind = Word | Extra | Mask | Vector | Flag | Unknown of ty
 
 let string_of_kind =
   function
   | Word -> "general purpose"
   | Extra -> "extra (aka mmx)"
+  | Mask -> "mask"
   | Vector -> "vector"
   | Flag -> "flag"
   | Unknown ty -> Format.asprintf "(unknown of type %a)" PrintCommon.pp_ty ty
@@ -57,14 +58,16 @@ let kind_of_type reg_size k =
   function
   | Bty (U sz) ->
      if Wsize.wsize_cmp sz reg_size = Datatypes.Gt then Vector
-     else if reg_kind k = Normal then Word else Extra
+     else if reg_kind k = Normal then Word 
+     else if reg_kind k = Extra then Extra
+     else Mask
   | Bty Bool -> Flag
   | ty -> Unknown ty
 
 (* Only variables that will be allocated to the same “bank” may conflict. *)
 let types_cannot_conflict reg_size kx x ky y : bool =
   match kind_of_type reg_size kx x, kind_of_type reg_size ky y with
-  | Word, Word | Extra, Extra | Vector, Vector | Flag, Flag -> false
+  | Word, Word | Extra, Extra | Mask, Mask | Vector, Vector | Flag, Flag -> false
   | _, _ -> true
 
 let find_equality_constraints (id: instruction_desc) : arg_position list list =
@@ -647,20 +650,24 @@ let allocate_forced_registers return_addresses translate_var nv (vars: int Hv.t)
        hierror_reg ~loc:(Lone f.f_loc) ~funname:f.f_name.fn_name "too many %s according to the ABI (only %d available on this architecture)"
          ctxt num
   in
-  let alloc_from_list loc ~ctxt rs xs q vs : unit =
+  let alloc_from_list loc ~ctxt rs xs ks q vs : unit =
     let f x = Hv.find vars x in
     let num_rs = List.length rs in
     let num_xs = List.length xs in
-    List.fold_left (fun (rs, xs) p ->
+    let num_ks = List.length ks in
+    List.fold_left (fun (rs, xs, ks) p ->
         let p = q p in
         match f p with
         | i ->
-          let d, rs, xs =
+          let d, rs, xs, ks =
             match kind_of_type Arch.reg_size p.v_kind p.v_ty with
-            | Word -> let d, rs = split ~ctxt ~num:num_rs rs in d, rs, xs
+            | Word -> let d, rs = split ~ctxt ~num:num_rs rs in d, rs, xs, ks
             | Vector ->
                 let ctxt = "large " ^ ctxt in
-                let d, xs = split ~ctxt ~num:num_xs xs in d, rs, xs
+                let d, xs = split ~ctxt ~num:num_xs xs in d, rs, xs, ks
+            | Mask ->
+                let ctxt = "mask " ^ ctxt in
+                let d, ks = split ~ctxt ~num:num_ks ks in d, rs, xs, ks
             | Extra ->
                hierror_reg ~loc:(Lmore loc) "unexpected extra register %a" (Printer.pp_var ~debug:true) p
             | Flag ->
@@ -670,14 +677,14 @@ let allocate_forced_registers return_addresses translate_var nv (vars: int Hv.t)
                 PrintCommon.pp_ty ty (Printer.pp_var ~debug:true) p
           in
           allocate_one nv vars loc cnf p i d a;
-          (rs, xs)
-        | exception Not_found -> (rs, xs))
-      (rs, xs)
+          (rs, xs, ks)
+        | exception Not_found -> (rs, xs, ks))
+      (rs, xs, ks)
       vs
-    |> (ignore : var list * var list -> unit)
+    |> (ignore : var list * var list * var list-> unit)
   in
-  let alloc_args loc get = alloc_from_list loc ~ctxt:"parameters" Arch.argument_vars Arch.xmm_argument_vars get in
-  let alloc_ret loc get = alloc_from_list loc ~ctxt:"return values" Arch.ret_vars Arch.xmm_ret_vars get in
+  let alloc_args loc get = alloc_from_list loc ~ctxt:"parameters" Arch.argument_vars Arch.xmm_argument_vars Arch.mask_argument_vars get in
+  let alloc_ret loc get = alloc_from_list loc ~ctxt:"return values" Arch.ret_vars Arch.xmm_ret_vars Arch.mask_argument_vars get in
   let rec alloc_instr_r loc =
     function
     | Cfor (_, _, s)
@@ -862,6 +869,7 @@ let greedy_allocation
     (a: A.allocation) : unit =
   let scalars : (int, var list) Hashtbl.t = Hashtbl.create nv in
   let extra_scalars : (int, var list) Hashtbl.t = Hashtbl.create nv in
+  let mask_scalars : (int, var list) Hashtbl.t = Hashtbl.create nv in
   let vectors : (int, var list) Hashtbl.t = Hashtbl.create nv in
   let flags : (int, var list) Hashtbl.t = Hashtbl.create nv in
   let push_var tbl i v =
@@ -873,6 +881,7 @@ let greedy_allocation
       match kind_of_type Arch.reg_size v.v_kind v.v_ty with
       | Word -> push_var scalars i v
       | Extra -> push_var extra_scalars i v
+      | Mask -> push_var mask_scalars i v
       | Vector -> push_var vectors i v
       | Flag -> push_var flags i v
       | Unknown ty ->
@@ -881,6 +890,7 @@ let greedy_allocation
       ) vars;
   two_phase_coloring Arch.allocatable_vars scalars cnf fr a;
   two_phase_coloring Arch.extra_allocatable_vars extra_scalars cnf fr a;
+  two_phase_coloring Arch.regmask_allocatable_vars mask_scalars cnf fr a;
   two_phase_coloring Arch.xmm_allocatable_vars vectors cnf fr a;
   check_allocated flags a;
   ()
@@ -1039,15 +1049,16 @@ let pp_liveness vars liveness_per_callsite liveness_table a =
         | x :: _ as xs -> fprintf fmt "%a %a /* %a */@ " pp_decl_type x pp_variable i (pp_list ", " pp_nonreg) xs
       ) !tbl
   in
-  let m_word, m_extra, m_vector, m_flag = ref 0, ref 0, ref 0, ref 0 in
+  let m_word, m_extra, m_mask, m_vector, m_flag = ref 0, ref 0, ref 0, ref 0, ref 0 in
   let reset_max () =
-    m_word := 0; m_extra := 0; m_vector := 0; m_flag := 0
+    m_word := 0; m_extra := 0; m_mask :=0; m_vector := 0; m_flag := 0
   in
 
   let set_max k n =
     match k with
     | Word   -> m_word   := max !m_word   n
     | Extra  -> m_extra  := max !m_extra  n
+    | Mask   -> m_mask   := max !m_mask   n
     | Vector -> m_vector := max !m_vector n
     | Flag   -> m_flag   := max !m_flag   n
     | Unknown _ -> assert false
@@ -1056,6 +1067,7 @@ let pp_liveness vars liveness_per_callsite liveness_table a =
   let string_of_k = function
     | Word   -> "word"
     | Extra  -> "extra"
+    | Mask   -> "mask"
     | Vector -> "vector"
     | Flag   -> "flag"
     | Unknown _ -> assert false
@@ -1065,6 +1077,7 @@ let pp_liveness vars liveness_per_callsite liveness_table a =
     let subset k = Sv.elements (Sv.filter (fun x -> k (kind_of_type Arch.reg_size x.v_kind x.v_ty)) s) in
     let words = subset (fun k -> k = Word) in
     let extras = subset (fun k -> k = Extra) in
+    let masks = subset (fun k -> k = Mask) in
     let vectors = subset (fun k -> k = Vector) in
     let flags = subset (fun k -> k = Flag) in
     let pp fmt (k, xs) =
@@ -1073,7 +1086,7 @@ let pp_liveness vars liveness_per_callsite liveness_table a =
       fprintf fmt "@[<h> %d %s%s (%a)@]" n (string_of_k k) (if n > 1 then "s" else "") (pp_list "@ " pp_var) xs in
     let l =
       (List.filter (fun (_, m) -> List.length m > 0)
-         [ Word, words; Extra, extras; Vector, vectors; Flag, flags]) in
+         [ Word, words; Extra, extras; Mask, masks; Vector, vectors; Flag, flags]) in
     fprintf fmt "%a" (pp_list "@ " pp) l
 
   in

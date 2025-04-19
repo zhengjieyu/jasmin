@@ -67,6 +67,7 @@ module type Arch = sig
   val flag_vars : var list
   val argument_vars : var list
   val xmm_argument_vars : var list
+  val mask_argument_vars : var list
   val ret_vars : var list
   val xmm_ret_vars : var list
   val allocatable_vars : var list
