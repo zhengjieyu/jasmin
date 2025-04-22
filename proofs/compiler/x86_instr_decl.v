@@ -1682,24 +1682,10 @@ Definition x86_VPBLENDVB sz (x y m: word sz) : tpl (w_ty sz) :=
 (* TODO: remove in 2025.AA.0 *)
 Definition Ox86_VPBLENDVB_instr :=
   (fun sz => mk_instr_safe
-               (pp_sz "VPBLENDVB" sz) (w3_ty sz) (w_ty sz) [:: Eu 0; Eu 1; Eu 2] [:: Eu 0] MSB_CLEAR
+               (pp_sz "VPBLENDVB" sz) (w3_ty sz) (w_ty sz) [:: Eu 1; Eu 2; Eu 3] [:: Eu 0] MSB_CLEAR
                (@x86_VPBLENDVB sz) (check_xmm_xmm_xmmm_xmm sz) 4 (size_128_256 sz)
                (pp_name "vpblendvb" sz), ("VPBLENDVB"%string, prim_128_256 VPBLENDVB)).
 
-(* Definition x86_VPERMI2 (ve: velem) sz v1 v2 :=
-x86_u128_binop (lift2_vec ve *%R sz) v1 v2.
-
-Definition Ox86_VPERMI2_instr := mk_ve_instr_w2_w_120 "VPERMI2" x86_VPERMI2 check_xmm_xmm_xmmm_xmm (primV VPERMI2)
-(fun (ve:velem) sz => size_8_64 ve && size_128_512 sz)  (pp_viname "vpermi2"). *)
-
-Definition x86_VPERMT2Q sz (x y m: word sz) : tpl (w_ty sz) :=
-  wpermi2q x m.
-
-Definition Ox86_VPERMT2Q_instr :=
-(fun sz => mk_instr_safe
-(pp_sz "VPERMT2Q" sz) (w3_ty sz) (w_ty sz) [:: Eu 0; Eu 1; Eu 2] [:: Eu 0] MSB_MERGE
-(@x86_VPERMT2Q sz) (check_xmm_xmm_xmmm sz) 3 (size_128_512 sz)
-(pp_name "vpermt2q" sz), ("VPERMT2Q"%string, prim_128_512 VPERMT2Q)).
 
 Definition x86_BLENDV ve sz (x y m: word sz) : tpl (w_ty sz) :=
   blendv ve x y m.
@@ -1764,6 +1750,23 @@ Definition Ox86_VSHUFPS_instr :=
   mk_instr_w2w8_w_1230 "VSHUFPS" (@x86_VSHUFPS) check_xmm_xmm_xmmm_imm8 (prim_128_256 VSHUFPS)
       size_128_256
       (pp_name "vshufps").
+
+
+(* Definition x86_VPERMI2 (ve: velem) sz v1 v2 :=
+x86_u128_binop (lift2_vec ve *%R sz) v1 v2.
+
+Definition Ox86_VPERMI2_instr := mk_ve_instr_w2_w_120 "VPERMI2" x86_VPERMI2 check_xmm_xmm_xmmm_xmm (primV VPERMI2)
+(fun (ve:velem) sz => size_8_64 ve && size_128_512 sz)  (pp_viname "vpermi2"). *)
+
+Definition x86_VPERMT2Q sz (x y m: word sz) : tpl (w_ty sz) :=
+  wpermi2q x m.
+
+Definition Ox86_VPERMT2Q_instr :=
+(fun sz => mk_instr_safe
+(pp_sz "VPERMT2Q" sz) (w3_ty sz) (w_ty sz) [:: Eu 0; Eu 1; Eu 2] [:: Eu 0] MSB_MERGE
+(@x86_VPERMT2Q sz) (check_xmm_xmm_xmmm sz) 3 (size_128_512 sz)
+(pp_name "vpermt2q" sz), ("VPERMT2Q"%string, prim_128_512 VPERMT2Q)).
+
 
 Definition pp_vpbroadcast ve sz args :=
   {| pp_aop_name := "vpbroadcast";

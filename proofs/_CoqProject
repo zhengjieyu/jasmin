@@ -16,9 +16,6 @@
 -arg "-w -deprecated-from-Coq"
 -arg "-w -deprecated-dirpath-Coq"
 
-
--Q /Users/zhengjieyu/.opam/rocq/lib/coq/user-contrib/mathcomp mathcomp
-
 -R 3rdparty Jasmin
 -R arch Jasmin
 -R compiler Jasmin
