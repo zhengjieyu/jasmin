@@ -1,0 +1,8 @@
+export fn test_vextracti32x8(reg u64 rp)
+{
+    reg u512 f0;
+    reg u256 t0;
+    f0 = #set0_512();
+    t0 = #VEXTRACTI32X8(f0, 1);
+    (u256)[rp] = t0;
+}

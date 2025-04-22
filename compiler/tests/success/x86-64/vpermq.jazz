@@ -1,0 +1,21 @@
+export
+fn test_vpermq(reg u64 tmp)
+{
+  reg u256 t0 t1;
+
+  t0 = #set0_256();
+  t1 = (u256)[tmp];
+
+  t0 = #VPERMQ_256(t1, 0x44);
+  t0 = #VPERMQ_256(t1, 0xEE);
+  (u256)[tmp] = t0;
+
+  reg u512 tt0 tt1;
+
+  tt0 = #set0_512();
+  tt1 = (u512)[tmp];
+
+  tt0 = #VPERMQ_512(tt1, 0x44);
+  tt0 = #VPERMQ_512(tt1, 0xEE);
+  (u512)[tmp] = tt0;
+}

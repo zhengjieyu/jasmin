@@ -1,0 +1,20 @@
+export
+fn test_vpermt2q(reg u64 in)
+{
+  reg u128 x y z;
+  reg u256 xx yy zz;
+  reg u512 xxx yyy zzz;
+
+  x = (u128)[in];
+  y = x;
+  z = #VPERMT2Q_128(z, x, y);
+
+  xx = (u256)[in];
+  yy = xx;
+  zz = #VPERMT2Q_256(zz, xx, yy);
+
+  xxx = (u512)[in];
+  yyy = xxx;
+  zzz = #VPERMT2Q_512(zzz, xxx, yyy);
+
+}

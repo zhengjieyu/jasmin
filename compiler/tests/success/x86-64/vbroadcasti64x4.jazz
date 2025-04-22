@@ -1,0 +1,10 @@
+export fn test_vbroadcasti64x4(reg u64 rp)
+{
+    reg u512 f0;
+    reg u256 t0;
+    stack u256 sh;
+    t0 = #set0_256();
+    sh = t0;
+    f0 = #VBROADCASTI64X4(sh);
+    (u512)[rp] = f0;
+}
