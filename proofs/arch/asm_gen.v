@@ -394,6 +394,7 @@ Definition check_arg_kind_no_imm (a:asm_arg) (cond: arg_kind) :=
   | Imm _ _, CAimm _ _ => true
   | Reg _ , CAreg => true
   | Regx _, CAregx => true
+  | Regmask _, CAregmask => true
   | Addr _, CAmem _ => true
   | XReg _, CAxmm   => true
   | _, _ => false

@@ -173,14 +173,14 @@ HB.instance Definition _ := isFinite.Build register_ext regxs_fin_axiom.
 Definition mask_registers :=
   [:: K0; K1; K2; K3; K4; K5; K6; K7 ].
 
-Lemma mask_registers_fin_axiom : Finite.axiom mask_registers.
+Lemma regmasks_fin_axiom : Finite.axiom mask_registers.
 Proof. by case. Qed.
 
 
 HB.instance Definition _ := Countable.copy register_mask
-  (pcan_type (FinIsCount.pickleK mask_registers_fin_axiom)).
+  (pcan_type (FinIsCount.pickleK regmasks_fin_axiom)).
 
-HB.instance Definition _ := isFinite.Build register_mask mask_registers_fin_axiom.
+HB.instance Definition _ := isFinite.Build register_mask regmasks_fin_axiom.
 
 (* -------------------------------------------------------------------- *)
 Definition xmm_registers :=
@@ -333,7 +333,7 @@ Instance eqTC_regmask : eqTypeC register_mask :=
 
 #[global]
 Instance finC_regmask : finTypeC register_mask :=
-  { cenumP := mask_registers_fin_axiom }.
+  { cenumP := regmasks_fin_axiom }.
 
 Definition regmask_to_string r : string :=
   match r with

@@ -71,6 +71,7 @@ Variant lom_eqv rip (m : estate) (lom : asmmem) :=
     & disj_rip rip
     & (∀ r, value_uincl (evm m).[to_var r] (Vword (asm_reg lom r)))
     & (∀ r, value_uincl (evm m).[to_var r] (Vword (asm_regx lom r)))
+    & (∀ r, value_uincl (evm m).[to_var r] (Vword (asm_regmask lom r)))
     & (∀ r, value_uincl (evm m).[to_var r] (Vword (asm_xreg lom r)))
     & eqflags m (asm_flag lom).
 
@@ -1998,6 +1999,7 @@ Definition get_typed_reg_value (st : asmmem) (r : asm_typed_reg) : value :=
   match r with
   | ARReg r => Vword (asm_reg  st r)
   | ARegX r => Vword (asm_regx st r)
+  | ARegmask r => Vword (asm_regmask st r)
   | AXReg r => Vword (asm_xreg st r)
   | ABReg r => of_rbool (asm_flag st r)
   end.
@@ -2028,7 +2030,7 @@ Lemma lom_eqv_estate_of_asm_mem sp rip rsp s :
   disj_rip (mk_ptr rip)
   -> lom_eqv (mk_ptr rip) (estate_of_asm_mem sp rip rsp s) s.
 Proof.
-  case => rip_not_reg rip_not_regx rip_not_xreg rip_not_flag.
+  case => rip_not_reg rip_not_regx rip_not_regmask rip_not_xreg rip_not_flag.
   split => //=.
   - rewrite /vmap_of_asm_mem.
     rewrite get_var_vmap_set_vars_other_type //.
@@ -2038,9 +2040,12 @@ Proof.
     + apply/allP => /= r _; apply/eqP. exact: rip_not_regx.
     rewrite get_var_vmap_set_vars_other; last first.
     + apply/allP => /= r _; apply/eqP. exact: rip_not_reg.
+    rewrite get_var_vmap_set_vars_other; last first.
+    + apply/allP => /= r _; apply/eqP. exact: rip_not_regmask.
     by rewrite Vm.setP_eq //= cmp_le_refl.
   - by move => r; rewrite (get_var_vmap_of_asm_mem _ _ _ _ (ARReg r)).
   - by move => r; rewrite (get_var_vmap_of_asm_mem _ _ _ _ (ARegX r)).
+  - by move => r; rewrite (get_var_vmap_of_asm_mem _ _ _ _ (ARegmask r)).
   - by move => r; rewrite (get_var_vmap_of_asm_mem _ _ _ _ (AXReg r)).
   by move => r; rewrite (get_var_vmap_of_asm_mem _ _ _ _ (ABReg r)).
 Qed.

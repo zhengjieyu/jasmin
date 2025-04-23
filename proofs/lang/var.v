@@ -112,6 +112,9 @@ Definition is_reg_ptr (x: var) : bool :=
 Definition is_regx (x: var) : bool :=
   if Ident.id_kind x.(vname) is Reg(Extra, _) then true else false.
 
+Definition is_regmask (x: var) : bool :=
+  if Ident.id_kind x.(vname) is Reg(Mask, _) then true else false.
+
 Definition is_reg_array x :=
   if Ident.id_kind x.(vname) is Reg (_, Direct) then
     if x.(vtype) is sarr _ then true else false
