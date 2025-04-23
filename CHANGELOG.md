@@ -1,5 +1,92 @@
 
 # [unreleased]
+## New features
+
+- New syntax
+  - for memory load/store: `(uXX)[aligned? x e]` becomes `[aligned? :uXX x e]`,
+    the syntax  `(uXX)[aligned? x e]` is deprecated.
+  - for array load/store: `t DOT? [aligned? uXX e]` becomes `t DOT? [aligned? :uXX e]`,
+    the syntax `t DOT? [aligned? uXX e]` is deprecated.
+  
+  The script `compiler/script/replace-new-memory-syntax.sh` allows to perform the change automatically.
+
+  New syntax for infix and prefix operators, the type of the arguments can be provided
+  using `:uXX`, like in `e1 +:u32 e2`. The previous syntax is **not** deprecated.
+  ([PR #1086](https://github.com/jasmin-lang/jasmin/pull/1086)).
+
+- Introduction of wint types siXX and uiXX (XX in [8,16,32,64,128, 256]). The
+  key feature of this new type are for the extraction to easycrypt. They are
+  extracted to int, removing the need to deal with modulus 2^XX operations.
+  Introduction of a new cast operators: `(sint)` and `(uint)` from words to
+  `int`. The previous cast operator `(int)` stands for one of them if its
+  argument is of wint type: applying it to usual machine words is deprecated.
+  Introduce zquot and zrem operators on int : `e1 /s e2` and `e1 %s e2`.
+  ([PR #1071](https://github.com/jasmin-lang/jasmin/pull/1071)).
+
+## Other changes
+
+- The deprecated legacy interface to extract to EasyCrypt has been removed
+  ([PR #1114](https://github.com/jasmin-lang/jasmin/pull/1114)).
+
+- Rewriting of assembly printers
+  ([PR #1118](https://github.com/jasmin-lang/jasmin/pull/1118),
+  [PR #1125](https://github.com/jasmin-lang/jasmin/pull/1125)).
+
+# Jasmin 2025.02.1 — Nancy, 2025-04-10
+
+## New features
+
+- Add support for x86 `SHA256MSG1`, `SHA256MSG2`, and `SHA256RNDS2` instructions
+  ([PR #1116](https://github.com/jasmin-lang/jasmin/pull/1116);
+  fixes [#1040](https://github.com/jasmin-lang/jasmin/issues/1040)).
+
+- Add support for x86 `VMOVMSKPS` and `VMOVMSKPD` instructions, through the new
+  intrinsics `#MOVEMASK` which also maps to the `VPMOVMSKB` instruction;
+  therefore old intrinsic `#VPMOVMSKB` is deprecated
+  ([PR #1083](https://github.com/jasmin-lang/jasmin/pull/1083);
+  fixes [#1079](https://github.com/jasmin-lang/jasmin/issues/1079)).
+
+## Bug fixes
+
+- Improve heuristic for relational variables in safety analysis
+  ([PR #1109](https://github.com/jasmin-lang/jasmin/pull/1109)).
+
+- Improve memory usage in safety pre-analysis
+  ([PR #1103](https://github.com/jasmin-lang/jasmin/pull/1103)).
+
+- Fix liveness annotation of while loops
+  ([PR #1098](https://github.com/jasmin-lang/jasmin/pull/1098);
+  fixes [#1097](https://github.com/jasmin-lang/jasmin/issues/1097)).
+
+- Fix EC extraction of signed division and modulo, respectively to `\zquot` and
+  `\zrem`
+  ([PR #1090](https://github.com/jasmin-lang/jasmin/pull/1090)).
+
+- Fix semantics of flags in `#ROR`, `#ASR`, `#LSR`, and `#LSL` arm instructions
+  ([PR #1085](https://github.com/jasmin-lang/jasmin/pull/1085),
+  ([PR #1091](https://github.com/jasmin-lang/jasmin/pull/1091);
+  fixes [#1033](https://github.com/jasmin-lang/jasmin/issues/1033)).
+
+- Fix semantics of unsigned division and modulo operators: the safety condition
+  only requires that the divisor is non-zero
+  ([PR #1088](https://github.com/jasmin-lang/jasmin/pull/1088)).
+
+- Program with conflicting assembly labels print warning when compiled
+  ([PR #1067](https://github.com/jasmin-lang/jasmin/pull/1067);
+  fixes [#993](https://github.com/jasmin-lang/jasmin/issues/993)).
+
+## Other changes
+
+- Add warning to signal deprecated intrinsic operators
+  ([PR #1092](https://github.com/jasmin-lang/jasmin/pull/1092)).
+
+- Some warnings are now disabled by default: when introducing assignements
+  (`-wea`), destinations (`-w_`), array copies (`-winsertarraycopy`), or `LEA`
+  instructions (`-wlea`); they can be enabled using a new command-line argument
+  `-wall` or individually using the corresponding flag
+  ([PR #1087](https://github.com/jasmin-lang/jasmin/pull/1087)).
+
+# Jasmin 2025.02.0 — Nancy, 2025-02-28
 
 ## New features
 
@@ -12,13 +99,50 @@
   fixes [#503](https://github.com/jasmin-lang/jasmin/issues/503),
   [#698](https://github.com/jasmin-lang/jasmin/issues/698)).
 
+- Extraction to Easycrypt is now available as a separate `jasmin2ec` tool; the
+  `-ec`, `-oec`, `-oecarray` and `-CT` command-line options are deprecated.
+  The `jasmin2ec` tool uses a new set of theories in `eclib` for extracting array operations,
+  and supports a new extraction for leakage based on local variables.
+  ([PR #914](https://github.com/jasmin-lang/jasmin/pull/914),
+  [PR #952](https://github.com/jasmin-lang/jasmin/pull/952),
+  [PR #967](https://github.com/jasmin-lang/jasmin/pull/967),
+  [PR #972](https://github.com/jasmin-lang/jasmin/pull/972),
+  [PR #995](https://github.com/jasmin-lang/jasmin/pull/995)).
+
+## Bug fixes
+
+- Fix EC extraction in case on nested loops
+  ([PR #971](https://github.com/jasmin-lang/jasmin/pull/971)).
+
+## Other changes
+
+- The deprecated legacy interface to the LATEX pretty-printer has been removed
+  ([PR #869](https://github.com/jasmin-lang/jasmin/pull/869)).
+
+- Extraction to EasyCrypt for safety verification is now removed, it was
+  deprecated in the previous release
+  ([PR #846](https://github.com/jasmin-lang/jasmin/pull/846)).
+
+- The printer to LATEX shows a comment informing about jasmin.sty support file
+  ([PR #976](https://github.com/jasmin-lang/jasmin/pull/976) and
+  [PR #986](https://github.com/jasmin-lang/jasmin/pull/986)).
+
+- The `-I` command-line argument to `jasminc` now uses an equal sign as separator
+  (using a colon is deprecated)
+  ([PR #1068](https://github.com/jasmin-lang/jasmin/pull/1068)).
+
+- Include paths used in the resolution of `require` directives can be
+  controlled using the `-I` command-line argument to the various Jasmin tools
+  (`jasminc`, `jasmin2tex`, `jasmin-ct`, and `jasmin2ec`)
+  ([PR #1068](https://github.com/jasmin-lang/jasmin/pull/1068)).
+
+# Jasmin 2024.07.3 — Nancy, 2025-02-25
+
+## New features
+
 - ARM now emits two instructions instead of `ADR` to load the low and high
   parts of global addresses
   ([PR#921](https://github.com/jasmin-lang/jasmin/pull/921)).
-
-- Extraction to EasyCrypt can now be done after a given compilation pass using
-  `--after` command-line argument
-  ([PR#972](https://github.com/jasmin-lang/jasmin/pull/972)).
 
 - While instructions now have two pieces of information (including locations)
   attached to them: one corresponding to the whole instruction, the other one
@@ -36,9 +160,6 @@
   therefore old intrinsic `#VPBLENDVB` is deprecated
   ([PR #1010](https://github.com/jasmin-lang/jasmin/pull/1010)).
 
-- Add an option to treat some pre-typing error as warning instead. 
-  ([PR #1023](https://github.com/jasmin-lang/jasmin/pull/1023))
-
 - Add support for x86 `VPSIGN` instructions
   ([PR #1030](https://github.com/jasmin-lang/jasmin/pull/1030);
   fixes [#1029](https://github.com/jasmin-lang/jasmin/issues/1029)).
@@ -50,10 +171,9 @@
 
 - Fix EasyCrypt semantics of shift operators
   ([PR#973](https://github.com/jasmin-lang/jasmin/pull/973),
-  [PR#1001](https://github.com/jasmin-lang/jasmin/pull/1001)).
-
-- Fix EC extraction in case on nested loops
-  ([PR #971](https://github.com/jasmin-lang/jasmin/pull/971)).
+  [PR#1001](https://github.com/jasmin-lang/jasmin/pull/1001))
+  and of `VPCMPGT`
+  ([PR#1018](https://github.com/jasmin-lang/jasmin/pull/1018)).
 
 - The speculative constant-time checker rejects more programs, considering that
   different source-level local variables may be merged during the compilation
@@ -64,38 +184,25 @@
   ([PR #1027](https://github.com/jasmin-lang/jasmin/pull/1027);
   fixes [#1026](https://github.com/jasmin-lang/jasmin/issues/1026)).
 
-- Compiler now enforces coherence between function storage type and return variable storage type
-  ([PR#1028](https://github.com/jasmin-lang/jasmin/pull/1028);
-  fixes [#18](https://github.com/jasmin-lang/jasmin/issues/18)).
-
 - Fix allocation of dead stack variables
   ([PR #1044](https://github.com/jasmin-lang/jasmin/pull/1044);
   fixes [#680](https://github.com/jasmin-lang/jasmin/issues/680)).
 
-- Fix printing of x86 `CLFLUSH` instruction in “Intel” syntax
-  ([PR #1054](https://github.com/jasmin-lang/jasmin/pull/1054);
+- Compiler now enforces coherence between function storage type and return variable storage type
+  ([PR#1028](https://github.com/jasmin-lang/jasmin/pull/1028);
+  fixes [#18](https://github.com/jasmin-lang/jasmin/issues/18)).
+
+- Fix printing of x86 `CLFLUSH` and `PREFETCH` instructions in “Intel” syntax
+  ([PR #1054](https://github.com/jasmin-lang/jasmin/pull/1054),
+  [PR #1057](https://github.com/jasmin-lang/jasmin/pull/1057);
   fixes [#438](https://github.com/jasmin-lang/jasmin/issues/438)).
 
+- Fix LATEX printing of strings
+  ([PR #1063](https://github.com/jasmin-lang/jasmin/pull/1063),
+  [PR #1064](https://github.com/jasmin-lang/jasmin/pull/1064);
+  fixes [#1060](https://github.com/jasmin-lang/jasmin/issues/1060)).
+
 ## Other changes
-
-- Adding an annotation to function (`'info` type). Useful to store result of analysis. (see [[#1016](https://github.com/jasmin-lang/jasmin/issues/1016)])
-- ([PR#1021](https://github.com/jasmin-lang/jasmin/issues/1021))
-
-- The deprecated legacy interface to the LATEX pretty-printer has been removed
-  ([PR #869](https://github.com/jasmin-lang/jasmin/pull/869)).
-
-- Extraction to EasyCrypt for safety verification is now removed, it was
-  deprecated in the previous release
-  ([PR #846](https://github.com/jasmin-lang/jasmin/pull/846)).
-
-- Extraction to Easycrypt is now available as a separate `jasmin2ec` tool; the
-  `-ec`, `-oec`, `-oecarray` and `-CT` command-line options are deprecated.
-  The `jasmin2ec` tool uses a new set of theories in `eclib` for extracting array operations, and supports a new extraction for leakage based on local variables.
-  ([PR #914](https://github.com/jasmin-lang/jasmin/pull/914),
-  [PR #952](https://github.com/jasmin-lang/jasmin/pull/952),
-  [PR #967](https://github.com/jasmin-lang/jasmin/pull/967)),
-  [PR #995](https://github.com/jasmin-lang/jasmin/pull/995)),
-  [PR #1047](https://github.com/jasmin-lang/jasmin/pull/1047)).
 
 - The “allocation” pass now uses the liveness information to reduce the sizes
   of the tables it uses internally; it should be faster on large functions
@@ -104,14 +211,17 @@
 - Compiling the OCaml source code no longer requires `-rectypes`
   ([PR #980](https://github.com/jasmin-lang/jasmin/pull/980)).
 
-- The printer to LATEX shows a comment informing about jasmin.sty support file
-  ([PR #976](https://github.com/jasmin-lang/jasmin/pull/976) and
-  [PR #986](https://github.com/jasmin-lang/jasmin/pull/986)).
-
 - The (speculative) constant-time checkers now ignores `#strict` and `#flex`
   annotations: all variables are considered “flexible”, i.e., have a
   flow-sensitive type
   ([PR #990](https://github.com/jasmin-lang/jasmin/pull/990)).
+
+- Functions can carry information (`'info` type) in a new `f_info` field
+  ([PR #1021](https://github.com/jasmin-lang/jasmin/pull/1021);
+  fixes [#1016](https://github.com/jasmin-lang/jasmin/issues/1016)).
+
+- Add an option to treat some pre-typing error as a warning instead
+  ([PR #1023](https://github.com/jasmin-lang/jasmin/pull/1023)).
 
 # Jasmin 2024.07.2 — Nancy, 2024-11-21
 

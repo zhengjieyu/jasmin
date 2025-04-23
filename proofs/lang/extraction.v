@@ -32,6 +32,8 @@ Extract Constant expr.InstrInfo.is_inline => "IInfo.is_inline".
 Extract Constant expr.InstrInfo.var_info_of_ii => "IInfo.var_info_of_ii".
 Extract Constant expr.instr_info => "IInfo.t".
 Extract Constant expr.fun_info => "FInfo.t".
+Extract Constant expr.entry_info_of_fun_info => "FInfo.entry_info".
+Extract Constant expr.ret_info_of_fun_info => "FInfo.ret_info".
 Extract Constant waes.MixColumns => "(fun _ -> failwith ""MixColumns is not implemented"")".
 Extract Constant waes.InvMixColumns => "(fun _ -> failwith ""InvMixColumns not implemented"")".
 
@@ -51,7 +53,7 @@ Extract Constant ident.Cident.id_kind => "CoreIdent.Cident.id_kind".
 
 Extract Constant ident.Cident.spill_to_mmx => "CoreIdent.Cident.spill_to_mmx".
 
-Cd  "lang/ocaml".
+Set Extraction Output Directory "lang/ocaml".
 
 Extraction Blacklist String List Nat Uint63 Utils Var Array.
 
@@ -79,6 +81,5 @@ Separate Extraction
   riscv_instr_decl
   riscv_extra
   riscv_params
-  compiler.
-
-Cd  "../..".
+  compiler
+  wint_int.

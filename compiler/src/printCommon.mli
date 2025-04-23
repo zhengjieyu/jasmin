@@ -5,19 +5,31 @@ val pp_wsize : Format.formatter -> Wsize.wsize -> unit
 val pp_aligned : Format.formatter -> Memory_model.aligned -> unit
 val string_of_signess : Wsize.signedness -> string
 val string_of_velem : Wsize.signedness -> Wsize.wsize -> Wsize.velem -> string
-val string_of_op1 : Expr.sop1 -> string
+val string_of_op1 : debug:bool -> Expr.sop1 -> string
 val string_of_op2 : Expr.sop2 -> string
+
 val pp_opn :
   Wsize.wsize -> 'asm Sopn.asmOp -> Format.formatter -> 'asm Sopn.sopn -> unit
 val pp_syscall : BinNums.positive Syscall_t.syscall_t -> string
 val pp_bool : Format.formatter -> bool -> unit
 val pp_kind : Format.formatter -> Wsize.v_kind -> unit
-val pp_btype : Format.formatter -> Prog.base_ty -> unit
+val pp_btype : ?w:Wsize.signedness -> Format.formatter -> Prog.base_ty -> unit
 
 val pp_gtype :
+  ?w:Wsize.signedness ->
   (Format.formatter -> 'size -> unit) ->
   Format.formatter ->
   'size Prog.gty ->
+  unit
+
+val pp_mem_access :
+  'var Utils.pp ->
+  'expr Utils.pp ->
+  Format.formatter ->
+  Memory_model.aligned ->
+  Wsize.wsize ->
+  'var ->
+  'expr ->
   unit
 
 val pp_arr_access :

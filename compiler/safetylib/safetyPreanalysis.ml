@@ -272,7 +272,8 @@ end = struct
       cfg = mcfg st1.cfg st2.cfg;
       while_vars = Sv.union st1.while_vars st2.while_vars;
       f_done = Ss.union st1.f_done st2.f_done;
-      if_conds = List.rev_append st1.if_conds st2.if_conds;
+      if_conds = List.rev_append st1.if_conds st2.if_conds
+                 |> List.sort_uniq Stdlib.compare;
       ct = ct }
 
   let set_ct ct st = { st with ct = ct }
@@ -579,3 +580,18 @@ let flowing_to (dp : Pa.dp) (sv_ini : Sv.t) =
         if Sv.mem v acc then acc
         else Sv.union acc sv
     ) dp sv_ini
+
+(** Set of variables reachable from [s] in the [dp] graph. *)
+let leads_to (dp: Pa.dp) (s: Sv.t) =
+  let rec loop acc visited workset =
+    (* Invariant: no visited variable is in the workset *)
+    match Sv.choose workset with
+    | exception Not_found -> acc
+    | x ->
+     let visited = Sv.add x visited in
+     let succ = Pa.dp_v dp x in
+     let acc = Sv.union acc succ in
+     let workset = Sv.remove x workset in
+     let workset = Sv.union workset (Sv.diff succ visited) in
+     loop acc visited workset
+  in loop Sv.empty Sv.empty s

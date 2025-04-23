@@ -637,9 +637,12 @@ module Regalloc (Arch : Arch_full.Arch)
         match ad with
         | ADImplicit v ->
            mallocate_one e (translate_var v) a
-        | ADExplicit (_, Some v) ->
+        | ADExplicit (_, ACR_exact v) ->
            mallocate_one e (translate_var v) a
-        | ADExplicit (_, None) -> ()) id.i_in es
+        | ADExplicit (_, ACR_vector v) ->
+           mallocate_one e (translate_var v) a
+        | ADExplicit (_, ACR_subset _) (* TODO *)
+        | ADExplicit (_, ACR_any) -> ()) id.i_in es
 
 let allocate_forced_registers return_addresses translate_var nv (vars: int Hv.t) (cnf: conflicts)
     (f: ('info, 'asm) func) (a: A.allocation) : unit =
@@ -1131,7 +1134,7 @@ let pp_liveness vars liveness_per_callsite liveness_table a =
   printf "/* Ready to allocate variables to registers: */@.";
   liveness_table |> Hf.iter (fun fn fd ->
     reset_max();
-    printf "%a@." (pp_fun ~pp_locals ~pp_info (pp_opn Arch.reg_size Arch.asmOp) pp_var) fd;
+    printf "%a@." (pp_fun ~debug:!Glob_options.debug ~pp_locals ~pp_info (pp_opn Arch.reg_size Arch.asmOp) pp_var) fd;
     let intern = !m_word, !m_extra, !m_vector, !m_flag in
     reset_max();
     printf "%a@." pp_callsites fn;

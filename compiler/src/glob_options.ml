@@ -8,9 +8,6 @@ let debug = ref false
 let timings = ref false
 let print_list = ref []
 let print_liveness = ref false
-let ecfile = ref ""
-let ec_list = ref []
-let ec_array_path = ref Filename.current_dir_name
 let slice = ref []
 let check_safety = ref false
 let safety_param = ref None
@@ -26,7 +23,6 @@ let color = ref Auto
 
 let lea = ref false
 let set0 = ref false
-let model = ref Normal
 let print_stack_alloc = ref false
 let introduce_array_copy = ref true
 let print_dependencies = ref false 
@@ -71,16 +67,8 @@ let set_stop_after p () =
 let set_all_print () =
   print_list := Compiler.compiler_step_list
 
-let set_ec f =
-  ec_list := f :: !ec_list
-
-let set_ec_array_path p =
-  ec_array_path := p
-
 let set_slice f =
   slice := f :: !slice
-
-let set_constTime () = model := ConstantTime
 
 let set_checksafety () = check_safety := true
 let set_safetyparam s = safety_param := Some s
@@ -96,16 +84,23 @@ let set_color c =
   in
   color := assoc c
 
-let parse_jasmin_path s =
-  s |> String.split_on_char ':' |> List.map (String.split ~by:"=")
+let idirs = ref []
 
-let idirs =
-  ref (try "JASMINPATH" |> Sys.getenv |> parse_jasmin_path with _ -> [])
-
-let set_idirs s = 
-  match String.split_on_char ':' s with
-  | [s1; s2] -> idirs := (s1,s2)::!idirs
-  | _ -> hierror ~loc:Lnone ~kind:"parsing arguments" "bad format for -I : ident:path expected"
+let set_idirs s =
+  let colons = String.count_char s ':' in
+  let equals = String.count_char s '=' in
+  let idir =
+    match (equals, colons) with
+    | 1, 0 -> String.split ~by:"=" s
+    | 0, 1 ->
+       warning Deprecated Location.i_dummy
+         "Use of colon in path:ident is deprecated: use an equal sign instead";
+       String.split ~by:":" s
+    | _, _ ->
+       hierror ~loc:Lnone ~kind:"parsing arguments"
+         "bad format for -I : ident=path expected"
+  in
+  idirs := idir :: !idirs
 
 type call_conv = Linux | Windows
 
@@ -122,6 +117,7 @@ let set_cc cc =
 let print_strings = function
   | Compiler.Typing                      -> "typing"   , "typing"
   | Compiler.ParamsExpansion             -> "cstexp"   , "param expansion"
+  | Compiler.WintWord                    -> "wintword" , "replace wint by word"
   | Compiler.ArrayCopy                   -> "arraycopy", "array copy"
   | Compiler.AddArrInit                  -> "addarrinit", "add array initialisation"
   | Compiler.LowerSpill                  -> "lowerspill", "lower spill/unspill instructions"
@@ -172,15 +168,11 @@ let options = [
     "-g"       , Arg.Set dwarf         , " Emit DWARF2 line number information";
     "-debug"   , Arg.Set debug         , " Print debug information";
     "-timings" , Arg.Set timings       , " Print a timestamp and elapsed time after each pass";
-    "-I"       , Arg.String set_idirs  , "[ident:path] Bind ident to path for from ident require ...";
+    "-I"       , Arg.String set_idirs  , "[ident=path] Bind ident to path for from ident require ...";
     "-lea"     , Arg.Set lea           , " Use lea as much as possible (default is nolea)";
     "-nolea"   , Arg.Clear lea         , " Try to use add and mul instead of lea";
     "-set0"     , Arg.Set set0          , " Use [xor x x] to set x to 0 (default is not)";
     "-noset0"   , Arg.Clear set0        , " Do not use set0 option";
-    "-ec"       , Arg.String  set_ec    , "[f] Extract function [f] and its dependencies to an easycrypt file (deprecated)";
-    "-oec"     ,  Arg.Set_string ecfile , "[filename] Use filename as output destination for easycrypt extraction (deprecated)";
-    "-oecarray" , Arg.String set_ec_array_path, "[dir] Output easycrypt array theories to the given path (deprecated)";
-    "-CT" , Arg.Unit set_constTime      , " Generate model for constant time verification (deprecated)";
     "-slice"    , Arg.String set_slice  , "[f] Keep function [f] and everything it needs";
     "-checksafety", Arg.Unit set_checksafety, " Automatically check for safety";
     "-safetyparam", Arg.String set_safetyparam,
@@ -200,6 +192,7 @@ let options = [
     "-wduplicatevar", Arg.Unit (add_warning DuplicateVar), " Print warning when two variables share the same name";
     "-wunusedvar", Arg.Unit (add_warning UnusedVar), " Print warning when a variable is not used";
     "-noinsertarraycopy", Arg.Clear introduce_array_copy, " Do not automatically insert array copy";
+    "-wall", Arg.Unit (set_all_warnings), " Enable all warnings";
     "-nowarning", Arg.Unit (nowarning), " Do no print warnings";
     "-color", Arg.Symbol (["auto"; "always"; "never"], set_color), " Print messages with color";
     "-help-intrinsics", Arg.Set help_intrinsics, " List the set of intrinsic operators (and exit)";

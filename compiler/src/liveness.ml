@@ -66,7 +66,7 @@ and live_d weak d (s_o: Sv.t) =
       let s_o' = Sv.union ve s_o in
       let s_i, c = live_c weak c s_o' in
       let s_i', c' = live_c weak c' s_i in
-      if Sv.subset s_i' s_o then s_i, (s_o', s_o), (c,c')
+      if Sv.subset s_i' s_o then s_i, (s_o', s_i'), (c, c')
       else loop (Sv.union s_i' s_o) in
     let s_i, se, (c,c') = loop s_o in
     s_i, s_o, Cwhile(a, c, e, (info, se), c')
@@ -88,7 +88,7 @@ and live_c weak c s_o =
     (s_o, [])
 
 let live_fd weak fd =
-  let s_o = Sv.of_list (List.map L.unloc fd.f_ret) in
+  let s_o = vars_ret fd in
   let s_i, c = live_c weak fd.f_body s_o in
   { fd with f_body = c; f_info = (s_i, s_o) }
 

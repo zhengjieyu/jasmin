@@ -61,9 +61,9 @@ Proof.
 Qed.
 
 End ToIdent.
-Arguments ToIdent [t] T%type_scope {tS}.
-Arguments of_var {t} {T}%type_scope {tS toI} v.
-Arguments to_var {t} {T}%type_scope {tS toI} r.
+Arguments ToIdent [t] T%_type_scope {tS}.
+Arguments of_var {t} {T}%_type_scope {tS toI} v.
+Arguments to_var {t} {T}%_type_scope {tS toI} r.
 
 Module Type MkToIdent_T.
 
@@ -240,10 +240,18 @@ Definition var_of_implicit_arg (i : implicit_arg) : var :=
   | IAreg r => to_var r
   end.
 
+Definition sopn_constrained_register acr :=
+  match acr with
+  | ACR_any      => sopn.ACR_any
+  | ACR_exact x  => sopn.ACR_exact (to_var x)
+  | ACR_vector x => sopn.ACR_vector (to_var x)
+  | ACR_subset s => sopn.ACR_subset (map to_var s)
+  end.
+
 Definition sopn_arg_desc (ad:arg_desc) :=
   match ad with
   | ADImplicit ia => sopn.ADImplicit (var_of_implicit_arg ia)
-  | ADExplicit _ n ox => sopn.ADExplicit n (omap to_var ox)
+  | ADExplicit _ n ox => sopn.ADExplicit n (sopn_constrained_register ox)
   end.
 
 End ARCH.

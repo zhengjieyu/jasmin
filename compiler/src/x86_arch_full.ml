@@ -37,7 +37,8 @@ module X86_core = struct
 
   let not_saved_stack = (X86_params.x86_liparams atoI).lip_not_saved_stack
 
-  let pp_asm = Ppasm.pp_prog
+  let pp_asm = Pp_x86.print_prog
+
   let callstyle = Arch_full.StackDirect
 
   let known_implicits = ["OF","_of_"; "CF", "_cf_"; "SF", "_sf_"; "ZF", "_zf_"]
@@ -87,6 +88,8 @@ module X86_core = struct
     | MFENCE -> false (* Not DOIT *)
     | MOV _ -> true
     | MOVD _ -> true
+    | MOVEMASK (VE8, _) -> true
+    | MOVEMASK _ -> false (* Not DOIT *)
     | MOVSX _ -> true
     | MOVV _ -> true
     | MOVX _ -> true
@@ -118,6 +121,9 @@ module X86_core = struct
     | SBB _ -> true
     | SETcc -> true
     | SFENCE -> false (* Not DOIT *)
+    | SHA256MSG1 -> true
+    | SHA256MSG2 -> true
+    | SHA256RNDS2 -> true
     | SHL _ -> true
     | SHLD _ -> false (* Not DOIT *)
     | SHLX _ -> true

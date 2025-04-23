@@ -311,7 +311,8 @@ let is_ct_op1 (_: Expr.sop1) = true
 
 let is_ct_op2 (o: Expr.sop2) =
   match o with
-  | Omod (Cmp_w _) | Odiv (Cmp_w _) -> false
+  | Omod (_, Op_w _) | Odiv (_, Op_w _) -> false
+  | Owi2(_, _, (WImod | WIdiv)) -> false
   | _ -> true
 
 let is_ct_opN (_ : Expr.opN) = true
@@ -415,7 +416,7 @@ let get_annot ensure_annot f =
   in
   let ain  = List.mapi process_argument f.f_args in
   let ainlevels = List.map (fun (_, x) -> x) ain in
-  let aout = List.mapi process_result f.f_outannot in
+  let aout = List.mapi process_result f.f_ret_info.ret_annot in
 
   let check_defined msg l =
     if List.exists (fun a -> a = None) l then

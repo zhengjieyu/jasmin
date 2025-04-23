@@ -22,9 +22,17 @@ let dname = latex "dname"
 let pannot = latex "annotation"
 let pprim = latex "primitive"
 let arrow = symbol "arrow"
+
 let sharp fmt () = F.fprintf fmt "\\#"
 let openbrace fmt () = F.fprintf fmt "\\{"
 let closebrace fmt () = F.fprintf fmt "\\}"
+let percent fmt () = F.fprintf fmt "\\%%"
+let dollar fmt () = F.fprintf fmt "\\$"
+let tilde fmt () = F.fprintf fmt "\\textasciitilde{}"
+let caret fmt () = F.fprintf fmt "\\textasciicircum{}"
+let backslash fmt () = F.fprintf fmt "\\textbackslash{}"
+let quotesingle fmt () = F.fprintf fmt "\\textquotesingle{}"
+let quotedouble fmt () = F.fprintf fmt "\\textquotedbl{}"
 
 let indent fmt d = if d > 0 then latex "indent" fmt (string_of_int d)
 
@@ -35,6 +43,23 @@ let pp_opt p fmt =
 
 let pp_paren p fmt =
   F.fprintf fmt "(%a)" p
+
+let pp_string fmt s =
+  F.asprintf "%S" s |>
+  String.iter @@ function
+  | '\\' -> backslash fmt ()
+  | '\'' -> quotesingle fmt ()
+  | '"' -> quotedouble fmt ()
+  | '#' -> sharp fmt ()
+  | '{' -> openbrace fmt ()
+  | '}' -> closebrace fmt ()
+  | '%' -> percent fmt ()
+  | '$' -> dollar fmt ()
+  | '~' -> tilde fmt ()
+  | '^' -> caret fmt ()
+  | c -> F.fprintf fmt "%c" c
+
+let pp_loc_string fmt s = L.unloc s |> pp_string fmt
 
 let pp_cc =
     pp_opt (fun fmt x -> F.fprintf fmt "%a " kw (match x with `Inline -> "inline" | `Export -> "export"))
@@ -47,30 +72,38 @@ let pp_castop fmt =
   | None -> ()
   | Some ty -> ptype fmt (string_of_castop1 (L.unloc ty))
 
+let pp_signcastop fmt (s, c) =
+  match s, c with
+  | None, _ -> pp_castop fmt c
+  | Some s, None -> Format.fprintf fmt "%s" (string_of_sign s)
+  | Some s, Some _ -> Format.fprintf fmt "%s %a" (string_of_sign s) pp_castop c
+
 let pp_op2 fmt =
-  let f s p = F.fprintf fmt "%s%a" p pp_castop s in
+  let f c p = F.fprintf fmt "%s%a" p pp_castop c in
+  let g c p =  F.fprintf fmt "%s%a" p pp_signcastop c in
+
   let ret s = F.fprintf fmt "%s" s in
   function
   | `Add s -> f s "+"
   | `Sub s -> f s "-"
   | `Mul s -> f s "*"
-  | `Div s -> f s "/"
-  | `Mod s -> f s "\\%"
+  | `Div s -> g s "/"
+  | `Mod s -> g s "\\%"
   | `And -> ret "&&"
   | `Or -> ret "||"
   | `BAnd s -> f s "&"
   | `BOr s -> f s "|"
   | `BXOr s -> f s "\\textasciicircum{}"
-  | `ShR s -> f s ">{}>"
+  | `ShR s -> g s ">{}>"
   | `ShL s -> f s "<{}<"
   | `ROR s -> f s ">{}>r"
   | `ROL s -> f s "<{}<r"
   | `Eq s -> f s "=="
   | `Neq s -> f s "!="
-  | `Lt s -> f s "<"
-  | `Le s -> f s "<="
-  | `Gt s -> f s ">"
-  | `Ge s -> f s ">="
+  | `Lt s -> g s "<"
+  | `Le s -> g s "<="
+  | `Gt s -> g s ">"
+  | `Ge s -> g s ">="
   | `Raw -> ret ""
 
 type prio =
@@ -114,9 +147,9 @@ let optparent fmt ctxt prio p =
 
 let string_of_wsize w = Format.sprintf "u%d" (bits_of_wsize w)
 
-let pp_svsize fmt (vs,s,ve) = 
+let pp_svsize fmt (vs,s,ve) =
   Format.fprintf fmt "%d%s%d"
-    (int_of_vsize vs) (suffix_of_sign s) (bits_of_vesize ve)
+    (int_of_vsize vs) (string_of_sign s) (bits_of_vesize ve)
 
 let pp_space fmt _ =
   F.fprintf fmt " "
@@ -139,7 +172,8 @@ let pp_aligned =
 let rec pp_simple_attribute fmt a =
   match L.unloc a with
   | Aint i -> Z.pp_print fmt i
-  | Aid s | Astring s -> pannot fmt s
+  | Aid s -> pannot fmt s
+  | Astring s -> pannot fmt (Format.asprintf "%a" pp_string s)
   | Aws ws -> Format.fprintf fmt "%a" ptype (string_of_wsize ws)
   | Astruct struct_ -> Format.fprintf fmt "(%a)" pp_struct_attribute struct_
 
@@ -177,7 +211,7 @@ let rec pp_expr_rec prio fmt pe =
   | PEBool b -> F.fprintf fmt "%s" (if b then "true" else "false")
   | PEInt i -> F.fprintf fmt "%s" i
   | PECall (f, args) -> F.fprintf fmt "%a(%a)" pp_var f (pp_list ", " pp_expr) args
-  | PECombF (f, args) -> 
+  | PECombF (f, args) ->
     F.fprintf fmt "%a(%a)" pp_var f (pp_list ", " pp_expr) args
   | PEPrim (f, args) -> F.fprintf fmt "%a%a(%a)" sharp () pprim (L.unloc f) (pp_list ", " pp_expr) args
   | PEOp1 (op, e) ->
@@ -197,12 +231,12 @@ let rec pp_expr_rec prio fmt pe =
     optparent fmt prio p ")"
 
 and pp_mem_access fmt (al, ty,x,e) =
-  let pp_e fmt e = 
+  let pp_e fmt e =
     match e with
     | None -> ()
-    | Some (`Add, e) -> Format.fprintf fmt " + %a" pp_expr e 
+    | Some (`Add, e) -> Format.fprintf fmt " + %a" pp_expr e
     | Some (`Sub, e) -> Format.fprintf fmt " - %a" pp_expr e in
-  F.fprintf fmt "%a[%a%a%a]" (pp_opt (pp_paren pp_ws)) ty pp_aligned al pp_var x pp_e e
+  F.fprintf fmt "%a[%a%a%a]" (pp_opt (pp_paren pp_ws)) (Option.map L.unloc ty) pp_aligned al pp_var x pp_e e
 
 
 and pp_type fmt ty =
@@ -213,12 +247,14 @@ and pp_type fmt ty =
   | TArray (w, e) -> F.fprintf fmt "%a[%a]" ptype (Syntax.string_of_sizetype w) pp_expr e
   | TAlias id -> F.fprintf fmt "%a" ptype (L.unloc id)
 
-and pp_ws fmt w = F.fprintf fmt "%a" ptype (string_of_wsize w)
+and pp_ws fmt w =
+  F.fprintf fmt "%a" ptype (string_of_swsize_ty w)
 
 and pp_expr fmt e = pp_expr_rec Pmin fmt e
 
 and pp_arr_access fmt al aa ws x e len=
- let pp_olen fmt len = 
+ let ws = Option.map L.unloc ws in
+ let pp_olen fmt len =
    match len with
    | None -> ()
    | Some len -> Format.fprintf fmt " : %a" pp_expr len in
@@ -279,7 +315,7 @@ let pp_lv fmt x =
   | PLIgnore -> F.fprintf fmt "_"
   | PLVar x -> pp_var fmt x
   | PLArray (al, aa, ws, x, e, len) -> pp_arr_access fmt al aa ws x e len
-  | PLMem me -> pp_mem_access fmt me 
+  | PLMem me -> pp_mem_access fmt me
 
 let pp_eqop fmt op =
   F.fprintf fmt "%a=" pp_op2 op
@@ -294,7 +330,7 @@ let rec pp_instr depth fmt (annot, p) =
   if annot <> [] then F.fprintf fmt "%a%a" indent depth pp_top_annotations annot;
   indent fmt depth;
   match L.unloc p with
-  | PIdecl d -> pp_vardecls fmt d 
+  | PIdecl d -> pp_vardecls fmt d
   | PIArrayInit x -> F.fprintf fmt "%a (%a);" kw "arrayinit" pp_var x
   | PIAssign ((pimp,lvs), op, e, cnd) ->
     begin match pimp, lvs with
@@ -306,15 +342,15 @@ let rec pp_instr depth fmt (annot, p) =
          | PEPrim _ -> F.fprintf fmt "() %a" pp_eqop op
          | _ -> ()
        end
-    | None, _ -> F.fprintf fmt "%a %a " (pp_list ", " pp_lv) lvs pp_eqop op 
+    | None, _ -> F.fprintf fmt "%a %a " (pp_list ", " pp_lv) lvs pp_eqop op
     | Some pimp, _ ->
       F.fprintf fmt "?%a%a%a, %a %a "
         openbrace ()
         pp_struct_attribute (L.unloc pimp)
         closebrace ()
-        (pp_list ", " pp_lv) lvs 
+        (pp_list ", " pp_lv) lvs
         pp_eqop op
-      
+
     end;
     F.fprintf fmt "%a%a;"
       pp_expr e
@@ -361,7 +397,7 @@ let pp_funbody fmt { pdb_instr ; pdb_ret } =
         indent 1
         kw "return"
         (pp_list ", " pp_var) ret;
-  ) fmt pdb_ret
+  ) fmt (L.unloc pdb_ret)
 
 let pp_fundef fmt { pdf_cc ; pdf_name ; pdf_args ; pdf_rty ; pdf_body ; pdf_annot } =
   F.fprintf
@@ -375,13 +411,6 @@ let pp_fundef fmt { pdf_cc ; pdf_name ; pdf_args ; pdf_rty ; pdf_body ; pdf_anno
     pp_rty pdf_rty
     (pp_inbraces 0 pp_funbody) pdf_body
 
-let pp_string fmt s =
-  s |> L.unloc |> F.asprintf "%S" |> String.iter @@ function
-  | '\\' -> F.fprintf fmt "\\textbackslash{}"
-  | '\'' -> F.fprintf fmt "\\textquotesingle{}"
-  | '"' -> F.fprintf fmt "\\textquotedbl{}"
-  | c -> F.fprintf fmt "%c" c
-
 let pp_param fmt { ppa_ty ; ppa_name ; ppa_init } =
   F.fprintf fmt "%a %a %a = %a;"
     kw "param"
@@ -390,13 +419,13 @@ let pp_param fmt { ppa_ty ; ppa_name ; ppa_init } =
     pp_expr ppa_init
 
 let pp_pgexpr fmt = function
-  | GEword e -> pp_expr fmt e 
+  | GEword e -> pp_expr fmt e
   | GEarray es ->
     F.fprintf fmt "%a @[%a@] %a"
       openbrace ()
       (pp_list ",@ " pp_expr) es
       closebrace ()
-  | GEstring e -> pp_string fmt e
+  | GEstring e -> pp_loc_string fmt e
 
 let pp_global fmt { pgd_type ; pgd_name ; pgd_val } =
   F.fprintf fmt "%a %a = %a;"

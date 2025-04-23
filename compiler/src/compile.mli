@@ -14,6 +14,7 @@ val preprocess : wsize -> 'asm asmOp -> (unit, 'asm) pprog -> (unit, 'asm) prog
 
 val parse_file :
   ('reg, 'regx, 'xreg, 'regmask, 'rflag, 'cond, 'asm_op, 'extra_op) Pretyping.arch_info ->
+  ?idirs: (string * string) list ->
   string ->
   ('reg, 'regx, 'xreg, 'regmask, 'rflag, 'cond, 'asm_op, 'extra_op) Arch_extra.extended_op
   Pretyping.Env.env
@@ -30,7 +31,9 @@ val parse_file :
     pmod_item
     list
   * Syntax.pprogram
-(** Parsing and pre-typing of a complete file.
+(** Parsing and pre-typing of a complete file. Require directives are resolved
+    using named path given through the [idirs] argument and the JASMINPATH
+    environment variable.
 
     Raises `Pretyping.TyError` and `Syntax.ParseError`. *)
 
@@ -40,6 +43,23 @@ val do_spill_unspill :
   (unit, 'asm) prog ->
   ((unit, 'asm) prog, Utils.hierror) result
 (** Removes (aka implements) #spill and #unspill instructions. *)
+
+val do_wint_int :
+  (module Arch_full.Arch
+     with type reg = 'reg
+      and type regx = 'regx
+      and type xreg = 'xreg
+      and type regmask = 'regmask
+      and type rflag = 'rflag
+      and type cond = 'cond
+      and type asm_op = 'asm_op
+      and type extra_op = 'extra_op) ->
+  (unit,
+    ('reg, 'regx, 'xreg, 'regmask, 'rflag, 'cond, 'asm_op, 'extra_op) Arch_extra.extended_op Sopn.asm_op_t)
+   prog ->
+  (unit,
+    ('reg, 'regx, 'xreg, 'regmask, 'rflag, 'cond, 'asm_op, 'extra_op) Arch_extra.extended_op Sopn.asm_op_t)
+   prog
 
 val compile :
   (module Arch_full.Arch

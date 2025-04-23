@@ -1,6 +1,7 @@
 (* -------------------------------------------------------------------- *)
 require import AllCore IntDiv List.
 require export JModel_common JArray JWord_array Jslh JMemory AES.
+require SHA.
 
 
 (* ------------------------------------------------------------------- *)
@@ -836,6 +837,34 @@ op VPMOVMSKB_u256u64 (v: W256.t) =
 
 (* ------------------------------------------------------------------- *)
 (*
+| MOVEMASK of velem & wsize
+*)
+op MOVEMASK_16u8 (v: W128.t) =
+   let vb = W16u8.to_list v in
+   W64.bits2w (map W8.msb vb).
+
+op MOVEMASK_32u8 (v: W256.t) =
+   let vb = W32u8.to_list v in
+   W64.bits2w (map W8.msb vb).
+
+op MOVEMASK_4u32 (v: W128.t) =
+   let vb = W4u32.to_list v in
+   W64.bits2w (map W32.msb vb).
+
+op MOVEMASK_8u32 (v: W256.t) =
+   let vb = W8u32.to_list v in
+   W64.bits2w (map W32.msb vb).
+
+op MOVEMASK_2u64 (v: W128.t) =
+   let vb = W2u64.to_list v in
+   W64.bits2w (map W64.msb vb).
+
+op MOVEMASK_4u64 (v: W256.t) =
+   let vb = W4u64.to_list v in
+   W64.bits2w (map W64.msb vb).
+
+(* ------------------------------------------------------------------- *)
+(*
 | VPCMPEQ of velem & wsize
 | VPCMPGT of velem & wsize
 | VPSIGN of velem & wsize
@@ -993,6 +1022,17 @@ abbrev [-printing] VPCLMULQDQ_128 = PCLMULQDQ.
 op VPCLMULQDQ_256 (v1 v2: W256.t) (k: W8.t): W256.t =
  pack2 [ PCLMULQDQ (v1 \bits128 0) (v2 \bits128 0) k
        ; PCLMULQDQ (v1 \bits128 1) (v2 \bits128 1) k ].
+
+(* ------------------------------------------------------------------- *)
+(* SHA instructions *)
+(*
+| SHA256RNDS2
+| SHA256MSG1
+| SHA256MSG2
+*)
+op SHA256RNDS2 (v1 v2 v3: W128.t) : W128.t = SHA.rnds2 v1 v2 v3.
+op SHA256MSG1 (v1 v2: W128.t) : W128.t = SHA.msg1 v1 v2.
+op SHA256MSG2 (v1 v2: W128.t) : W128.t = SHA.msg2 v1 v2.
 
 (* -------------------------------------------------------------------- *)
 

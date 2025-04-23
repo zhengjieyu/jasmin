@@ -6,14 +6,15 @@ val pp_err : debug:bool -> Format.formatter -> Compiler_util.pp_error -> unit
 val pp_print_X : Format.formatter -> Z.t -> unit
 
 val pp_pvar  : Format.formatter -> pvar -> unit
-val pp_ptype : Format.formatter -> pty -> unit
-val pp_plval : Format.formatter -> plval -> unit
-val pp_pexpr : Format.formatter -> pexpr -> unit
-val pp_pprog : Wsize.wsize -> ('reg, 'regx, 'xreg, 'regmask, 'rflag, 'cond, 'asm_op, 'extra_op) Arch_extra.extended_op Sopn.asmOp ->
+val pp_ptype : debug:bool -> Format.formatter -> pty -> unit
+val pp_eptype : debug:bool -> Format.formatter -> epty -> unit
+val pp_plval : debug:bool -> Format.formatter -> plval -> unit
+val pp_pexpr : debug:bool -> Format.formatter -> pexpr -> unit
+val pp_pprog : debug:bool -> Wsize.wsize -> ('reg, 'regx, 'xreg, 'regmask, 'rflag, 'cond, 'asm_op, 'extra_op) Arch_extra.extended_op Sopn.asmOp ->
                Format.formatter -> ('info, ('reg, 'regx, 'xreg, 'regmask, 'rflag, 'cond, 'asm_op, 'extra_op) Arch_extra.extended_op) pprog -> unit
 
 val pp_var   : debug:bool -> Format.formatter -> var -> unit
-val pp_dvar   : debug:bool -> Format.formatter -> var -> unit
+val pp_dvar  : debug:bool -> Format.formatter -> var -> unit
 
 val string_of_combine_flags : Expr.combine_flags -> string
 
@@ -31,6 +32,7 @@ val pp_stmt  : debug:bool ->
                Format.formatter -> ('info, ('reg, 'regx, 'xreg, 'regmask, 'rflag, 'cond, 'asm_op, 'extra_op) Arch_extra.extended_op) stmt  -> unit
 
 val pp_fun :
+             debug:bool ->
              ?pp_locals:(Sv.t Utils.pp) ->
              ?pp_info:((Location.i_loc * 'info) Utils.pp) ->
              (('reg, 'regx, 'xreg, 'regmask, 'rflag, 'cond, 'asm_op, 'extra_op) Arch_extra.extended_op Sopn.sopn) Utils.pp ->

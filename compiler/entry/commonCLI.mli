@@ -4,6 +4,7 @@ open Cmdliner
 val get_arch_module : Utils.architecture -> Glob_options.call_conv -> (module Arch_full.Arch)
 val arch : Utils.architecture Term.t
 val call_conv : Glob_options.call_conv Term.t
+val idirs : (string * string) list Term.t
 val warn : bool Term.t
 val after_pass : Compiler.compiler_step Term.t
 
@@ -17,8 +18,11 @@ val parse_and_compile :
       and type regmask = 'regmask
       and type rflag = 'rflag
       and type xreg = 'xreg) ->
+  wi2i:bool ->
+  (* true => start by replacing wint operation by int operation *)
   Compiler.compiler_step ->
   string ->
+  (string * string) list ->
   ( unit,
     ( 'reg,
       'regx,

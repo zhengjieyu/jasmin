@@ -21,13 +21,15 @@ let coqPackages =
       coq = super.coq.override { version = "master"; };
       stdlib = super.stdlib.override { version = "master"; };
       mathcomp = super.mathcomp.override { version = "master"; };
+      mathcomp-algebra-tactics = super.mathcomp-algebra-tactics.override { version = "master"; };
+      mathcomp-zify = super.mathcomp-zify.override { version = "master"; };
       coq-elpi = callPackage scripts/coq-elpi.nix {
         version = "master";
-        inherit (self) lib mkCoqDerivation coq stdlib;
+        inherit (self) lib mkCoqDerivation coq;
       };
       hierarchy-builder = super.hierarchy-builder.override { version = "master"; };
     })
-  else coqPackages_8_19.overrideScope (self: super: {
+  else coqPackages_8_20.overrideScope (self: super: {
       mathcomp = super.mathcomp.override { version = "2.2.0"; };
   })
 ; in
@@ -68,7 +70,7 @@ stdenv.mkDerivation {
       coqPackages.coq
       mathcomp-word
       coqPackages.mathcomp-algebra-tactics ]
-    ++ optionals testDeps ([ curl.bin oP.apron.out libllvm ] ++ (with python3Packages; [ python pyyaml ]))
+    ++ optionals testDeps ([ curl.bin oP.apron.out llvmPackages.bintools-unwrapped ] ++ (with python3Packages; [ python pyyaml ]))
     ++ optionals ocamlDeps ([ mpfr ppl ] ++ (with oP; [
          ocaml findlib dune_3
          cmdliner
@@ -76,7 +78,7 @@ stdenv.mkDerivation {
          batteries
          menhir (oP.menhirLib or null) zarith camlidl apron yojson ]))
     ++ optionals devTools (with oP; [ merlin ocaml-lsp ])
-    ++ optionals ecDeps [ easycrypt alt-ergo.bin z3.out ]
+    ++ optionals ecDeps [ easycrypt z3.out ]
     ++ optionals opamDeps [ rsync git pkg-config perl ppl mpfr opam ]
     ;
 

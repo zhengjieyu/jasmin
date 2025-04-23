@@ -11,11 +11,21 @@ let preprocess reg_size asmOp p =
 
 (* -------------------------------------------------------------------- *)
 
-let parse_file arch_info fname =
-  let env =
-    List.fold_left Pretyping.Env.add_from Pretyping.Env.empty
-      !Glob_options.idirs
-  in
+let parse_jasmin_path s =
+  s |> String.split_on_char ':' |> List.map (String.split ~by:"=")
+
+let get_jasminpath () =
+  match Sys.getenv "JASMINPATH" with
+  | exception Not_found -> []
+  | path ->
+  try parse_jasmin_path path with
+  | Not_found ->
+  warning Always Location.i_dummy "ill-formed value for the JASMINPATH environment variable";
+  []
+
+let parse_file arch_info ?(idirs=[]) fname =
+  let idirs = idirs @ get_jasminpath () in
+  let env = List.fold_left Pretyping.Env.add_from Pretyping.Env.empty idirs in
   Pretyping.tt_program arch_info env fname
 
 (* -------------------------------------------------------------------- *)
@@ -55,6 +65,60 @@ let do_spill_unspill asmop ?(debug = false) cp =
   with
   | Utils0.Error msg -> Error (Conv.error_of_cerror (Printer.pp_err ~debug) msg)
   | Utils0.Ok p -> Ok (Conv.prog_of_cuprog p)
+
+let do_wint_int
+   (type reg regx xreg regmask rflag cond asm_op extra_op)
+    (module Arch : Arch_full.Arch
+      with type reg = reg
+       and type regx = regx
+       and type xreg = xreg
+       and type regmask = regmask
+       and type rflag = rflag
+       and type cond = cond
+       and type asm_op = asm_op
+       and type extra_op = extra_op) prog =
+  let fdsi = snd prog in
+  let fv = List.fold_left (fun fv fd -> Sv.union fv (vars_fc fd)) Sv.empty fdsi in
+  let m =
+    Sv.fold (fun x m ->
+          match x.v_ty with
+          | Bty (U _) ->
+            begin match Annotations.has_wint x.v_annot with
+            | None -> m
+            | Some sg ->
+              let annot = Annotations.remove_wint x.v_annot in
+              let xi = V.mk x.v_name x.v_kind tint x.v_dloc annot in
+              Mv.add x (sg, Conv.cvar_of_var xi) m
+            end
+          | _ -> m)
+      fv Mv.empty in
+  let cp = Conv.cuprog_of_prog prog in
+  let info x =
+    let x = Conv.var_of_cvar x in
+     Mv.find_opt x m in
+  let cp = Wint_int.wi2i_prog Arch.asmOp Arch.msf_size info cp in
+  let cp =
+    match cp with
+    | Utils0.Ok cp -> cp
+    | Utils0.Error e ->
+      let e = Conv.error_of_cerror (Printer.pp_err ~debug:false) e in
+      raise (HiError e) in
+  let (gd, fdso) = Conv.prog_of_cuprog cp in
+  (* Restore type of array in the functions signature *)
+  let restore_ty tyi tyo =
+    match tyi, tyo with
+    | Arr(ws1, l1), Arr(ws2, l2) -> assert (arr_size ws1 l1 = arr_size ws2 l2); tyi
+    | Bty (U _), Bty Int -> tyo
+    | _, _ -> assert (tyi = tyo); tyo
+  in
+  let restore_sig fdi fdo =
+    { fdo with
+      f_tyin = List.map2 restore_ty fdi.f_tyin fdo.f_tyin;
+      f_tyout = List.map2 restore_ty fdi.f_tyout fdo.f_tyout;
+    } in
+  let fds = List.map2 restore_sig fdsi fdso in
+  (gd, fds)
+
 
 (*--------------------------------------------------------------------- *)
 
@@ -187,8 +251,8 @@ let compile (type reg regx xreg regmask rflag cond asm_op extra_op)
         let (_, va) = Hv.find harrs (L.unloc x) in
         List.init (Array.length va) (fun _ -> [])
       with Not_found -> [a] in
-    let f_outannot = List.flatten (List.map2 do_outannot fd.f_ret fd.f_outannot) in
-    let finfo = fd.f_loc, fd.f_annot, f_cc, f_outannot in
+    let ret_annot = List.flatten (List.map2 do_outannot fd.f_ret fd.f_ret_info.ret_annot) in
+    let finfo = fd.f_loc, fd.f_annot, f_cc, { fd.f_ret_info with ret_annot } in
     { Array_expansion.vars; arrs = !arrs; finfo }
   in
 
@@ -216,6 +280,19 @@ let compile (type reg regx xreg regmask rflag cond asm_op extra_op)
     let fds, _data = Conv.prog_of_csprog sp in
     let tokeep = RemoveUnusedResults.analyse fds in
     tokeep
+  in
+
+  let remove_wint_annot fd =
+    let vars = Prog.vars_fc fd in
+    let subst =
+      Sv.fold (fun x s ->
+          if Annotations.has_wint x.v_annot = None then s
+          else
+            let annot = Annotations.remove_wint x.v_annot in
+            let x' = V.mk x.v_name x.v_kind x.v_ty x.v_dloc annot in
+            Mv.add x x' s)
+        vars Mv.empty in
+    Subst.vsubst_func subst fd
   in
 
   let warn_extra s p =
@@ -310,6 +387,8 @@ let compile (type reg regx xreg regmask rflag cond asm_op extra_op)
         Var0.Var.vname (Conv.cvar_of_var Arch.rip);
       Compiler.stackalloc = memory_analysis;
       Compiler.removereturn;
+      Compiler.remove_wint_annot =
+        apply "remove wint annot" remove_wint_annot;
       Compiler.regalloc = global_regalloc;
       Compiler.print_uprog =
         (fun s p ->

@@ -114,7 +114,7 @@ let main () =
         | None -> () in
 
     let env, pprog, _ast =
-      try Compile.parse_file Arch.arch_info infile
+      try Compile.parse_file Arch.arch_info ~idirs:!Glob_options.idirs infile
       with
       | Annot.AnnotationError (loc, code) -> hierror ~loc:(Lone loc) ~kind:"annotation error" "%t" code
       | Pretyping.TyError (loc, code) -> hierror ~loc:(Lone loc) ~kind:"typing error" "%a" Pretyping.pp_tyerror code
@@ -128,13 +128,17 @@ let main () =
     in
 
     if !print_dependencies then begin
-      Format.printf "%a" 
+      Format.printf "%a"
         (pp_list " " (fun fmt p -> Format.fprintf fmt "%s" (BatPathGen.OfString.to_string p)))
         (List.tl (List.rev (Pretyping.Env.dependencies env)));
       exit 0
     end;
 
-    eprint Compiler.Typing (Printer.pp_pprog Arch.reg_size Arch.asmOp) pprog;
+    (* Check if generated assembly labels will generate conflicts*)
+    let label_errors = Label_check.get_labels_errors pprog in 
+    List.iter Label_check.warn_duplicate_label label_errors;
+
+    eprint Compiler.Typing (Printer.pp_pprog ~debug:true Arch.reg_size Arch.asmOp) pprog;
 
     let prog =
       try Compile.preprocess Arch.reg_size Arch.asmOp pprog
@@ -167,32 +171,10 @@ let main () =
           source_prog
         |> fun () -> exit 0
       else
-      (
         eprint s (Printer.pp_prog ~debug Arch.reg_size Arch.asmOp) p
-      ) in
+    in
 
     visit_prog_after_pass ~debug:true Compiler.ParamsExpansion prog;
-
-    if !ec_list <> [] || !ecfile <> "" then begin
-      let fmt, close =
-        if !ecfile = "" then Format.std_formatter, fun () -> ()
-        else
-          let out = open_out !ecfile in
-          let fmt = Format.formatter_of_out_channel out in
-          fmt, fun () -> close_out out in
-      begin try
-        BatPervasives.finally
-          (fun () -> close ())
-          (fun () ->
-            ToEC.extract prog !Glob_options.target_arch Arch.reg_size Arch.asmOp !model ToEC.ArrayOld !ec_list (Some !ec_array_path) fmt
-          )
-          ()
-      with e ->
-        BatPervasives.ignore_exceptions
-          (fun () -> if !ecfile <> "" then Unix.unlink !ecfile) ();
-        raise e end;
-      exit 0
-    end;
 
     (* Now call the coq compiler *)
     let cprog = Conv.cuprog_of_prog prog in
