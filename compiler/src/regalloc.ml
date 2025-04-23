@@ -57,10 +57,10 @@ let string_of_kind =
 let kind_of_type reg_size k =
   function
   | Bty (U sz) ->
-     if Wsize.wsize_cmp sz reg_size = Datatypes.Gt then Vector
-     else if reg_kind k = Normal then Word 
-     else if reg_kind k = Extra then Extra
-     else Mask
+     if Wsize.wsize_cmp sz reg_size = Datatypes.Gt then Vector 
+     else if reg_kind k = Normal then Word
+     else if reg_kind k = Mask then Mask 
+     else Extra
   | Bty Bool -> Flag
   | ty -> Unknown ty
 

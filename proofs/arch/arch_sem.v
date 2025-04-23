@@ -43,6 +43,19 @@ Module RegXMap. Section Section.
 
 End Section. End RegXMap.
 
+Module RegMaskMap. Section Section.
+
+  Context `{arch : arch_decl }.
+
+  Definition map := (* {ffun reg_t -> wreg}. *)
+    FinMap.map (T:= regmask_t) wreg.
+
+  Definition set (m : map) (x : regmask_t) (y : wreg) : map :=
+    FinMap.set m x y.
+
+End Section. End RegMaskMap.
+
+
 (* -------------------------------------------------------------------- *)
 
 Module XRegMap. Section Section.

@@ -43,8 +43,8 @@ Proof.
   rewrite /xreg_of_var.
   case heqxr: (to_xreg x) => [ r | ]; first by move=> [<-].
   case heqrx: (to_reg x) => [ r | ]; first by move=> [<-].
+  case heqrmask: (to_regmask x) => [ r | ]; first by move=> [<-].
   case heqr: (to_regx x) => [ r | // ]; move=> [<-].
-  by case heqrmask: (to_regmask x) => [ r | // ]; move=> [<-].
 Qed.
 
 (* -------------------------------------------------------------------- *)
@@ -59,6 +59,7 @@ Variant disj_rip rip :=
   | Drip of
     (∀ (r:reg_t), to_var r <> rip) &
     (∀ (r:regx_t), to_var r <> rip) &
+    (∀ (r:regmask_t), to_var r <> rip) &
     (∀ (r:xreg_t), to_var r <> rip) &
     (∀ (f:rflag_t), to_var f <> rip).
 
@@ -460,7 +461,7 @@ Lemma lom_eqv_write_var f rip s xs (x : var_i) sz (w : word sz) s' r :
   -> to_var r = x
   -> lom_eqv rip s' (mem_write_reg f r w xs).
 Proof.
-  case => eqscs eqm ok_rip [dr drx dx df] eqr eqrx eqx eqf.
+  case => eqscs eqm ok_rip [dr drx dx df] eqr eqrx eqrmask eqx eqf.
   case: x => x xi /=.
   rewrite /mem_write_reg => /write_varP [-> hdb htr] ?; subst x.
   constructor => //=.
@@ -474,6 +475,8 @@ Proof.
     by rewrite word_extend_big //;apply /negP.
   + move=> r'; rewrite Vm.setP_neq; first by apply eqrx.
     by apply/eqP/to_var_reg_neq_regx.
+  + move=> r'; rewrite Vm.setP_neq; first by apply eqrmask.
+    by apply/eqP/to_var_reg_neq_regmask.
   + move=> r'; rewrite Vm.setP_neq; first by apply eqx.
     by apply/eqP/to_var_reg_neq_xreg.
   by move=> ?; rewrite Vm.setP_neq.
@@ -1843,7 +1846,7 @@ Proof.
     by apply: asm_pos_incr hok_i hac heq hip => /=; rewrite ok_r_x'.
   - rewrite /linear_sem.eval_instr => /=.
     t_xrbindP => cnd lbl hok_i cndt ok_c ? b v ok_v ok_b; subst aci.
-    case: hloeq => eqscs eqm hrip hd eqr eqrx eqx eqf.
+    case: hloeq => eqscs eqm hrip hd eqr eqrx eqrmask eqx eqf.
     have [v' ok_v' hvv'] := hagp_eval_assemble_cond hagparams eqr eqf ok_c ok_v.
     case: v ok_v ok_b hvv' => // [ b' | [] // ] ok_b [?]; subst b'.
     rewrite ok_fd /=; case: v' ok_v' => // b1 ok_v' ? h; subst b1.

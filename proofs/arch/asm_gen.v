@@ -245,6 +245,7 @@ Definition xreg_of_var ii (x: var_i) : cexec asm_arg :=
   if to_xreg x is Some r then ok (XReg r)
   else if to_reg x is Some r then ok (Reg r)
   else if to_regx x is Some r then ok (Regx r)
+  else if to_regmask x is Some r then ok (Regmask r)
   else Error (E.verror false "Not a (x)register" ii x).
 
 Definition assemble_word_load rip ii al (sz: wsize) (e: rexpr) :=
@@ -430,6 +431,7 @@ Definition enforce_imm_arg_kind (a:asm_arg) (cond: arg_kind) : option asm_arg :=
     if (w == w2) && check_CAimm checker w1 then Some (Imm w1) else None
   | Reg _, CAreg => Some a
   | Regx _, CAregx => Some a
+  | Regmask _, CAregmask => Some a
   | Addr _, CAmem _ => Some a
   | XReg _, CAxmm   => Some a
   | _, _ => None
