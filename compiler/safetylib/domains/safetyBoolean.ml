@@ -220,6 +220,7 @@ let ws_of_int i = match i with
   | 64  -> U64
   | 128 -> U128
   | 256 -> U256
+  | 512 -> U512
   | _ -> assert false
 
 let ws_meet ws1 ws2 = 

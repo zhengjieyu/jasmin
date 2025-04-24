@@ -16,7 +16,7 @@ open SafetyInterfaces
 
 let int_thresholds =
   (* For unsigned *)
-  List.map (fun i -> mpq_pow_minus i 1) [8;16;32;64;128;256]
+  List.map (fun i -> mpq_pow_minus i 1) [8;16;32;64;128;256;512]
   (* (\* For signed *\)
    * @ List.map (fun i -> mpq_pow_minus i 1) [7;15;31;63;127;255]
    * @ List.map (fun i -> mpq_pow_minus i 0) [7;15;31;63;127;255] *)

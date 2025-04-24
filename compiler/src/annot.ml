@@ -92,7 +92,7 @@ let string_of_ws ws = Annotations.string_of_ws ws
 let ws_strings =
   List.map
     (fun ws -> (string_of_ws ws, ws))
-    [ U8; U16; U32; U64; U128; U256 ]
+    [ U8; U16; U32; U64; U128; U256; U512 ]
 
 let ws_of_string =
   fun s -> List.assoc s ws_strings

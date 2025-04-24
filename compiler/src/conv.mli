@@ -19,6 +19,7 @@ val z_of_cz : BinNums.coq_Z -> Z.t
 val word_of_z : wsize -> Z.t -> Obj.t
 val int64_of_z : Z.t -> Obj.t
 val int32_of_z : Z.t -> Obj.t
+val z_of_int512 : Obj.t -> Z.t
 val z_of_int256 : Obj.t -> Z.t
 val z_of_int128 : Obj.t -> Z.t
 val z_of_int64 : Obj.t -> Z.t

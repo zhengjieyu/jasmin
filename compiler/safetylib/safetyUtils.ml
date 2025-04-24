@@ -110,6 +110,7 @@ let wsize_of_int = function
   | 64  -> U64
   | 128 -> U128
   | 256 -> U256
+  | 512 -> U512
   | _   -> assert false
 
 

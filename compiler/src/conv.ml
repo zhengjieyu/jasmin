@@ -20,7 +20,7 @@ let word_of_z sz z = Word0.wrepr sz (cz_of_z z)
 let int64_of_z z = word_of_z W.U64 z
 let int32_of_z z = word_of_z W.U32 z
 
-
+let z_of_int512 z  = z_of_cz (Word0.wsigned W.U512 z)
 let z_of_int256 z  = z_of_cz (Word0.wsigned W.U256 z)
 let z_of_int128 z  = z_of_cz (Word0.wsigned W.U128 z)
 let z_of_int64 z  = z_of_cz (Word0.wsigned W.U64 z)

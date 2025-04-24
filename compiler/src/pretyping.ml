@@ -975,7 +975,7 @@ let op2_of_ty exn op s castop ty (info:E.sop2 op_info) =
   let tok = op_info exn (`Op2 op) s castop ty info.opi_wcmp info.opi_vcmp in
   info.opi_op tok
 
-let ensure_word exn ty = (max_ty ty (P.etw U256) |> oget ~exn)
+let ensure_word exn ty = (max_ty ty (P.etw U512) |> oget ~exn)
 
 let op2_of_pop2 exn ty (op : S.peop2) =
   match op with

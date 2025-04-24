@@ -7,6 +7,7 @@ let w8 i = w_of_string Wsize.U8 i
 let w16 i = w_of_string Wsize.U16 i
 let w128 i = w_of_string Wsize.U128 i
 let w256 i = w_of_string Wsize.U256 i
+let w512 i = w_of_string Wsize.U512 i
 
 let () =
   let prog = load_file "sem_unit.jazz" in
