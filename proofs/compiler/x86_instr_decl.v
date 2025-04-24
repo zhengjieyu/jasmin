@@ -12,6 +12,7 @@ Require Import x86_decl.
 Variant x86_op : Type :=
   (* Data transfert *)
 | MOV    of wsize              (* copy *)
+| KMOV    of wsize              (* copy *)
 | MOVSX  of wsize & wsize      (* sign-extend *)
 | MOVZX  of wsize & wsize      (* zero-extend *)
 | CMOVcc of wsize              (* conditional copy *)
@@ -462,6 +463,10 @@ Notation mk_instr_w_w name semi ain aout nargs check prc valid pp_asm :=
  ((fun sz =>
   mk_instr_safe (pp_sz name sz) (w_ty sz) (w_ty sz) ain aout (reg_msb_flag sz) (semi sz) (check sz) nargs (valid sz) (pp_asm sz)), (name%string,prc)) (only parsing).
 
+Notation mk_instr_w_w_kmov name semi ain aout nargs check prc valid pp_asm :=
+((fun sz =>
+  mk_instr_safe (pp_sz name sz) (w_ty sz) (w_ty sz) ain aout (reg_msb_flag sz) (semi sz) (check) nargs (valid sz) (pp_asm sz)), (name%string,prc)) (only parsing).
+
 Notation mk_instr_w_w'_10 name sign semi check prc valid pp_asm :=
  ((fun szo szi =>
   mk_instr_safe (pp_sz_sz name sign szo szi) (w_ty szi) (w_ty szo) [:: Eu 1] [:: Eu 0] (reg_msb_flag szo) (semi szi szo) (check szi szo) 2 (valid szi szo) (pp_asm szi szo)), (name%string,prc)) (only parsing).
@@ -644,6 +649,19 @@ let (name, ext) :=
   pp_aop_ext  := ext;
   pp_aop_args := map_sz sz args; |}.
 
+Definition pp_kmov sz (args: asm_args) :=
+let (name, ext) :=
+    match sz with
+    | U8 => ("kmovb"%string, PP_name)
+    | U16 => ("kmovw"%string, PP_name)
+    | U32 => ("kmovd"%string, PP_name)
+    | U64 => ("kmovq"%string, PP_name)
+    | _   => (""%string, PP_error)
+    end in
+{| pp_aop_name := name;
+  pp_aop_ext  := ext;
+  pp_aop_args := map_sz sz args; |}.
+
 
 Definition pp_vmovdqu sz (args: asm_args) :=
   let (name, ext) :=
@@ -664,15 +682,19 @@ Definition k := [:: CAregmask].
 Definition m b := [:: CAmem b].
 Definition i sz := [:: CAimm CAimmC_none sz].
 Definition rm b := [:: CAreg; CAmem b].
+Definition krm b := [:: CAregmask; CAreg; CAmem b].
 Definition rxm b := [:: CAregx; CAmem b].
 
 Definition rmi sz := [:: CAreg; CAmem true; CAimm CAimmC_none sz].
 Definition ri  sz := [:: CAreg; CAimm CAimmC_none sz].
 
 Definition m_r := [:: m false; r].
+Definition rm_k := [:: rm false; k].
 Definition r_rm_false := [:: r; rm false].
 
 Definition r_rm := [:: r; rm true].
+Definition k_krm := [:: k; krm true].
+
 Definition r_rmi sz := [:: r; rmi sz].
 Definition m_ri sz := [:: m false; ri sz].
 
@@ -696,6 +718,14 @@ Definition check_mov sz := [:: r_rmi sz; m_ri (max_32 sz)].
 Definition Ox86_MOV_instr               :=
   mk_instr_w_w "MOV" x86_MOV [:: Eu 1] [:: Eu 0] 2
                check_mov (prim_8_64 MOV) size_8_64 (pp_iname "mov").
+
+Definition x86_KMOV sz (x: word sz) : word sz := x.
+
+Definition check_kmov := [:: k_krm; rm_k].
+
+Definition Ox86_KMOV_instr               :=
+  mk_instr_w_w_kmov "KMOV" x86_KMOV [:: Eu 1] [:: Eu 0] 2
+              check_kmov (prim_8_64 KMOV) size_8_64 pp_kmov.
 
 Definition check_movx (sz:wsize) := [:: [:: rx; rm true]; [:: rm true; rx]].
 
@@ -2341,6 +2371,7 @@ Definition Ox86_SHA256MSG2_instr :=
 Definition x86_instr_desc o : instr_desc_t :=
   match o with
   | MOV sz             => Ox86_MOV_instr.1 sz
+  | KMOV sz            => Ox86_KMOV_instr.1 sz
   | MOVSX sz sz'       => Ox86_MOVSX_instr.1 sz sz'
   | MOVZX sz sz'       => Ox86_MOVZX_instr.1 sz sz'
   | CMOVcc sz          => Ox86_CMOVcc_instr.1 sz
@@ -2509,6 +2540,7 @@ Definition x86_instr_desc o : instr_desc_t :=
 Definition x86_prim_string :=
  [::
    Ox86_MOV_instr.2;
+   Ox86_KMOV_instr.2;
    Ox86_MOVSX_instr.2;
    Ox86_MOVZX_instr.2;
    Ox86_CMOVcc_instr.2;

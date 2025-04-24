@@ -283,6 +283,7 @@ Definition x86_szparams : stack_zeroization_params :=
 Definition x86_is_move_op (o : asm_op_t) :=
   match o with
   | BaseOp (None, MOV _) => true
+  | BaseOp (None, KMOV _) => true
   | BaseOp (None, VMOVDQA _) => true
   | BaseOp (None, VMOVDQU _) => true
   | ExtOp Ox86SLHmove => true
