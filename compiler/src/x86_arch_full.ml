@@ -166,6 +166,7 @@ module X86_core = struct
     | VPANDN _ -> true
     | VPAVG _ -> true
     | VPBLEND _ -> true
+    | VPBLENDM _ -> true
     | VPBLENDVB _ -> true
     | VPBROADCAST _ -> true
     | VPCLMULQDQ _ -> true

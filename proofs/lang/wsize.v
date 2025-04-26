@@ -162,7 +162,20 @@ Definition string_of_ve_sz (ve:velem) (sz:wsize) : string :=
   | VE64, U512 => "8u64"
   | _,    _    => "ERROR: please repport"
   end.
-
+(* for mask register notation*)
+Definition string_of_ve_sz_sz (ve:velem) (sz:wsize) (sz':wsize): string :=
+  match ve, sz, sz' with
+  | VE16 , U128, U8 => "8u16_8"
+  | VE32, U128, U8 => "4u32_8"
+  | VE64, U128, U8 => "2u64_8"
+  | VE16 , U256, U16 => "16u16_16"
+  | VE32, U256, U8 => "8u32_8"
+  | VE64, U256, U8 => "4u64_8"
+  | VE16 , U512, U32 => "32u16_32"
+  | VE32, U512, U16 => "16u32_16"
+  | VE64, U512, U8 => "8u64_8"
+  | _, _, _    => "ERROR: please repport"
+  end.
 
 Definition pp_s (s: string) (_: unit) : string := s.
 
@@ -171,6 +184,8 @@ Definition pp_sz (s: string) (sz: wsize) (_: unit) : string :=
 
 Definition pp_ve_sz (s: string) (ve: velem) (sz: wsize) (_: unit) : string :=
   s ++ "_" ++ string_of_ve_sz ve sz.
+Definition pp_ve_sz_sz (s: string) (ve: velem) (sz: wsize) (sz': wsize) (_: unit) : string :=
+  s ++ "_" ++ string_of_ve_sz_sz ve sz sz'.
 
 Definition pp_ve_sz_ve_sz (s: string) (ve: velem) (sz: wsize) (ve': velem) (sz': wsize) (_: unit) : string :=
   s ++ "_" ++ string_of_ve_sz ve sz ++ "_" ++ string_of_ve_sz ve' sz'.

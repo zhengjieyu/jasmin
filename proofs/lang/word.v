@@ -1588,7 +1588,20 @@ Definition wpblendd sz (w1 w2: word sz) (m: u8) : word sz :=
   let b := split_vec 1 m in
   let r := map3 (λ b v1 v2, if b == 1%R then v2 else v1) b v1 v2 in
   make_vec sz r.
-
+(* -------------------------------------------------------------------*)
+Definition wpblendmd sz ksz (w1 w2: word sz) (m: word ksz) : word sz :=
+  let v1 := split_vec U32 w1 in
+  let v2 := split_vec U32 w2 in
+  let b := split_vec 1 m in
+  let r := map3 (λ b v1 v2, if b == 1%R then v2 else v1) b v1 v2 in
+  make_vec sz r.
+(* -------------------------------------------------------------------*)
+Definition wpblendmq sz ksz (w1 w2: word sz) (m: word ksz) : word sz :=
+  let v1 := split_vec U32 w1 in
+  let v2 := split_vec U32 w2 in
+  let b := split_vec 1 m in
+  let r := map3 (λ b v1 v2, if b == 1%R then v2 else v1) b v1 v2 in
+  make_vec sz r.
 (* -------------------------------------------------------------------*)
 Definition wpbroadcast ve sz (w: word ve) : word sz :=
   let r := nseq (sz %/ ve) w in
