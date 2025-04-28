@@ -77,6 +77,7 @@ let pp_suffix fmt =
   | PVp sz -> F.fprintf fmt "_%a" pp_wsize sz
   | PVs (sg, sz) -> F.fprintf fmt "_%s%a" (string_of_signess sg) pp_wsize sz
   | PVv (ve, sz) -> F.fprintf fmt "_%s" (string_of_velem Unsigned sz ve)
+  | PVvw (ve, sz, sz') -> F.fprintf fmt "_%su%a" (string_of_velem Unsigned sz ve) pp_wsize sz'
   | PVsv (sg, ve, sz) -> F.fprintf fmt "_%s" (string_of_velem sg sz ve)
   | PVx (szo, szi) -> F.fprintf fmt "_u%au%a" pp_wsize szo pp_wsize szi
   | PVvv (ve, sz, ve', sz') -> F.fprintf fmt "_%s_%s" (string_of_velem Unsigned sz ve) (string_of_velem Unsigned sz' ve')
@@ -1567,6 +1568,19 @@ let extract_size str : string * Sopn.prim_x86_suffix option =
     | "16u32"  -> PVsv (W.Unsigned, W.VE32, W.U512)
     | "8u64"  -> PVsv (W.Unsigned, W.VE64, W.U512)
 
+    | "16u8u16"  -> PVvw (W.VE8, W.U16, W.U128)
+    | "8u16u8"   -> PVvw (W.VE16, W.U8, W.U128)
+    | "4u32u8"   -> PVvw (W.VE32, W.U8, W.U128)
+    | "2u64u8"   -> PVvw (W.VE64, W.U8, W.U128)
+    | "32u8u32"  -> PVvw (W.VE8, W.U32, W.U256)
+    | "16u16u16" -> PVvw (W.VE16, W.U16, W.U256)
+    | "8u32u8"   -> PVvw (W.VE32, W.U8, W.U256)
+    | "4u64u8"   -> PVvw (W.VE64, W.U8, W.U256)
+    | "64u8u64"  -> PVvw (W.VE8, W.U64, W.U512)
+    | "32u16u32" -> PVvw (W.VE16, W.U32, W.U512)
+    | "16u32u16" -> PVvw (W.VE32, W.U16, W.U512)
+    | "8u64u8"   -> PVvw (W.VE64, W.U8, W.U512)
+    
     | "2s8"   -> PVsv (W.Signed, W.VE8,  W.U16)
     | "4s8"   -> PVsv (W.Signed, W.VE8,  W.U32)
     | "2s16"  -> PVsv (W.Signed, W.VE16, W.U32)

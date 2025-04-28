@@ -249,6 +249,7 @@ Definition ww8_ty   sz      := [:: sword sz; sword8].
 Definition ww8b_ty   sz     := [:: sword sz; sword8; sbool].
 Definition w2w8_ty   sz     := [:: sword sz; sword sz; sword8].
 Definition w2w_ty   sz sz'     := [:: sword sz; sword sz; sword sz'].
+Definition ww2_ty   sz sz'     := [:: sword sz; sword sz'; sword sz'].
 Definition w128w8_ty        := [:: sword128; sword8].
 Definition w128ww8_ty sz    := [:: sword128; sword sz; sword8].
 Definition w256w8_ty        := [:: sword256; sword8].
@@ -382,13 +383,22 @@ Definition primVw_range range (f: velem → wsize → wsize → x86_op) : prim_c
   PrimX86 range
   (fun s => if s is PVvw ve sz sz' then Some (f ve sz sz') else None).
 
+
 Definition primV := primV_range [seq PVv ve sz | ve <- [:: VE8; VE16; VE32; VE64 ], sz <- [:: U128; U256; U512]].
 Definition primV_8_16 := primV_range [seq PVv ve sz | ve <- [:: VE8; VE16 ], sz <- [:: U128; U256; U512]].
 Definition primV_8_32 := primV_range [seq PVv ve sz | ve <- [:: VE8; VE16; VE32 ], sz <- [:: U128; U256; U512]].
 Definition primV_16 := primV_range [seq PVv VE16 sz | sz <- [:: U128; U256; U512]].
 Definition primV_16_32 := primV_range [seq PVv ve sz | ve <- [:: VE16; VE32 ], sz <- [:: U128; U256; U512]].
 Definition primV_16_64 := primV_range [seq PVv ve sz | ve <- [:: VE16; VE32; VE64 ], sz <- [:: U128; U256; U512]].
-Definition primVw := primVw_range [seq PVvw ve sz sz| ve <- [:: VE16; VE32; VE64 ], sz <- [:: U128; U256; U512]].
+Definition primVw_8_64 :=
+  primVw_range
+    (flatten (flatten
+      (map (fun ve =>
+        map (fun sz =>
+          map (fun sz' => PVvw ve sz sz')
+          [:: U128; U256; U512])
+          [:: U8; U16; U32; U64])
+        [:: VE8; VE16; VE32; VE64]))).
 
 
 Definition primV_128 := primV_range [seq PVv ve U128 | ve <- [:: VE8; VE16; VE32; VE64 ]].
@@ -403,9 +413,28 @@ Definition primX (f: wsize → wsize → x86_op) : prim_constructor x86_op :=
     (fun s => if s is PVx ssz dsz then Some (f ssz dsz) else None).
 
 Definition primXK (f: wsize → wsize → x86_op) : prim_constructor x86_op :=
-PrimX86 [seq PVx ssz dsz | ssz <- [:: U128; U512 ], dsz <- [:: U64; U32; U16 ] ]
+PrimX86 [seq PVx ssz dsz | ssz <- [:: U128; U256; U512 ], dsz <- [:: U64; U32; U16 ] ]
   (fun s => if s is PVx ssz dsz then Some (f ssz dsz) else None).
 
+(* Definition primWK (f: velem → wsize → wsize → x86_op) : prim_constructor x86_op :=
+PrimX86 (flatten (flatten
+(map (fun ve =>
+  map (fun sz =>
+    map (fun sz' => PVvw ve sz sz')
+        [:: U8; U16; U32; U64])
+    [:: U128; U256; U512])
+  [:: VE8; VE16; VE32; VE64])))
+  (fun s => if s is PVvw ve sz ksz then Some (f ve sz ksz) else None). *)
+  Definition primWK (f: velem → wsize → wsize → x86_op) : prim_constructor x86_op :=
+  PrimX86 (flatten (flatten
+  (map (fun ve =>
+    map (fun sz =>
+      map (fun sz' => PVvw ve sz sz')
+          [:: U8; U16; U32; U64])
+      [:: U128; U256; U512])
+    [:: VE8; VE16; VE32; VE64])))
+    (fun s => if s is PVvw ve sz ksz then Some (f ve sz ksz) else None).
+  
 End PRIM_RANGE.
 
 (* -------------------------------------------------------------------- *)
@@ -543,10 +572,9 @@ Notation mk_instr_w2w8_w_1230 name semi check prc valid pp_asm := ((fun sz =>
 Notation mk_ve_instr_w2w8_w_1230 name semi check prc valid pp_asm := ((fun (ve:velem) sz =>
   mk_instr_safe (pp_ve_sz name ve sz) (w2w8_ty sz) (w_ty sz) [:: Ea 1 ; Eu 2 ; Ea 3] [:: Ea 0] (reg_msb_flag sz) (semi ve sz) (check sz) 4 (valid ve sz) (pp_asm ve sz)), (name%string,prc))  (only parsing).
 
-Notation mk_ve_instr_w2w_w_1230 name semi check prc valid pp_asm := ((fun (ve:velem) (sz:wsize) (sz':wsize) =>
-  mk_instr_safe (pp_ve_sz_sz name ve sz sz') (w2w_ty sz sz') (w_ty sz) [:: Ea 1 ; Eu 2 ; Ea 3] [:: Ea 0] (reg_msb_flag sz) (semi ve sz sz') (check sz) 4 (valid ve sz sz') (pp_asm ve sz)), (name%string,prc))  (only parsing).
+Notation mk_ve_instr_w2w_w_1230 name semi check prc valid pp_asm := ((fun (ve:velem) (ksz:wsize) (sz:wsize) =>
+  mk_instr_safe (pp_ve_sz_sz name ve ksz sz) (ww2_ty ksz sz) (w_ty sz) [:: Ea 0; Eu 1 ; Ea 2] [:: Ea 3] (reg_msb_flag sz) (semi ve ksz sz) (check) 4 (valid ve ksz sz) (pp_asm ve sz)), (name%string,prc))  (only parsing).
 
-Print semi.
 
 Notation mk_instr_w_w128_10 name msb semi check prc valid pp_asm := ((fun sz =>
   mk_instr_safe (pp_sz name sz) (w_ty sz) (w128_ty) [:: Eu 1] [:: Eu 0] msb (semi sz) (check sz) 2 (valid sz) (pp_asm sz)), (name%string,prc))  (only parsing).
@@ -588,6 +616,8 @@ Definition pp_viname name ve sz args :=
   {| pp_aop_name := name;
      pp_aop_ext  := PP_viname ve false;
      pp_aop_args := map_sz sz args; |}.
+
+
 
 Definition pp_viname_ww_128 name ve sz args :=
   {| pp_aop_name := name;
@@ -751,6 +781,8 @@ Definition xmm_xmmm := [::xmm; xmmm true].
 Definition xmmm_xmm := [::xmmm false; xmm].
 Definition xmm_xmm_xmmm := [::xmm; xmm; xmmm true].
 Definition xmm_xmm_xmmmi sz := [::xmm; xmm; xmmmi sz].
+
+
 
 Definition x86_MOV sz (x: word sz) : word sz := x.
 
@@ -1724,7 +1756,7 @@ Definition Ox86_VPUNPCKL_instr :=
 
 Definition check_xmm_xmm_xmmm_imm8 (_:wsize) := [:: [:: xmm; xmm; xmmm true; i U8]].
 
-Definition check_xmm_k_xmm_xmmm (_:wsize) := [:: [:: xmm; k; xmm; xmmm true]].
+Definition check_k_xmm_xmm_xmmm := [:: [:: k; xmm; xmm; xmmm true]].
 
 Definition x86_VSHUFI32X4 (v1 v2: u512) (m: u8): tpl (w_ty U512) :=
   wshufi32x4 v1 v2 m.
@@ -1744,26 +1776,39 @@ Definition x86_VPBLEND ve sz (v1 v2: word sz) (m: u8) : tpl (w_ty sz) :=
   if ve == U32 then wpblendd v1 v2 m
   else lift2_vec U128 (wpblendw m) sz v1 v2.
 
-Print x86_VPBLEND.
+
 
 Definition Ox86_VPBLEND_instr :=
   mk_ve_instr_w2w8_w_1230 "VPBLEND" (@x86_VPBLEND) check_xmm_xmm_xmmm_imm8 (primV_16_32 VPBLEND)
   (fun ve sz => size_16_32 ve && size_128_256 sz) (pp_viname "vpblend").
 
+
+
+(* Definition Ox86_VPBLENDM_instr :=
+(fun (ve: velem) sz ksz => mk_instr_safe
+    (pp_ve_sz_sz "VPBLENDM"%string ve sz ksz) (* Jasmin name *)
+    (w2w_ty sz ksz) (* args type *)
+    (w_ty sz) (* result type *)
+    [:: Ea 1 ; Eu 2 ; Ea 3] (* args *)
+    [:: Ea 0 ]  (* results *)
+    MSB_CLEAR (* clear MostSignificantBits *)
+    (@x86_VPBLENDM ve sz ksz) (* semantics *)
+    check_xmm_xmm_xmmm_k (* arg checks *)
+    4 (* nargs *)
+    (size_8_64 ve && size_128_512 sz && size_8_64 ksz)
+    (pp_name_ty "vpblendm" [:: sz; ksz])  (* asm pprinter *)
+  , ("VPBLENDM"%string, primWK VPBLENDM) (* jasmin concrete syntax *)
+  ). *)
+
 (*TODO: add definition for wpblendmd and processing logic*)
-Definition x86_VPBLENDM ve sz sz' (v1 v2: word sz) (m: word sz') : tpl (w_ty sz) :=
+Definition x86_VPBLENDM ve ksz sz (m: word ksz) (v1 v2: word sz)  : tpl (w_ty sz) :=
   if ve == U32 then wpblendmd v1 v2 m
   else wpblendmq v1 v2 m.
 
-Print x86_VPBLENDM.
-Print x86_VPBLEND.
-
-
-
 Definition Ox86_VPBLENDM_instr :=
   mk_ve_instr_w2w_w_1230 "VPBLENDM"
-  (@x86_VPBLENDM) check_xmm_k_xmm_xmmm (primVw VPBLENDM)
-  (fun ve sz sz' => size_16_32 ve && size_128_512 sz && size_8_32 sz') (pp_viname "vpblendm").
+  (@x86_VPBLENDM) check_k_xmm_xmm_xmmm (primVw_8_64 VPBLENDM)
+  (fun ve ksz sz => size_8_64 ve && size_8_64 ksz && size_128_512 sz) (pp_viname "vpblendm").
 
 
 Definition check_xmm_xmm_xmmm_xmm (_:wsize) := [:: [:: xmm; xmm; xmmm true; xmm]].

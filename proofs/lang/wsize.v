@@ -165,17 +165,21 @@ Definition string_of_ve_sz (ve:velem) (sz:wsize) : string :=
 (* for mask register notation*)
 Definition string_of_ve_sz_sz (ve:velem) (sz:wsize) (sz':wsize): string :=
   match ve, sz, sz' with
-  | VE16 , U128, U8 => "8u16_8"
-  | VE32, U128, U8 => "4u32_8"
-  | VE64, U128, U8 => "2u64_8"
-  | VE16 , U256, U16 => "16u16_16"
-  | VE32, U256, U8 => "8u32_8"
-  | VE64, U256, U8 => "4u64_8"
-  | VE16 , U512, U32 => "32u16_32"
-  | VE32, U512, U16 => "16u32_16"
-  | VE64, U512, U8 => "8u64_8"
-  | _, _, _    => "ERROR: please repport"
+  | VE8 , U16, U128 => "16u8u16"
+  | VE16, U8,  U128 => "8u16u8"
+  | VE32, U8,  U128 => "4u32u8"
+  | VE64, U8,  U128 => "2u64u8"
+  | VE8 , U32, U256 => "32u8u32"
+  | VE16, U16, U256 => "16u16u16"
+  | VE32, U8,  U256 => "8u32u8"
+  | VE64, U8,  U256 => "4u64u8"
+  | VE8 , U64, U512 => "64u8u64"
+  | VE16, U32, U512 => "32u16u32"
+  | VE32, U16, U512 => "16u32u16"
+  | VE64, U8,  U512 => "8u64u8"
+  | _, _, _         => "ERROR: please report"
   end.
+  
 
 Definition pp_s (s: string) (_: unit) : string := s.
 

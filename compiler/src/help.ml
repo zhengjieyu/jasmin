@@ -10,7 +10,7 @@ let show_intrinsics asmOp fmt =
       | PVp _ :: _ -> 1
       | PVs _ :: _ -> 2
       | PVx _ :: _ -> 3
-      | (PVv _ | PVsv _) :: _ -> 4
+      | (PVvw _| PVv _ | PVsv _) :: _ -> 4
       | PVvv _ :: _ -> 5
       end
     | PrimARM _ -> 6
