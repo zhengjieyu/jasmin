@@ -573,7 +573,7 @@ Notation mk_ve_instr_w2w8_w_1230 name semi check prc valid pp_asm := ((fun (ve:v
   mk_instr_safe (pp_ve_sz name ve sz) (w2w8_ty sz) (w_ty sz) [:: Ea 1 ; Eu 2 ; Ea 3] [:: Ea 0] (reg_msb_flag sz) (semi ve sz) (check sz) 4 (valid ve sz) (pp_asm ve sz)), (name%string,prc))  (only parsing).
 
 Notation mk_ve_instr_w2w_w_1230 name semi check prc valid pp_asm := ((fun (ve:velem) (ksz:wsize) (sz:wsize) =>
-  mk_instr_safe (pp_ve_sz_sz name ve ksz sz) (ww2_ty ksz sz) (w_ty sz) [:: Ea 0; Eu 1 ; Ea 2] [:: Ea 3] (reg_msb_flag sz) (semi ve ksz sz) (check) 4 (valid ve ksz sz) (pp_asm ve sz)), (name%string,prc))  (only parsing).
+  mk_instr_safe (pp_ve_sz_sz name ve ksz sz) (ww2_ty ksz sz) (w_ty sz) [:: Ea 1; Eu 2 ; Ea 3] [:: Ea 0] (reg_msb_flag sz) (semi ve ksz sz) (check) 4 (valid ve ksz sz) (pp_asm ve sz)), (name%string,prc))  (only parsing).
 
 
 Notation mk_instr_w_w128_10 name msb semi check prc valid pp_asm := ((fun sz =>
@@ -1756,7 +1756,7 @@ Definition Ox86_VPUNPCKL_instr :=
 
 Definition check_xmm_xmm_xmmm_imm8 (_:wsize) := [:: [:: xmm; xmm; xmmm true; i U8]].
 
-Definition check_k_xmm_xmm_xmmm := [:: [:: k; xmm; xmm; xmmm true]].
+Definition check_xmm_k_xmm_xmmm := [:: [::  xmm; k; xmm; xmmm true]].
 
 Definition x86_VSHUFI32X4 (v1 v2: u512) (m: u8): tpl (w_ty U512) :=
   wshufi32x4 v1 v2 m.
@@ -1807,7 +1807,7 @@ Definition x86_VPBLENDM ve ksz sz (m: word ksz) (v1 v2: word sz)  : tpl (w_ty sz
 
 Definition Ox86_VPBLENDM_instr :=
   mk_ve_instr_w2w_w_1230 "VPBLENDM"
-  (@x86_VPBLENDM) check_k_xmm_xmm_xmmm (primVw_8_64 VPBLENDM)
+  (@x86_VPBLENDM) check_xmm_k_xmm_xmmm (primVw_8_64 VPBLENDM)
   (fun ve ksz sz => size_8_64 ve && size_8_64 ksz && size_128_512 sz) (pp_viname "vpblendm").
 
 
