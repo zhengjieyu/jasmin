@@ -175,6 +175,7 @@ module X86_core = struct
     | VPERM2I128 -> true
     | VPERMD _ -> true
     | VPERMB _ -> true
+    | VPERMBMASK _ -> true
     | VPERMQ _ -> true
     | VPERMQ512 -> true
     | VPEXTR _ -> true

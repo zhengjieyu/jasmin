@@ -155,6 +155,7 @@ Variant x86_op : Type :=
 | VPERM2I128
 | VPERMD `(wsize)
 | VPERMB `(wsize)
+| VPERMBMASK `(wsize) `(wsize)
 | VPERMQ `(wsize)
 | VPERMQ512
 | VPMOVMSKB of wsize & wsize (* source size (U128/256) & dest. size (U32/64) *)
@@ -382,6 +383,15 @@ Definition primV_range range (f: velem → wsize → x86_op) : prim_constructor 
 Definition primVw_range range (f: velem → wsize → wsize → x86_op) : prim_constructor x86_op :=
   PrimX86 range
   (fun s => if s is PVvw ve sz sz' then Some (f ve sz sz') else None).
+Definition primWw_range range (f: wsize → wsize → x86_op) : prim_constructor x86_op :=
+  PrimX86 range 
+  (fun s => if s is PVx sz sz' then Some (f sz sz') else None).
+
+(* Definition primWw_16_64 := primWw_range [seq PVx sz sz' | sz <- [:: U16; U32; U64], sz' <- [::U128; U256; U512]]. *)
+Definition primWw_16_64 := prim_movxx [:: PVx U16 U128; PVx U32 U256; PVx U64 U512].
+
+
+
 
 
 Definition primV := primV_range [seq PVv ve sz | ve <- [:: VE8; VE16; VE32; VE64 ], sz <- [:: U128; U256; U512]].
@@ -549,6 +559,10 @@ Notation mk_instr_division sg name semi check prc valid pp_asm semi_errty semi_s
 
 Notation mk_instr_w2_w_120 name semi check prc valid pp_asm := ((fun sz =>
   mk_instr_safe (pp_sz name sz) (w2_ty sz sz) (w_ty sz) [:: Ea 1 ; Eu 2] [:: Ea 0] MSB_CLEAR (semi sz) (check sz) 3 (valid sz) (pp_asm sz)), (name%string,prc))  (only parsing).
+
+Notation mk_instr_ww2_w_1230 name semi check prc valid pp_asm := ((fun (ksz:wsize) (sz:wsize) =>
+  mk_instr_safe (pp_sz_sz name false ksz sz) (ww2_ty ksz sz) (w_ty sz) [:: Ea 1 ; Eu 2 ; Eu 3] [:: Ea 0] MSB_CLEAR (semi ksz sz) (check) 4 (valid ksz sz) (pp_asm sz)), (name%string,prc))  (only parsing).
+
 
 Notation mk_instr_ww8_w_120 name semi check prc valid pp_asm := ((fun sz =>
   mk_instr_safe (pp_sz name sz) (ww8_ty sz) (w_ty sz) [:: Eu 1 ; Ea 2] [:: Ea 0] (reg_msb_flag sz) (semi sz) (check sz) 3 (valid sz) (pp_asm sz)), (name%string,prc))  (only parsing).
@@ -1783,24 +1797,6 @@ Definition Ox86_VPBLEND_instr :=
   (fun ve sz => size_16_32 ve && size_128_256 sz) (pp_viname "vpblend").
 
 
-
-(* Definition Ox86_VPBLENDM_instr :=
-(fun (ve: velem) sz ksz => mk_instr_safe
-    (pp_ve_sz_sz "VPBLENDM"%string ve sz ksz) (* Jasmin name *)
-    (w2w_ty sz ksz) (* args type *)
-    (w_ty sz) (* result type *)
-    [:: Ea 1 ; Eu 2 ; Ea 3] (* args *)
-    [:: Ea 0 ]  (* results *)
-    MSB_CLEAR (* clear MostSignificantBits *)
-    (@x86_VPBLENDM ve sz ksz) (* semantics *)
-    check_xmm_xmm_xmmm_k (* arg checks *)
-    4 (* nargs *)
-    (size_8_64 ve && size_128_512 sz && size_8_64 ksz)
-    (pp_name_ty "vpblendm" [:: sz; ksz])  (* asm pprinter *)
-  , ("VPBLENDM"%string, primWK VPBLENDM) (* jasmin concrete syntax *)
-  ). *)
-
-(*TODO: add definition for wpblendmd and processing logic*)
 Definition x86_VPBLENDM ve ksz sz (m: word ksz) (v1 v2: word sz)  : tpl (w_ty sz) :=
   if ve == U32 then wpblendmd v1 v2 m
   else wpblendmq v1 v2 m.
@@ -2041,7 +2037,18 @@ Definition x86_VPERMB sz (v1 v2: word sz): tpl w_ty sz :=
 
 
 Definition Ox86_VPERMB_instr :=
-mk_instr_w2_w_120 "VPERMB" x86_VPERMB check_xmm_xmm_xmmm (prim_256_512 VPERMB) (fun sz => size_256_512 sz) (pp_name "vpermb").
+mk_instr_w2_w_120 "VPERMB" x86_VPERMB check_xmm_xmm_xmmm (prim_128_512 VPERMB) (fun sz => size_128_512 sz) (pp_name "vpermb").
+
+
+Definition x86_VPERMBMASK ksz sz (m: word ksz) (v1 v2: word sz): tpl w_ty sz :=
+  wpermbmask m v1 v2.
+
+
+
+Definition Ox86_VPERMBMASK_instr :=
+  mk_instr_ww2_w_1230 "VPERMBMASK" x86_VPERMBMASK check_xmm_k_xmm_xmmm (primWw_16_64 VPERMBMASK) (fun ksz sz => size_16_64 ksz && size_128_512 sz) (pp_name "vpermb").
+
+
 
 Definition x86_VPERMQ sz (v: word sz) (m: u8) : tpl w_ty sz :=
   wpermq v m.
@@ -2591,6 +2598,7 @@ Definition x86_instr_desc o : instr_desc_t :=
   | VPERM2I128         => Ox86_VPERM2I128_instr.1
   | VPERMD sz          => Ox86_VPERMD_instr.1 sz
   | VPERMB sz          => Ox86_VPERMB_instr.1 sz
+  | VPERMBMASK sz sz'          => Ox86_VPERMBMASK_instr.1 sz sz'
   | VPERMQ sz            => Ox86_VPERMQ_instr.1 sz
   | VPERMQ512             => Ox86_VPERMQ512_instr.1
   | VINSERTI128        => Ox86_VINSERTI128_instr.1
@@ -2761,6 +2769,7 @@ Definition x86_prim_string :=
    Ox86_VPERM2I128_instr.2;
    Ox86_VPERMD_instr.2;
    Ox86_VPERMB_instr.2;
+   Ox86_VPERMBMASK_instr.2;
    Ox86_VPERMQ_instr.2;
    Ox86_VPERMQ512_instr.2;
    Ox86_VINSERTI128_instr.2;

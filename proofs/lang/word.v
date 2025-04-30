@@ -1682,6 +1682,10 @@ Definition wpermb sz (idx w: word sz) : word sz :=
   let i := split_vec U8 idx in
   make_vec sz (map (wpermb1 v) i).
 
+Definition wpermbmask ksz sz (m: word ksz) (idx w: word sz) : word sz :=
+  let v := split_vec U8 w in
+  let i := split_vec U8 idx in
+  make_vec sz (map (wpermb1 v) i).
 (* -------------------------------------------------------------------*)
 Definition wpermq sz (w: word sz) (i: u8) : word sz :=
   let v := split_vec U64 w in
