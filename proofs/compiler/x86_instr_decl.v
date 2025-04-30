@@ -100,6 +100,7 @@ Variant x86_op : Type :=
 | VMOV     of wsize
 | VMOVDQA  of wsize
 | VMOVDQU  `(wsize)
+| VMOVDQU8  `(wsize) `(wsize)
 | VPMOVSX of velem & wsize & velem & wsize (* parallel sign-extension: sizes are source, source, target, target *)
 | VPMOVZX of velem & wsize & velem & wsize (* parallel zero-extension: sizes are source, source, target, target *)
 | VPAND    `(wsize)
@@ -510,6 +511,11 @@ Notation mk_instr_pp name tin tout ain aout msb semi check nargs prc pp_asm :=
 Notation mk_instr_w_w name semi ain aout nargs check prc valid pp_asm :=
  ((fun sz =>
   mk_instr_safe (pp_sz name sz) (w_ty sz) (w_ty sz) ain aout (reg_msb_flag sz) (semi sz) (check sz) nargs (valid sz) (pp_asm sz)), (name%string,prc)) (only parsing).
+
+(* for load/store according mask register *)
+Notation mk_instr_w2_w_120_mask name semi check prc valid pp_asm :=
+ ((fun ksz sz =>
+  mk_instr_safe (pp_sz_sz name false ksz sz) (w2_ty ksz sz) (w_ty sz) [:: Ea 1 ; Eu 2] [:: Ea 0] (reg_msb_flag sz) (semi ksz sz) (check) 3 (valid ksz sz) (pp_asm sz)), (name%string,prc)) (only parsing).
 
 Notation mk_instr_w_w_kmov name semi ain aout nargs check prc valid pp_asm :=
 ((fun sz =>
@@ -1508,11 +1514,18 @@ Definition x86_VMOVDQ sz (v: word sz) : tpl (w_ty sz) := v.
 Definition Ox86_VMOVDQU_instr :=
   mk_instr_w_w "VMOVDQU" x86_VMOVDQ [:: Eu 1] [:: Eu 0] 2 check_vmovdq (prim_128_256 VMOVDQU) size_128_256 (pp_name "vmovdqu"). *)
 
-  Definition Ox86_VMOVDQA_instr :=
+Definition Ox86_VMOVDQA_instr :=
   mk_instr_w_w "VMOVDQA" x86_VMOVDQ [:: Ea 1] [:: Ea 0] 2 check_vmovdq (prim_128_512 VMOVDQA) size_128_512 pp_vmovdqa.
 
 Definition Ox86_VMOVDQU_instr :=
   mk_instr_w_w "VMOVDQU" x86_VMOVDQ [:: Eu 1] [:: Eu 0] 2 check_vmovdq (prim_128_512 VMOVDQU) size_128_512 pp_vmovdqu.
+
+(* load/store according to mask register *)
+Definition check_xmm_k_xmmm := [:: [::  xmm; k; xmmm true]].
+Definition x86_VMOVDQ8 ksz sz (m: word ksz) (v: word sz) : tpl (w_ty sz) := wmovdq8 m v.
+
+Definition Ox86_VMOVDQU8_instr :=
+  mk_instr_w2_w_120_mask "VMOVDQU8" x86_VMOVDQ8 check_xmm_k_xmmm (primWw_16_64 VMOVDQU8) (fun ksz sz => size_16_64 ksz && size_128_512 sz) (pp_name "vmovdqu8").
 
 
 
@@ -1771,6 +1784,8 @@ Definition Ox86_VPUNPCKL_instr :=
 Definition check_xmm_xmm_xmmm_imm8 (_:wsize) := [:: [:: xmm; xmm; xmmm true; i U8]].
 
 Definition check_xmm_k_xmm_xmmm := [:: [::  xmm; k; xmm; xmmm true]].
+
+
 
 Definition x86_VSHUFI32X4 (v1 v2: u512) (m: u8): tpl (w_ty U512) :=
   wshufi32x4 v1 v2 m.
@@ -2552,6 +2567,7 @@ Definition x86_instr_desc o : instr_desc_t :=
   | VEXTRACTI32X8       => Ox86_VEXTRACTI32X8_instr.1
   | VMOVDQA sz         => Ox86_VMOVDQA_instr.1 sz
   | VMOVDQU sz         => Ox86_VMOVDQU_instr.1 sz
+  | VMOVDQU8 sz sz'         => Ox86_VMOVDQU8_instr.1 sz sz'
   | VPMOVSX ve sz ve' sz' => Ox86_VPMOVSX_instr.1 ve sz ve' sz'
   | VPMOVZX ve sz ve' sz' => Ox86_VPMOVZX_instr.1 ve sz ve' sz'
   | VPAND sz           => Ox86_VPAND_instr.1 sz
@@ -2725,6 +2741,7 @@ Definition x86_prim_string :=
    Ox86_VEXTRACTI32X8_instr.2;
    Ox86_VMOVDQA_instr.2;
    Ox86_VMOVDQU_instr.2;
+   Ox86_VMOVDQU8_instr.2;
    Ox86_VPAND_instr.2;
    Ox86_VPANDN_instr.2;
    Ox86_VPOR_instr.2;

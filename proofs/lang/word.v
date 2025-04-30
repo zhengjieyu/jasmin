@@ -1573,6 +1573,10 @@ Definition wpinsr ve (v: u128) (w: word ve) (i: u8) : u128 :=
   make_vec U128 (update_at w v i).
 
 (* -------------------------------------------------------------------*)
+(* TODO: fill the definition detail *)
+Definition wmovdq8 ksz sz (m: word ksz) (v: word sz) : word sz :=
+  v.
+(* -------------------------------------------------------------------*)
 Definition winserti128 (v: u256) (w: u128) (i: u8) : u256 :=
   let v := split_vec U128 v in
   make_vec U256 (if lsb i then [:: v`_0 ; w ] else [:: w ; v`_1 ])%R.

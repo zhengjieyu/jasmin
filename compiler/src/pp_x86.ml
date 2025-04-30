@@ -285,66 +285,44 @@ module ATTSyntax : X86AsmSyntax = struct
   
   (* let rev_args = List.rev  *)
   
-  (* let rev_args args =
-    (* 步骤1：先将所有元素按顺序添加到列表中 *)
-    let acc = ref [] in
-    List.iter (fun x -> acc := x :: !acc) args;
-    
-    (* 步骤2：扫描并交换 Regmask 和 XReg *)
-    let swapped_args = 
-        let rec process_list acc prev = function
-            | [] -> List.rev acc  (* 最终反转返回结果 *)
-            | (ws_cur, Regmask r) :: rest -> 
-                (* 当前元素是Regmask，检查前一个元素是否是XReg *)
-                begin match prev with
-                | Some (ws_prev, XReg x) -> 
-                    (* 交换：将前一个XReg和当前Regmask的位置 *)
-                    let new_acc = (ws_cur, Regmask r) :: (ws_prev, XReg x) :: acc in
-                    process_list new_acc None rest  (* 重置prev，避免连续交换 *)
-                | _ -> 
-                    (* 不交换，直接保留当前Regmask *)
-                    process_list ((ws_cur, Regmask r) :: acc) (Some (ws_cur, Regmask r)) rest
-                end
-            | (ws_cur, XReg x) :: rest -> 
-                (* 当前元素是XReg，直接加入acc *)
-                process_list ((ws_cur, XReg x) :: acc) (Some (ws_cur, XReg x)) rest
-            | hd :: tl ->
-                (* 其他类型元素，直接加入acc *)
-                process_list (hd :: acc) (Some hd) tl
+  
+
+      let rev_args args =
+        (* Step 1: Reverse the order of args to process from back to front *)
+        let rev_args = List.rev args in
+      
+        (* Step 2: Traverse and swap Regmask and XReg (only if Regmask is right before XReg) *)
+        let rec process acc prev = function
+          | [] ->
+              (* End of list: if there is still an unprocessed prev, add it *)
+              (match prev with
+               | Some x -> x :: acc
+               | None -> acc)
+      
+          | (ws, XReg x) as curr :: tl -> (
+              match prev with
+              | Some (ws2, Regmask r) ->
+                  (* Swap Regmask and XReg *)
+                  process ((ws2, Regmask r) :: curr :: acc) None tl
+              | Some other ->
+                  (* Add prev to acc, keep current XReg for future pairing *)
+                  process (other :: acc) (Some curr) tl
+              | None ->
+                  (* No prev, keep current as prev *)
+                  process acc (Some curr) tl
+            )
+      
+          | curr :: tl ->
+              (* Current is not XReg, so defer handling and store it as prev *)
+              (match prev with
+               | Some x -> process (x :: acc) (Some curr) tl
+               | None -> process acc (Some curr) tl)
         in
-        process_list [] None !acc
-    in
-    (* 步骤3：反转最终结果 *)
-    List.rev swapped_args *)
-
-    let rev_args args =
-      (* 步骤1：逆序 args，准备按从后往前处理 *)
-      let rev_args = List.rev args in
-    
-      (* 步骤2：遍历并交换 Regmask 和 XReg（如果 XReg 前面是 Regmask） *)
-      let rec process acc prev = function
-        | [] ->
-            (match prev with
-             | Some x -> x :: acc
-             | None -> acc)
-        | (ws, XReg x) :: tl -> (
-            match prev with
-            | Some (ws2, Regmask r) ->
-                (* 交换 *)
-                process ((ws2, Regmask r) :: (ws, XReg x) :: acc) None tl
-            | Some y ->
-                process ((ws, XReg x) :: y :: acc) None tl
-            | None ->
-                process ((ws, XReg x) :: acc) None tl
-          )
-        | hd :: tl -> process acc (Some hd) tl
-      in
-    
-      List.rev (process [] None rev_args)
-
-
-    
-    
+      
+        (* Step 3: Final reverse to restore left-to-right order *)
+        List.rev (process [] None rev_args)
+     
+      
     
     
     
