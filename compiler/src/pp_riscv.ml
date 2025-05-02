@@ -126,12 +126,13 @@ let pp_instr fn i =
   | SysCall op ->
       [Instr ("call", [ pp_syscall op ])]
 
-  | AsmOp (op, args) ->
-      let id = instr_desc riscv_decl riscv_op_decl (None, op) in
-      let pp = id.id_pp_asm args in
-      let name = pp_name_ext pp in
-      let args = List.filter_map (fun (_, a) -> pp_asm_arg a) pp.pp_aop_args in
-      [ Instr (name, args) ]
+  |AsmOp (op, args) ->
+    let id = instr_desc riscv_decl riscv_op_decl (None, op) in
+    let pp = id.id_pp_asm args in
+    let name = pp_name_ext pp in
+    let args = List.filter_map (fun p -> pp_asm_arg p.arg) pp.pp_aop_args in
+    [ Instr (name, args) ]
+  
 
 (* -------------------------------------------------------------------- *)
 

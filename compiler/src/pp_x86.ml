@@ -90,7 +90,7 @@ let pp_register_ext ~(reg_pre:string) (_ws: wsize) (r: register_ext) : string =
 
 (* -------------------------------------------------------------------- *)
 
-let pp_register_mask ~(reg_pre:string) (_ws: wsize) (r: register_mask) : string =
+(* let pp_register_mask ~(reg_pre:string) (_ws: wsize) (r: register_mask) : string =
   Format.sprintf "%sk%d" 
     reg_pre
     (match r with
@@ -101,7 +101,23 @@ let pp_register_mask ~(reg_pre:string) (_ws: wsize) (r: register_mask) : string 
      | K4 -> 4
      | K5 -> 5
      | K6 -> 6
-     | K7 -> 7)     
+     | K7 -> 7)      *)
+let pp_register_mask ~(reg_pre:string) (_ws: wsize) (r: register_mask) ~(pre:string) ~(pos:string) : string =
+    Format.sprintf "%s%sk%d%s" 
+      pre       (* print pre *)
+      reg_pre       (* print pre *)
+      (match r with
+        | K0 -> 0
+        | K1 -> 1
+        | K2 -> 2
+        | K3 -> 3
+        | K4 -> 4
+        | K5 -> 5
+        | K6 -> 6
+        | K7 -> 7)
+      pos   (* print pos *)
+      
+    
 (* -------------------------------------------------------------------- *)
 let pp_xmm_register ~(reg_pre:string) (ws: wsize) (r: xmm_register) : string =
   Format.asprintf "%s%smm%d"
@@ -228,8 +244,8 @@ module type X86AsmSyntax = sig
   val pp_adress       : wsize -> (register, 'a, 'b, 'c, 'd, 'e) Arch_decl.address -> string
   (* val rev_args        : 'a list -> 'a list *)
   val rev_args :
-           ('a * ('b, 'c, 'd, 'e, 'f, 'g) asm_arg) list ->
-           ('a * ('b, 'c, 'd, 'e, 'f, 'g) asm_arg) list
+           (('b, 'c, 'd, 'e, 'f, 'g) pp_arg) list ->
+           (('b, 'c, 'd, 'e, 'f, 'g) pp_arg) list
 
   val pp_iname_ext    : wsize -> string
 
@@ -287,43 +303,37 @@ module ATTSyntax : X86AsmSyntax = struct
   
   
 
-      let rev_args args =
-        (* Step 1: Reverse the order of args to process from back to front *)
-        let rev_args = List.rev args in
+  let rev_args args =
+    let rev_args = List.rev args in
+  
+    let rec process acc prev = function
+      | [] ->
+          (match prev with
+           | Some x -> x :: acc
+           | None -> acc)
+  
+      | curr :: tl -> (
+          match curr.arg, prev with
+          | XReg x, Some { arg = Regmask r; sz; pre; pos } ->
+              (* Swap Regmask and XReg, preserve all fields *)
+              let regmask_arg = { arg = Regmask r; sz; pre; pos } in
+              let xreg_arg = curr in
+              process (regmask_arg :: xreg_arg :: acc) None tl
+  
+          | _, Some p ->
+              (* No swap, push previous, carry current *)
+              process (p :: acc) (Some curr) tl
+  
+          | _, None ->
+              process acc (Some curr) tl
+        )
+    in
+  
+    List.rev (process [] None rev_args)
+  
       
-        (* Step 2: Traverse and swap Regmask and XReg (only if Regmask is right before XReg) *)
-        let rec process acc prev = function
-          | [] ->
-              (* End of list: if there is still an unprocessed prev, add it *)
-              (match prev with
-               | Some x -> x :: acc
-               | None -> acc)
-      
-          | (ws, XReg x) as curr :: tl -> (
-              match prev with
-              | Some (ws2, Regmask r) ->
-                  (* Swap Regmask and XReg *)
-                  process ((ws2, Regmask r) :: curr :: acc) None tl
-              | Some other ->
-                  (* Add prev to acc, keep current XReg for future pairing *)
-                  process (other :: acc) (Some curr) tl
-              | None ->
-                  (* No prev, keep current as prev *)
-                  process acc (Some curr) tl
-            )
-      
-          | curr :: tl ->
-              (* Current is not XReg, so defer handling and store it as prev *)
-              (match prev with
-               | Some x -> process (x :: acc) (Some curr) tl
-               | None -> process acc (Some curr) tl)
-        in
-      
-        (* Step 3: Final reverse to restore left-to-right order *)
-        List.rev (process [] None rev_args)
+   
      
-      
-    
     
     
     
@@ -420,22 +430,41 @@ module X86AsmTranslate (AsmSyntax: X86AsmSyntax) = struct
   let pp_imm (imm : Z.t) =
     Format.asprintf "%s%s" imm_pre (Z.to_string imm)
 
-  let pp_asm_arg ((ws,op) : (wsize * (_, _, _, _, _, _) Arch_decl.asm_arg)) =
-    match op with
-    | Condt  _   -> assert false
-    | Imm(ws, w) -> pp_imm ((if ws = U8 then Conv.z_unsigned_of_word else Conv.z_of_word) ws w)
-    | Reg r      -> pp_register ~reg_pre (rsize_of_wsize ws) r
-    | Regx r     -> pp_register_ext ~reg_pre ws r
-    | Regmask r     -> pp_register_mask ~reg_pre ws r
-    | Addr addr  -> pp_adress ws addr
-    | XReg r     -> pp_xmm_register ~reg_pre ws r
+    (* let pp_asm_arg ((ws,op) : (wsize * (_, _, _, _, _, _) Arch_decl.asm_arg)) =
+      match op with
+      | Condt  _   -> assert false
+      | Imm(ws, w) -> pp_imm ((if ws = U8 then Conv.z_unsigned_of_word else Conv.z_of_word) ws w)
+      | Reg r      -> pp_register ~reg_pre (rsize_of_wsize ws) r
+      | Regx r     -> pp_register_ext ~reg_pre ws r
+      | Regmask r     -> pp_register_mask ~reg_pre ws r
+      | Addr addr  -> pp_adress ws addr
+      | XReg r     -> pp_xmm_register ~reg_pre ws r *)
+      let pp_asm_arg (pp: (_, _, _, _, _, _) Arch_decl.pp_arg) =
+        let { arg; sz; pre; pos } = pp in
+        match arg with
+        | Condt _ -> assert false
+        | Imm(ws, w) -> pp_imm ((if ws = U8 then Conv.z_unsigned_of_word else Conv.z_of_word) ws w)
+        | Reg r -> pp_register ~reg_pre (rsize_of_wsize sz) r
+        | Regx r -> pp_register_ext ~reg_pre sz r
+        | Regmask r -> pp_register_mask ~reg_pre sz r ~pre ~pos
+        | Addr addr -> pp_adress sz addr
+        | XReg r -> pp_xmm_register ~reg_pre sz r
+      
+      
+      
 
   let pp_asm_args args = List.map pp_asm_arg (rev_args args)
 
   (* -------------------------------------------------------------------- *)
-  let pp_indirect_label lbl =
-    Format.sprintf "%s%s" indirect_pre (pp_asm_arg (U64, lbl))
-
+    let pp_indirect_label lbl =
+      let fake_pp_arg = {
+        arg = lbl;
+        sz = U64;
+        pre = "";
+        pos = "";
+      } in
+      Format.sprintf "%s%s" indirect_pre (pp_asm_arg fake_pp_arg)
+    
   let pp_ext = function
     | PP_error             -> assert false
     | PP_name              -> ""

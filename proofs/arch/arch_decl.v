@@ -390,11 +390,23 @@ Variant pp_asm_op_ext :=
   | PP_viname2 of velem & velem (* source and target element sizes *)
   | PP_ct      of asm_arg.
 
-Record pp_asm_op := mk_pp_asm_op {
+(* Record pp_asm_op := mk_pp_asm_op {
   pp_aop_name : string;
   pp_aop_ext  : pp_asm_op_ext;
   pp_aop_args : seq (wsize * asm_arg);
+}. *)
+Record pp_arg := {
+  arg : asm_arg;
+  sz : wsize;
+  pre : string;
+  pos : string;
 }.
+Record pp_asm_op := mk_pp_asm_op {
+  pp_aop_name : string;
+  pp_aop_ext  : pp_asm_op_ext;
+  pp_aop_args : seq pp_arg
+}.
+
 
 (* -------------------------------------------------------------------- *)
 (* Instruction descriptions. *)

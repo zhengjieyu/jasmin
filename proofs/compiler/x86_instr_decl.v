@@ -612,47 +612,68 @@ Definition max_32 (sz:wsize) := if (sz <= U32)%CMP then sz else U32.
 
 Definition map_sz (sz:wsize) (a:asm_args) := List.map (fun a => (sz,a)) a.
 
+
+
+Definition mk_pp_args sz args :=
+  map (fun a => {| arg := a; sz := sz; pre := ""; pos := "" |}) args.
+
+Definition mk_zip_pp_args (ws : seq wsize) (args : seq asm_arg) : seq pp_arg :=
+  map2 (fun sz a => {| arg := a; sz := sz; pre := ""; pos := "" |}) ws args.
+
+Definition mk_pp_args_with_mask (sz : wsize) (args : seq asm_arg) : seq pp_arg :=
+  mapi (fun i a =>
+          let (pre, pos) := if i == 1 then ("{", "}") else ("", "") in
+          {| arg := a; sz := sz; pre := pre; pos := pos |}
+       ) args.
+
+Definition pp_name_mask name sz args :=
+  {| pp_aop_name := name;
+    pp_aop_ext  := PP_name;
+    pp_aop_args := mk_pp_args_with_mask sz args; |}.       
 Definition pp_name name sz args :=
   {| pp_aop_name := name;
      pp_aop_ext  := PP_name;
-     pp_aop_args := map_sz sz args; |}.
+     pp_aop_args := mk_pp_args sz args; |}.
 
 Definition pp_name_ty name (ws:seq wsize) args :=
  {| pp_aop_name := name;
     pp_aop_ext  := PP_name;
-    pp_aop_args := zip ws args; |}.
+    pp_aop_args := mk_zip_pp_args ws args; |}.
 
 Definition pp_iname name sz args :=
   {| pp_aop_name := name;
      pp_aop_ext  := PP_iname sz;
-     pp_aop_args := map_sz sz args; |}.
+     pp_aop_args := mk_pp_args sz args; |}.
 
 Definition pp_viname_long name ve sz args :=
   {| pp_aop_name := name;
      pp_aop_ext  := PP_viname ve true;
-     pp_aop_args := map_sz sz args; |}.
+     pp_aop_args := mk_pp_args sz args; |}.
 
 Definition pp_viname name ve sz args :=
   {| pp_aop_name := name;
      pp_aop_ext  := PP_viname ve false;
-     pp_aop_args := map_sz sz args; |}.
+     pp_aop_args := mk_pp_args sz args; |}.
 
-
+Definition pp_viname_mask name ve sz args :=
+  {| pp_aop_name := name;
+    pp_aop_ext  := PP_viname ve false;
+    pp_aop_args := mk_pp_args_with_mask sz args; |}.
 
 Definition pp_viname_ww_128 name ve sz args :=
   {| pp_aop_name := name;
      pp_aop_ext  := PP_viname ve false;
-     pp_aop_args := zip [:: sz; sz; U128 ] args; |}.
+     pp_aop_args := mk_zip_pp_args [:: sz; sz; U128 ] args; |}.
 
 Definition pp_iname_w_8 name sz args :=
   {| pp_aop_name := name;
      pp_aop_ext  := PP_iname sz;
-     pp_aop_args := zip [::sz; U8] args; |}.
+     pp_aop_args := mk_zip_pp_args [::sz; U8] args; |}.
 
 Definition pp_iname_ww_8 name sz args :=
   {| pp_aop_name := name;
      pp_aop_ext  := PP_iname sz;
-     pp_aop_args := zip [::sz;sz; U8] args; |}.
+     pp_aop_args := mk_zip_pp_args [::sz;sz; U8] args; |}.
 
 Definition get_ct args :=
   match args with
@@ -664,7 +685,7 @@ Definition pp_ct name sz args :=
   let (ext, args) := get_ct args in
   {| pp_aop_name := name;
      pp_aop_ext  := ext;
-     pp_aop_args := map_sz sz args; |}.
+     pp_aop_args := mk_pp_args sz args; |}.
 
 Definition pp_cqo sz (args: asm_args) :=
   let (name, ext) :=
@@ -676,7 +697,7 @@ Definition pp_cqo sz (args: asm_args) :=
       end in
   {| pp_aop_name := name;
      pp_aop_ext  := ext;
-     pp_aop_args := map_sz sz [::]; |}.
+     pp_aop_args := mk_pp_args sz [::]; |}.
 
 Definition pp_vpand sz (args: asm_args) :=
 let (name, ext) :=
@@ -688,7 +709,7 @@ let (name, ext) :=
     end in
 {| pp_aop_name := name;
   pp_aop_ext  := ext;
-  pp_aop_args := map_sz sz args; |}.     
+  pp_aop_args := mk_pp_args sz args; |}.     
 
 Definition pp_vpxor sz (args: asm_args) :=
   let (name, ext) :=
@@ -700,7 +721,7 @@ Definition pp_vpxor sz (args: asm_args) :=
       end in
   {| pp_aop_name := name;
      pp_aop_ext  := ext;
-     pp_aop_args := map_sz sz args; |}.
+     pp_aop_args := mk_pp_args sz args; |}.
     
 Definition pp_vpor sz (args: asm_args) :=
   let (name, ext) :=
@@ -712,7 +733,7 @@ Definition pp_vpor sz (args: asm_args) :=
       end in
   {| pp_aop_name := name;
     pp_aop_ext  := ext;
-    pp_aop_args := map_sz sz args; |}.
+    pp_aop_args := mk_pp_args sz args; |}.
 
 Definition pp_vpandn sz (args: asm_args) :=
   let (name, ext) :=
@@ -724,7 +745,7 @@ Definition pp_vpandn sz (args: asm_args) :=
       end in
   {| pp_aop_name := name;
     pp_aop_ext  := ext;
-    pp_aop_args := map_sz sz args; |}.
+    pp_aop_args := mk_pp_args sz args; |}.
        
 
 
@@ -738,7 +759,7 @@ let (name, ext) :=
     end in
 {| pp_aop_name := name;
   pp_aop_ext  := ext;
-  pp_aop_args := map_sz sz args; |}.
+  pp_aop_args := mk_pp_args sz args; |}.
 
 Definition pp_kmov sz (args: asm_args) :=
 let (name, ext) :=
@@ -751,7 +772,7 @@ let (name, ext) :=
     end in
 {| pp_aop_name := name;
   pp_aop_ext  := ext;
-  pp_aop_args := map_sz sz args; |}.
+  pp_aop_args := mk_pp_args sz args; |}.
 
 
 Definition pp_vmovdqu sz (args: asm_args) :=
@@ -764,7 +785,7 @@ Definition pp_vmovdqu sz (args: asm_args) :=
       end in
   {| pp_aop_name := name;
      pp_aop_ext  := ext;
-     pp_aop_args := map_sz sz args; |}.    
+     pp_aop_args := mk_pp_args sz args; |}.    
 
 Definition c := [::CAcond].
 Definition r := [:: CAreg].
@@ -864,7 +885,7 @@ Definition pp_movsx szs szd args :=
   let ext := if (szd == szs) || (szd == U64) && (szs == U32) then "xd"%string else "x"%string in
   {| pp_aop_name := "movs";
      pp_aop_ext  := PP_iname2 ext szs szd;
-     pp_aop_args := zip [::szd; szs] args; |}.
+     pp_aop_args := mk_zip_pp_args [::szd; szs] args; |}.
 
 Definition size_MOVSX szi szo :=
   match szi with
@@ -882,7 +903,7 @@ Definition Ox86_MOVSX_instr             :=
 Definition pp_movzx szs szd args :=
   {| pp_aop_name := "movz";
      pp_aop_ext  := PP_iname2 "x" szs szd;
-     pp_aop_args := zip [::szd; szs] args; |}.
+     pp_aop_args := mk_zip_pp_args [::szd; szs] args; |}.
 
 Definition size_MOVZX szi szo :=
   match szi with
@@ -1525,7 +1546,7 @@ Definition check_xmm_k_xmmm := [:: [::  xmm; k; xmmm true]].
 Definition x86_VMOVDQ8 ksz sz (m: word ksz) (v: word sz) : tpl (w_ty sz) := wmovdq8 m v.
 
 Definition Ox86_VMOVDQU8_instr :=
-  mk_instr_w2_w_120_mask "VMOVDQU8" x86_VMOVDQ8 check_xmm_k_xmmm (primWw_16_64 VMOVDQU8) (fun ksz sz => size_16_64 ksz && size_128_512 sz) (pp_name "vmovdqu8").
+  mk_instr_w2_w_120_mask "VMOVDQU8" x86_VMOVDQ8 check_xmm_k_xmmm (primWw_16_64 VMOVDQU8) (fun ksz sz => size_16_64 ksz && size_128_512 sz) (pp_name_mask "vmovdqu8").
 
 
 
@@ -1534,7 +1555,7 @@ Definition Ox86_VMOVDQU8_instr :=
 Definition pp_vpmovx name ve sz ve' sz' args :=
   {| pp_aop_name := name;
      pp_aop_ext  := PP_viname2 ve ve';
-     pp_aop_args := zip [:: sz' ; sz ] args; |}.
+     pp_aop_args := mk_zip_pp_args [:: sz' ; sz ] args; |}.
 
 (* How many elements of size ve in a vector of size ws *)
 Definition vector_size (ve: velem) (ws: wsize) : option Z :=
@@ -1644,7 +1665,7 @@ Definition check_vpextr (_:wsize) :=  [:: [:: rm false; xmm; i U8] ].
 Definition pp_viname_t name ve (ts:seq wsize) args :=
   {| pp_aop_name := name;
      pp_aop_ext  := PP_viname ve false;
-     pp_aop_args := zip ts args; |}.
+     pp_aop_args := mk_zip_pp_args ts args; |}.
 
 Definition x86_nelem_mask (sze szc:wsize) : u8 :=
   wrepr U8 (two_power_nat (wsize_log2 szc - wsize_log2 sze) - 1).
@@ -1665,7 +1686,7 @@ Definition pp_vpinsr ve args :=
   let rs := match ve with VE8 | VE16 | VE32 => U32 | VE64 => U64 end in
   {| pp_aop_name := "vpinsr";
      pp_aop_ext  := PP_viname ve false;
-     pp_aop_args := zip [::U128; U128; rs; U8] args; |}.
+     pp_aop_args := mk_zip_pp_args [::U128; U128; rs; U8] args; |}.
 
 Definition check_vpinsr (_:wsize) :=  [:: [:: xmm; xmm; rm true; i U8] ].
 
@@ -1819,7 +1840,7 @@ Definition x86_VPBLENDM ve ksz sz (m: word ksz) (v1 v2: word sz)  : tpl (w_ty sz
 Definition Ox86_VPBLENDM_instr :=
   mk_ve_instr_w2w_w_1230 "VPBLENDM"
   (@x86_VPBLENDM) check_xmm_k_xmm_xmmm (primVw_8_64 VPBLENDM)
-  (fun ve ksz sz => size_8_64 ve && size_8_64 ksz && size_128_512 sz) (pp_viname "vpblendm").
+  (fun ve ksz sz => size_8_64 ve && size_8_64 ksz && size_128_512 sz) (pp_viname_mask "vpblendm").
 
 
 Definition check_xmm_xmm_xmmm_xmm (_:wsize) := [:: [:: xmm; xmm; xmmm true; xmm]].
@@ -1920,7 +1941,7 @@ Definition Ox86_VPERMT2Q_instr :=
 Definition pp_vpbroadcast ve sz args :=
   {| pp_aop_name := "vpbroadcast";
      pp_aop_ext  := PP_viname ve false;
-     pp_aop_args := zip [::sz; wsize_of_velem ve] args; |}.
+     pp_aop_args := mk_zip_pp_args [::sz; wsize_of_velem ve] args; |}.
 
 Definition check_xmm_xmmm (_:wsize) := [:: [:: xmm; xmmm true]].
 
@@ -2061,7 +2082,7 @@ Definition x86_VPERMBMASK ksz sz (m: word ksz) (v1 v2: word sz): tpl w_ty sz :=
 
 
 Definition Ox86_VPERMBMASK_instr :=
-  mk_instr_ww2_w_1230 "VPERMBMASK" x86_VPERMBMASK check_xmm_k_xmm_xmmm (primWw_16_64 VPERMBMASK) (fun ksz sz => size_16_64 ksz && size_128_512 sz) (pp_name "vpermb").
+  mk_instr_ww2_w_1230 "VPERMBMASK" x86_VPERMBMASK check_xmm_k_xmm_xmmm (primWw_16_64 VPERMBMASK) (fun ksz sz => size_16_64 ksz && size_128_512 sz) (pp_name_mask "vpermb").
 
 
 

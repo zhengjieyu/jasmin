@@ -24,12 +24,19 @@ End E.
 (* -------------------------------------------------------------------- *)
 (* Printing. *)
 
-Definition pp_name name args :=
+(* Definition pp_name name args :=
   {|
     pp_aop_name := name;
     pp_aop_ext := PP_name;
     pp_aop_args := map (fun a => (reg_size, a)) args;
-  |}.
+  |}. *)
+Definition pp_name name args :=
+{|
+  pp_aop_name := name;
+  pp_aop_ext := PP_name;
+  pp_aop_args := map (fun a => {| arg := a; sz := reg_size; pre := ""; pos := "" |}) args;
+|}.
+
 
 (* RISC-V declares encodings :
   - R type: reg reg -> reg (e.g.: ADD)

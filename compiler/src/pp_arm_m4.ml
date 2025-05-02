@@ -77,7 +77,8 @@ let pp_address addr =
   | Areg ra -> pp_reg_address ra
   | Arip r -> pp_rip_address r
 
-let pp_asm_arg (arg : (register, Arch_utils.empty, Arch_utils.empty, Arch_utils.empty, rflag, condt) asm_arg) =
+let pp_asm_arg (pp : (register, Arch_utils.empty, Arch_utils.empty, Arch_utils.empty, rflag, condt) Arch_decl.pp_arg) =
+  let { arg; sz; pre; pos } = pp in
   match arg with
   | Condt _ -> None
   | Imm (ws, w) -> Some (pp_imm (Conv.z_unsigned_of_word ws w))
@@ -207,7 +208,7 @@ let pp_ADR pp opts args =
   let name_lo = pp_mnemonic_ext (ARM_op(MOV, opts)) "w" args in
   let name_hi = pp_mnemonic_ext (ARM_op(MOVT, opts)) "" args in
   let args =
-    List.filter_map (fun (_, a) -> pp_asm_arg a) pp.pp_aop_args
+    List.filter_map pp_asm_arg pp.pp_aop_args
   in
   let args_lo, args_hi =
     match args with
@@ -259,20 +260,21 @@ let pp_instr fn i =
       [Instr ("bl", [ pp_syscall op ])]
 
   | AsmOp (op, args) ->
-      let id = instr_desc arm_decl arm_op_decl (None, op) in
-      let pp = id.id_pp_asm args in
-      (* We need to perform the check even if we don't use the suffix, for
-         instance for [LDR] or [STR]. *)
-      let suff = ArgChecker.check_args op pp.pp_aop_args in
-      match op, args with
-      | ARM_op(ADR, opts), _ :: Addr (Arip _) :: _ -> pp_ADR pp opts args
-      | _, _ ->
-          let name = pp_mnemonic_ext op suff args in
-          let args =
-            List.filter_map (fun (_, a) -> pp_asm_arg a) pp.pp_aop_args
-          in
-          let args = pp_shift op args in
-          get_IT i @ [ Instr (name, args) ]
+    let id = instr_desc arm_decl arm_op_decl (None, op) in
+    let pp = id.id_pp_asm args in
+    (* We need to perform the check even if we don't use the suffix, for
+       instance for [LDR] or [STR]. *)
+    let suff = ArgChecker.check_args op (List.map (fun p -> (p.sz, p.arg)) pp.pp_aop_args) in
+    match op, args with
+    | ARM_op(ADR, opts), _ :: Addr (Arip _) :: _ -> pp_ADR pp opts args
+    | _, _ ->
+        let name = pp_mnemonic_ext op suff args in
+        let args =
+          List.filter_map pp_asm_arg pp.pp_aop_args
+        in
+        let args = pp_shift op args in
+        get_IT i @ [ Instr (name, args) ]
+  
 
 (* -------------------------------------------------------------------- *)
 let pp_brace s = Format.asprintf "{%s}" s

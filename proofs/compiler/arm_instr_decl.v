@@ -729,14 +729,21 @@ Definition chk_imm_reject_shift :=
 (* -------------------------------------------------------------------- *)
 (* Printing. *)
 
-Definition pp_arm_op
+(* Definition pp_arm_op
   (mn : arm_mnemonic) (opts : arm_options) (args : seq asm_arg) : pp_asm_op :=
   {|
     pp_aop_name := string_of_arm_mnemonic mn;
     pp_aop_ext := PP_name;
     pp_aop_args := map (fun a => (reg_size, a)) args;
-  |}.
+  |}. *)
 
+Definition pp_arm_op
+  (mn : arm_mnemonic) (opts : arm_options) (args : seq asm_arg) : pp_asm_op :=
+  {|
+    pp_aop_name := string_of_arm_mnemonic mn;
+    pp_aop_ext := PP_name;
+    pp_aop_args := map (fun a => {| arg := a; sz := reg_size; pre := ""; pos := "" |}) args;
+  |}.
 
 (* -------------------------------------------------------------------- *)
 (* Instruction semantics and description. *)
