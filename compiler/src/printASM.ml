@@ -28,7 +28,7 @@ let pp_instr fmt name params =
   (* Post-process the joined parameter string:
       remove any spaces or commas before an opening brace *)
   let post_process s =
-    let re = Str.regexp "[ ,]*{" in
+    let re = Str.regexp ", {" in
     Str.global_replace re "{" s
   in
   match params with

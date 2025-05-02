@@ -1712,6 +1712,9 @@ Arguments wpcmps1 cmp {ve} _ _.
 Definition wpcmpeq ve sz (w1 w2: word sz) : word sz :=
   lift2_vec ve (wpcmps1 Z.eqb) sz w1 w2.
 
+
+
+
 Definition wpcmpgt ve sz (w1 w2: word sz) : word sz :=
   lift2_vec ve (wpcmps1 Z.gtb) sz w1 w2.
 

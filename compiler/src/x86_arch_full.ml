@@ -172,6 +172,7 @@ module X86_core = struct
     | VPBROADCAST _ -> true
     | VPCLMULQDQ _ -> true
     | VPCMPEQ _ -> true
+    | VPCMP _ -> true
     | VPCMPGT _ -> true
     | VPERM2I128 -> true
     | VPERMD _ -> true

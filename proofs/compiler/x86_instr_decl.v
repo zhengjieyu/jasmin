@@ -7,6 +7,8 @@ Import Utf8 Relation_Operators ZArith.
 Require Export arch_decl.
 Require Import x86_decl.
 
+
+Axiom TODO_AVX512 : forall {a: Type}, string -> a.
 (* -------------------------------------------------------------------- *)
 
 Variant x86_op : Type :=
@@ -163,6 +165,7 @@ Variant x86_op : Type :=
 | MOVEMASK of velem & wsize
 | VPMOVB2M of wsize & wsize (* source size (U128/512) & dest. size (U16/32/64) *)
 | VPCMPEQ of velem & wsize
+| VPCMP `(velem) `(wsize) `(wsize)
 | VPCMPGT of velem & wsize
 | VPSIGN of velem & wsize
 | VPMADDUBSW of wsize
@@ -791,6 +794,7 @@ Definition c := [::CAcond].
 Definition r := [:: CAreg].
 Definition rx := [:: CAregx].
 Definition k := [:: CAregmask].
+
 Definition m b := [:: CAmem b].
 Definition i sz := [:: CAimm CAimmC_none sz].
 Definition rm b := [:: CAreg; CAmem b].
@@ -1594,6 +1598,8 @@ Definition Ox86_VPMOVZX_instr :=
 
 Definition check_xmm_xmm_xmmm (_:wsize) := [:: xmm_xmm_xmmm].
 
+
+
 Definition x86_VPAND sz := @wand sz.
 
 Definition Ox86_VPAND_instr  := mk_instr_w2_w_120    "VPAND"   x86_VPAND  check_xmm_xmm_xmmm (prim_128_512 VPAND) size_128_512 pp_vpand.
@@ -1703,6 +1709,8 @@ Definition Ox86_VPINSR_instr  :=
    ("VPINSR"%string, primV_128 (λ ve _, VPINSR ve))).
 
 Definition check_xmm_xmm_imm8 (_:wsize) := [:: [:: xmm; xmm; i U8]].
+
+
 
 Definition x86_u128_shift sz' sz (op: word sz' → Z → word sz')
   (v: word sz) (c: word U128) : tpl (w_ty sz) :=
@@ -2171,6 +2179,26 @@ Definition Ox86_VPCMPEQ_instr :=
                 ,("VPCMPEQ"%string, primV VPCMPEQ)
   ).
 
+Definition check_k_xmm_xmmm_imm  := [:: [:: k; xmm; xmmm true; i U8]].
+
+Definition x86_VPCMP (ve: velem) ksz sz (v1 v2: word sz) (m: u8): tpl(w_ty ksz) :=
+  TODO_AVX512 "VPCMP".
+
+Definition Ox86_VPCMP_instr :=
+  (fun (ve: velem) ksz sz => mk_instr_safe
+                  (pp_ve_sz_sz "VPCMP"%string ve ksz sz)
+                  (w2w8_ty sz)
+                  (w_ty ksz)
+                  [:: Eu 1; Eu 2; Eu 3]
+                  [:: Eu 0]
+                  MSB_CLEAR
+                  (@x86_VPCMP ve ksz sz)
+                  (check_k_xmm_xmmm_imm)
+                  4
+                  (size_8_64 ve && size_128_512 sz && size_8_64 ksz)
+                  (pp_viname "vpcmp" ve sz)
+                ,("VPCMP"%string, primVw_8_64 VPCMP)
+  ).
 
 
 Definition x86_VPCMPGT (ve: velem) sz (v1 v2: word sz): tpl(w_ty sz) :=
@@ -2646,6 +2674,7 @@ Definition x86_instr_desc o : instr_desc_t :=
   | MOVEMASK ve sz     => Ox86_MOVEMASK_instr.1 ve sz
   | VPMOVB2M sz sz'   => Ox86_VPMOVB2M_instr.1 sz sz'
   | VPCMPEQ ve sz      => Ox86_VPCMPEQ_instr.1 ve sz
+  | VPCMP ve sz sz'      => Ox86_VPCMP_instr.1 ve sz sz'
   | VPCMPGT ve sz      => Ox86_VPCMPGT_instr.1 ve sz
   | VPSIGN ve sz       => Ox86_VPSIGN_instr.1 ve sz
   | VPMADDUBSW sz      => Ox86_VPMADDUBSW_instr.1 sz
@@ -2819,6 +2848,7 @@ Definition x86_prim_string :=
    Ox86_MOVEMASK_instr.2;
    Ox86_VPMOVB2M_instr.2;
    Ox86_VPCMPEQ_instr.2;
+   Ox86_VPCMP_instr.2;
    Ox86_VPCMPGT_instr.2;
    Ox86_VPSIGN_instr.2;
    Ox86_VPMADDUBSW_instr.2;

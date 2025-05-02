@@ -53,6 +53,10 @@ Extract Constant ident.Cident.id_kind => "CoreIdent.Cident.id_kind".
 
 Extract Constant ident.Cident.spill_to_mmx => "CoreIdent.Cident.spill_to_mmx".
 
+Extract Constant x86_instr_decl.TODO_AVX512 =>
+  "(fun msg -> failwith (""TODO_AVX512: "" ^ msg))".
+
+
 Set Extraction Output Directory "lang/ocaml".
 
 Extraction Blacklist String List Nat Uint63 Utils Var Array.

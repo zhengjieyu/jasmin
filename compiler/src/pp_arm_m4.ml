@@ -78,7 +78,7 @@ let pp_address addr =
   | Arip r -> pp_rip_address r
 
 let pp_asm_arg (pp : (register, Arch_utils.empty, Arch_utils.empty, Arch_utils.empty, rflag, condt) Arch_decl.pp_arg) =
-  let { arg; sz; pre; pos } = pp in
+  let { arg } = pp in
   match arg with
   | Condt _ -> None
   | Imm (ws, w) -> Some (pp_imm (Conv.z_unsigned_of_word ws w))

@@ -439,8 +439,8 @@ module X86AsmTranslate (AsmSyntax: X86AsmSyntax) = struct
       | Regmask r     -> pp_register_mask ~reg_pre ws r
       | Addr addr  -> pp_adress ws addr
       | XReg r     -> pp_xmm_register ~reg_pre ws r *)
-      let pp_asm_arg (pp: (_, _, _, _, _, _) Arch_decl.pp_arg) =
-        let { arg; sz; pre; pos } = pp in
+      let pp_asm_arg pp =
+        let Arch_decl.{ arg; sz; pre; pos } = pp in
         match arg with
         | Condt _ -> assert false
         | Imm(ws, w) -> pp_imm ((if ws = U8 then Conv.z_unsigned_of_word else Conv.z_of_word) ws w)
