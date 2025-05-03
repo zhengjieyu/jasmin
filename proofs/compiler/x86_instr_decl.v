@@ -103,6 +103,7 @@ Variant x86_op : Type :=
 | VMOVDQA  of wsize
 | VMOVDQU  `(wsize)
 | VMOVDQU8  `(wsize) `(wsize)
+| VPCOMPRESS  `(velem) `(wsize) `(wsize)
 | VPMOVSX of velem & wsize & velem & wsize (* parallel sign-extension: sizes are source, source, target, target *)
 | VPMOVZX of velem & wsize & velem & wsize (* parallel zero-extension: sizes are source, source, target, target *)
 | VPAND    `(wsize)
@@ -595,8 +596,13 @@ Notation mk_instr_w2w8_w_1230 name semi check prc valid pp_asm := ((fun sz =>
 Notation mk_ve_instr_w2w8_w_1230 name semi check prc valid pp_asm := ((fun (ve:velem) sz =>
   mk_instr_safe (pp_ve_sz name ve sz) (w2w8_ty sz) (w_ty sz) [:: Ea 1 ; Eu 2 ; Ea 3] [:: Ea 0] (reg_msb_flag sz) (semi ve sz) (check sz) 4 (valid ve sz) (pp_asm ve sz)), (name%string,prc))  (only parsing).
 
-Notation mk_ve_instr_w2w_w_1230 name semi check prc valid pp_asm := ((fun (ve:velem) (ksz:wsize) (sz:wsize) =>
+
+
+Notation mk_ve_instr_ww2_w_1230 name semi check prc valid pp_asm := ((fun (ve:velem) (ksz:wsize) (sz:wsize) =>
   mk_instr_safe (pp_ve_sz_sz name ve ksz sz) (ww2_ty ksz sz) (w_ty sz) [:: Ea 1; Eu 2 ; Ea 3] [:: Ea 0] (reg_msb_flag sz) (semi ve ksz sz) (check) 4 (valid ve ksz sz) (pp_asm ve sz)), (name%string,prc))  (only parsing).
+
+Notation mk_ve_instr_w2_w_120_mask name semi check prc valid pp_asm := ((fun (ve:velem) (ksz:wsize) (sz:wsize) =>
+  mk_instr_safe (pp_ve_sz_sz name ve ksz sz) (w2_ty ksz sz) (w_ty sz) [:: Eu 1 ; Eu 2] [:: Eu 0] (reg_msb_flag sz) (semi ve ksz sz) (check) 3 (valid ve ksz sz) (pp_asm ve sz)), (name%string,prc))  (only parsing).
 
 
 Notation mk_instr_w_w128_10 name msb semi check prc valid pp_asm := ((fun sz =>
@@ -1553,6 +1559,12 @@ Definition Ox86_VMOVDQU8_instr :=
   mk_instr_w2_w_120_mask "VMOVDQU8" x86_VMOVDQ8 check_xmm_k_xmmm (primWw_16_64 VMOVDQU8) (fun ksz sz => size_16_64 ksz && size_128_512 sz) (pp_name_mask "vmovdqu8").
 
 
+Definition check_xmmm_k_xmm := [:: [:: xmmm true; k; xmm]].
+Definition x86_VPCOMPRESS (ve: velem) ksz sz (m: word ksz) (v: word sz): tpl (w_ty sz) :=
+  TODO_AVX512 "x86_VPCOMPRESS".
+
+Definition Ox86_VPCOMPRESS_instr :=
+  mk_ve_instr_w2_w_120_mask "VPCOMPRESS" (@x86_VPCOMPRESS) check_xmmm_k_xmm (primVw_8_64 VPCOMPRESS) (fun ve ksz sz => size_8_64 ve && size_8_64 ksz && size_128_512 sz) (pp_viname_mask "vpcompress").
 
 
 
@@ -1846,7 +1858,7 @@ Definition x86_VPBLENDM ve ksz sz (m: word ksz) (v1 v2: word sz)  : tpl (w_ty sz
   else wpblendmq v1 v2 m.
 
 Definition Ox86_VPBLENDM_instr :=
-  mk_ve_instr_w2w_w_1230 "VPBLENDM"
+  mk_ve_instr_ww2_w_1230 "VPBLENDM"
   (@x86_VPBLENDM) check_xmm_k_xmm_xmmm (primVw_8_64 VPBLENDM)
   (fun ve ksz sz => size_8_64 ve && size_8_64 ksz && size_128_512 sz) (pp_viname_mask "vpblendm").
 
@@ -2617,6 +2629,7 @@ Definition x86_instr_desc o : instr_desc_t :=
   | VMOVDQA sz         => Ox86_VMOVDQA_instr.1 sz
   | VMOVDQU sz         => Ox86_VMOVDQU_instr.1 sz
   | VMOVDQU8 sz sz'         => Ox86_VMOVDQU8_instr.1 sz sz'
+  | VPCOMPRESS ve sz sz'         => Ox86_VPCOMPRESS_instr.1 ve sz sz'
   | VPMOVSX ve sz ve' sz' => Ox86_VPMOVSX_instr.1 ve sz ve' sz'
   | VPMOVZX ve sz ve' sz' => Ox86_VPMOVZX_instr.1 ve sz ve' sz'
   | VPAND sz           => Ox86_VPAND_instr.1 sz
@@ -2792,6 +2805,7 @@ Definition x86_prim_string :=
    Ox86_VMOVDQA_instr.2;
    Ox86_VMOVDQU_instr.2;
    Ox86_VMOVDQU8_instr.2;
+   Ox86_VPCOMPRESS_instr.2;
    Ox86_VPAND_instr.2;
    Ox86_VPANDN_instr.2;
    Ox86_VPOR_instr.2;

@@ -154,6 +154,7 @@ module X86_core = struct
     | VMOVDQA _ -> true
     | VMOVDQU _ -> true
     | VMOVDQU8 _ -> true
+    | VPCOMPRESS _ -> true
     | VMOVHPD -> false (* Not DOIT *)
     | VMOVLPD -> false (* Not DOIT *)
     | VMOVSHDUP _ -> true

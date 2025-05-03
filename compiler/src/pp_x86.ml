@@ -303,7 +303,7 @@ module ATTSyntax : X86AsmSyntax = struct
   
   
 
-  let rev_args args =
+  (* let rev_args args =
     let rev_args = List.rev args in
   
     let rec process acc prev = function
@@ -332,8 +332,36 @@ module ATTSyntax : X86AsmSyntax = struct
     List.rev (process [] None rev_args)
   
       
-   
-     
+    *)
+    let rev_args args =
+      let rev_args = List.rev args in
+    
+      let rec process acc prev = function
+        | [] ->
+            (match prev with
+             | Some x -> x :: acc
+             | None -> acc)
+    
+        | curr :: tl -> (
+            match curr.arg, prev with
+            | (XReg _ | Addr _),
+              Some { arg = Regmask r; sz; pre = "{"; pos = "}"} ->
+                (* Swap Regmask and XReg/Addr, only if pre and pos match "{" and "}" *)
+                let regmask_arg = { arg = Regmask r; sz; pre = "{"; pos = "}"} in
+                let xreg_or_addr_arg = curr in
+                process (regmask_arg :: xreg_or_addr_arg :: acc) None tl
+    
+            | _, Some p ->
+                (* No swap, push previous, carry current *)
+                process (p :: acc) (Some curr) tl
+    
+            | _, None ->
+                process acc (Some curr) tl
+          )
+      in
+    
+      List.rev (process [] None rev_args)
+    
     
     
     
