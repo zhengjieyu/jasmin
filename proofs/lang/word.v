@@ -1572,18 +1572,12 @@ Definition wpinsr ve (v: u128) (w: word ve) (i: u8) : u128 :=
   let i := Z.to_nat (wunsigned i) in
   make_vec U128 (update_at w v i).
 
-(* -------------------------------------------------------------------*)
-(* TODO: fill the definition detail *)
-Definition wmovdq8 ksz sz (m: word ksz) (v: word sz) : word sz :=
-  v.
+
 (* -------------------------------------------------------------------*)
 Definition winserti128 (v: u256) (w: u128) (i: u8) : u256 :=
   let v := split_vec U128 v in
   make_vec U256 (if lsb i then [:: v`_0 ; w ] else [:: w ; v`_1 ])%R.
-(* -------------------------------------------------------------------*)
-Definition winserti64x4 (v: u512) (w: u256) (i: u8) : u512 :=
-  let v := split_vec U256 v in
-  make_vec U512 (if lsb i then [:: v`_0 ; w ] else [:: w ; v`_1 ])%R.
+
 
 (* -------------------------------------------------------------------*)
 Definition wpblendd sz (w1 w2: word sz) (m: u8) : word sz :=
@@ -1599,13 +1593,7 @@ Definition wpblendmd sz ksz (w1 w2: word sz) (m: word ksz) : word sz :=
   let b := split_vec 1 m in
   let r := map3 (λ b v1 v2, if b == 1%R then v2 else v1) b v1 v2 in
   make_vec sz r.
-(* -------------------------------------------------------------------*)
-Definition wpblendmq sz ksz (w1 w2: word sz) (m: word ksz) : word sz :=
-  let v1 := split_vec U32 w1 in
-  let v2 := split_vec U32 w2 in
-  let b := split_vec 1 m in
-  let r := map3 (λ b v1 v2, if b == 1%R then v2 else v1) b v1 v2 in
-  make_vec sz r.
+
 (* -------------------------------------------------------------------*)
 Definition wpbroadcast ve sz (w: word ve) : word sz :=
   let r := nseq (sz %/ ve) w in
@@ -1648,48 +1636,21 @@ Definition wperm2i128 (w1 w2: u256) (i: u8) : u256 :=
   let hi := if wbit_n i 7 then 0%R else choose 4%nat in
   make_vec U256 [:: lo ; hi ].
 
-(* -------------------------------------------------------------------*)
-Definition wshufi32x4 (w1 w2: u512) (i: u8) : u512 :=
-  let choose (n: nat) :=
-        match urepr (subword n 2 i) with
-        | 0 => subword 0 U128 w1
-        | 1 => subword U128 U128 w1
-        | 2 => subword (2 * U128) U128 w1
-        | 3 => subword (3 * U128) U128 w1
-        | 4 => subword 0 U128 w2
-        | 5 => subword U128 U128 w2
-        | 6 => subword (2 * U128) U128 w2
-        | _ => subword (3 * U128) U128 w2
-        end in
-    let lo1 := if wbit_n i 3 then 0%R else choose 0%nat in
-    let lo2 := if wbit_n i 5 then 0%R else choose 2%nat in
-    let hi1 := if wbit_n i 7 then 0%R else choose 4%nat in
-    let hi2 := if wbit_n i 9 then 0%R else choose 6%nat in
-    make_vec U512 [:: lo1 ; lo2 ; hi1 ; hi2 ].
 
 (* -------------------------------------------------------------------*)
 Definition wpermd1 (v: seq u32) (idx: u32) :=
   let off := wunsigned idx mod 8 in
   (v`_(Z.to_nat off))%R.
 
-Definition wpermb1 (v: seq u8) (idx: u8) :=
-let off := wunsigned idx mod 8 in
-(v`_(Z.to_nat off))%R.
 
 Definition wpermd sz (idx w: word sz) : word sz :=
   let v := split_vec U32 w in
   let i := split_vec U32 idx in
   make_vec sz (map (wpermd1 v) i).
 
-Definition wpermb sz (idx w: word sz) : word sz :=
-  let v := split_vec U8 w in
-  let i := split_vec U8 idx in
-  make_vec sz (map (wpermb1 v) i).
 
-Definition wpermbmask ksz sz (m: word ksz) (idx w: word sz) : word sz :=
-  let v := split_vec U8 w in
-  let i := split_vec U8 idx in
-  make_vec sz (map (wpermb1 v) i).
+
+
 (* -------------------------------------------------------------------*)
 Definition wpermq sz (w: word sz) (i: u8) : word sz :=
   let v := split_vec U64 w in
@@ -1773,9 +1734,7 @@ Definition wpack sz pe (arg: seq Z) : word sz :=
 (* -------------------------------------------------------------------*)
 Definition movemask (ve: velem) (ssz: wsize) (w : word ssz) : word U64 :=
   wrepr U64 (t2w_def [tuple of map msb (split_vec ve w)]).
-(* -------------------------------------------------------------------*)
-Definition wpmovb2m (dsz ssz: wsize) (w : word ssz) : word dsz :=
-  wrepr dsz (t2w_def [tuple of map msb (split_vec U8 w)]).
+
 (* -------------------------------------------------------------------*)
 Definition blendv (ve: velem) sz (w1 w2 m: word sz): word sz :=
   let v1 := split_vec ve w1 in
@@ -1790,13 +1749,7 @@ Definition wpblendvb := blendv VE8.
 
 
 
-Definition wpermi2q sz (w1: word sz) (m: word sz) : word sz :=
- w1.
-(* let v1 := split_vec U64 w1 in
-let v2 := split_vec U64 w2 in
-let b := split_vec 1 m in
-let r := map3 (λ b v1 v2, if b == 1%R then v2 else v1) b v1 v2 in *)
-(* make_vec sz r. *)
+
 
 (* -------------------------------------------------------------------*)
 Lemma pow2pos q : 0 < 2 ^ Z.of_nat q.

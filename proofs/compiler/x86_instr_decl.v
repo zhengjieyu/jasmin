@@ -843,7 +843,7 @@ Definition Ox86_MOV_instr               :=
   mk_instr_w_w "MOV" x86_MOV [:: Eu 1] [:: Eu 0] 2
                check_mov (prim_8_64 MOV) size_8_64 (pp_iname "mov").
 
-Definition x86_KMOV sz (x: word sz) : word sz := x.
+Definition x86_KMOV sz (x: word sz) : word sz := TODO_AVX512 "KMOV".
 
 Definition check_kmov := [:: k_krm; rm_k].
 
@@ -1553,7 +1553,7 @@ Definition Ox86_VMOVDQU_instr :=
 
 (* load/store according to mask register *)
 Definition check_xmm_k_xmmm := [:: [::  xmm; k; xmmm true]].
-Definition x86_VMOVDQ8 ksz sz (m: word ksz) (v: word sz) : tpl (w_ty sz) := wmovdq8 m v.
+Definition x86_VMOVDQ8 ksz sz (m: word ksz) (v: word sz) : tpl (w_ty sz) :=  TODO_AVX512 "VMOVDQ8".
 
 Definition Ox86_VMOVDQU8_instr :=
   mk_instr_w2_w_120_mask "VMOVDQU8" x86_VMOVDQ8 check_xmm_k_xmmm (primWw_16_64 VMOVDQU8) (fun ksz sz => size_16_64 ksz && size_128_512 sz) (pp_name_mask "vmovdqu8").
@@ -1829,7 +1829,7 @@ Definition check_xmm_k_xmm_xmmm := [:: [::  xmm; k; xmm; xmmm true]].
 
 
 Definition x86_VSHUFI32X4 (v1 v2: u512) (m: u8): tpl (w_ty U512) :=
-  wshufi32x4 v1 v2 m.
+  TODO_AVX512 "VSHUFI32X4".
 
 Definition Ox86_VSHUFI32X4_instr :=
 mk_instr_pp "VSHUFI32X4" w512x2w8_ty w512_ty [:: Eu 1; Eu 2; Eu 3] [:: Eu 0] MSB_CLEAR x86_VSHUFI32X4 (check_xmm_xmm_xmmm_imm8 U512) 4 (primM VSHUFI32X4) (pp_name_ty "vshufi32x4" [::U512;U512; U512; U8]).
@@ -1854,8 +1854,7 @@ Definition Ox86_VPBLEND_instr :=
 
 
 Definition x86_VPBLENDM ve ksz sz (m: word ksz) (v1 v2: word sz)  : tpl (w_ty sz) :=
-  if ve == U32 then wpblendmd v1 v2 m
-  else wpblendmq v1 v2 m.
+  TODO_AVX512 "VPBLENDM".
 
 Definition Ox86_VPBLENDM_instr :=
   mk_ve_instr_ww2_w_1230 "VPBLENDM"
@@ -1949,7 +1948,7 @@ Definition Ox86_VPERMI2_instr := mk_ve_instr_w2_w_120 "VPERMI2" x86_VPERMI2 chec
 (fun (ve:velem) sz => size_8_64 ve && size_128_512 sz)  (pp_viname "vpermi2"). *)
 
 Definition x86_VPERMT2Q sz (x y m: word sz) : tpl (w_ty sz) :=
-  wpermi2q x m.
+  TODO_AVX512 "VPERMT2Q".
 
 Definition Ox86_VPERMT2Q_instr :=
 (fun sz => mk_instr_safe
@@ -2038,8 +2037,7 @@ mk_instr_pp "VEXTRACTI64X2" w512w8_ty w128_ty [:: Eu 1; Eu 2] [:: Eu 0] MSB_CLEA
 
 
 Definition x86_VEXTRACTI64X4 (v: u512) (i: u8) : tpl (w_ty U256) :=
-let r := if lsb i then wshr v (Z.of_nat U256) else v in
-zero_extend U256 r.              
+  TODO_AVX512 "VEXTRACTI64X4".              
 Definition Ox86_VEXTRACTI64X4_instr :=
 mk_instr_pp "VEXTRACTI64X4" w512w8_ty w256_ty [:: Eu 1; Eu 2] [:: Eu 0] MSB_CLEAR x86_VEXTRACTI64X4
             (check_xmmm_xmm_imm8 U512) 3 (primM VEXTRACTI64X4) (pp_name_ty "vextracti64x4" [::U256; U512; U8]).
@@ -2047,8 +2045,7 @@ mk_instr_pp "VEXTRACTI64X4" w512w8_ty w256_ty [:: Eu 1; Eu 2] [:: Eu 0] MSB_CLEA
 
 
 Definition x86_VEXTRACTI32X8 (v: u512) (i: u8) : tpl (w_ty U256) :=
-  let r := if lsb i then wshr v (Z.of_nat U256) else v in
-  zero_extend U256 r.
+  TODO_AVX512 "VEXTRACTI32X8".
 
 Definition Ox86_VEXTRACTI32X8_instr :=
   mk_instr_pp "VEXTRACTI32X8" w512w8_ty w256_ty [:: Eu 1; Eu 2] [:: Eu 0] MSB_CLEAR x86_VEXTRACTI32X8
@@ -2063,7 +2060,7 @@ Definition Ox86_VINSERTI128_instr :=
               (check_xmm_xmm_xmmm_imm8 U256) 4 (primM VINSERTI128) (pp_name_ty "vinserti128" [::U256;U256; U128; U8]).
 
 Definition x86_VINSERTI64X4 (v1: u512) (v2: u256) (m: u8) : tpl (w_ty U512) :=
-  winserti64x4 v1 v2 m.
+  TODO_AVX512 "VINSERTI64X4".
 
 Definition Ox86_VINSERTI64X4_instr :=
   mk_instr_pp "VINSERTI64X4" w512w256w8_ty w512_ty [:: Eu 1; Eu 2; Eu 3] [:: Eu 0] MSB_CLEAR x86_VINSERTI64X4
@@ -2089,7 +2086,7 @@ mk_instr_w2_w_120 "VPERMD" x86_VPERMD check_xmm_xmm_xmmm (prim_256_512 VPERMD) (
 
 
 Definition x86_VPERMB sz (v1 v2: word sz): tpl w_ty sz :=
-  wpermb v1 v2.
+  TODO_AVX512 "VPERMB".
 
 
 Definition Ox86_VPERMB_instr :=
@@ -2097,7 +2094,7 @@ mk_instr_w2_w_120 "VPERMB" x86_VPERMB check_xmm_xmm_xmmm (prim_128_512 VPERMB) (
 
 
 Definition x86_VPERMBMASK ksz sz (m: word ksz) (v1 v2: word sz): tpl w_ty sz :=
-  wpermbmask m v1 v2.
+  TODO_AVX512 "VPERMBMASK".
 
 
 
@@ -2113,7 +2110,7 @@ Definition Ox86_VPERMQ_instr :=
 mk_instr_ww8_w_120 "VPERMQ" x86_VPERMQ check_xmm_xmm_imm8 (prim_256_512 VPERMQ) size_256_512 (pp_name "vpermq").
 
 Definition x86_VPERMQ512 (v1 v2: u512) : tpl (w_ty U512) :=
-  v1.
+  TODO_AVX512 "VPERMQ512".
 
 Definition Ox86_VPERMQ512_instr :=
   mk_instr_pp "VPERMQ512" w512x2_ty w512_ty [:: Eu 1; Eu 2] [:: Eu 0] MSB_CLEAR x86_VPERMQ512
@@ -2154,7 +2151,7 @@ Definition Ox86_MOVEMASK_instr :=
 ).
 
 Definition x86_VPMOVB2M ssz dsz (v : word ssz): tpl (w_ty dsz) :=
-wpmovb2m dsz v.
+  TODO_AVX512 "VPMOVB2M".
 
 Definition Ox86_VPMOVB2M_instr :=
   (fun ssz dsz => mk_instr_safe
