@@ -1853,7 +1853,7 @@ Definition Ox86_VPBLEND_instr :=
   (fun ve sz => size_16_32 ve && size_128_256 sz) (pp_viname "vpblend").
 
 
-Definition x86_VPBLENDM ve ksz sz (m: word ksz) (v1 v2: word sz)  : tpl (w_ty sz) :=
+Definition x86_VPBLENDM (ve:velem) ksz sz (m: word ksz) (v1 v2: word sz)  : tpl (w_ty sz) :=
   TODO_AVX512 "VPBLENDM".
 
 Definition Ox86_VPBLENDM_instr :=
