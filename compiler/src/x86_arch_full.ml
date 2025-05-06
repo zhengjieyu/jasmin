@@ -145,7 +145,7 @@ module X86_core = struct
     | VBROADCASTI32X4 -> true
     | VBROADCASTI64X4 -> true
     | VEXTRACTI128 -> true
-    | VEXTRACTI64X2 -> true
+    | VEXTRACTI64X2 _ -> true
     | VEXTRACTI64X4 -> true
     | VEXTRACTI32X8 -> true
     | VINSERTI128 -> true
@@ -180,7 +180,7 @@ module X86_core = struct
     | VPERMB _ -> true
     | VPERMBMASK _ -> true
     | VPERMQ _ -> true
-    | VPERMQ512 -> true
+    | VPERMQ512 _ -> true
     | VPEXTR _ -> true
     | VPINSR _ -> true
     | VPMADDUBSW _ -> true
@@ -218,7 +218,7 @@ module X86_core = struct
     | VPUNPCKH _ -> true
     | VPUNPCKL _ -> true
     | VPXOR _ -> true
-    | VSHUFI32X4 -> true
+    | VSHUFI32X4 _-> true
     | VSHUFPS _ -> false (* Not DOIT *)
     | XCHG _ -> false (* Not DOIT *)
     | XOR _ -> true

@@ -6,5 +6,5 @@ export fn test_vbroadcasti64x4(reg u64 rp)
     t0 = #set0_256();
     sh = t0;
     f0 = #VBROADCASTI64X4(sh);
-    (u512)[rp] = f0;
+    [:u512 rp] = f0;
 }

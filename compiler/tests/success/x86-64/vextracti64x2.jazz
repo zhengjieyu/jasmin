@@ -3,6 +3,12 @@ export fn test_vextracti64x2(reg u64 rp)
     reg u512 f0;
     reg u128 t0;
     f0 = #set0_512();
-    t0 = #VEXTRACTI64X2(f0, 1);
-    (u128)[rp] = t0;
+    t0 = #VEXTRACTI64X2_512(f0, 1);
+    [:u128 rp] = t0;
+
+    reg u256 ff0;
+    reg u128 tt0;
+    ff0 = #set0_256();
+    tt0 = #VEXTRACTI64X2_256(ff0, 1);
+    [:u128 rp] = tt0;
 }

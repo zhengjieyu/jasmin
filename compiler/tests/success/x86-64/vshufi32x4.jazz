@@ -1,8 +1,17 @@
 export fn test_vshufi32x4(reg u64 rp)
 {
+
+
+    reg u256 ff0 ff1 ff2;
+    ff1 = #set0_256();
+    ff2 = #set0_256();
+    ff0 = #VSHUFI32X4_256(ff1, ff2, 0x44);
+    [:u256 rp] = ff0;
+
+
     reg u512 f0 f1 f2;
     f1 = #set0_512();
     f2 = #set0_512();
-    f0 = #VSHUFI32X4(f1, f2, 0x44);
-    (u512)[rp] = f0;
+    f0 = #VSHUFI32X4_512(f1, f2, 0x44);
+    [:u512 rp] = f0;
 }

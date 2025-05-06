@@ -120,7 +120,7 @@ Definition size_256_512 sz := ((U256 ≤ sz) && (sz ≤ U512))%CMP.
 Definition size_128_512 sz := ((U128 ≤ sz) && (sz ≤ U512))%CMP.
 Definition size_512 sz := (sz == U512)%CMP.
 
-
+Definition size_128 sz := (sz == U128)%CMP.
 
 Lemma wsize_nle_u128_size_256_512 sz :
   (sz ≤ U128)%CMP = false →

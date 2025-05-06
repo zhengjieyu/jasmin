@@ -150,18 +150,18 @@ Variant x86_op : Type :=
 | VPUNPCKH `(velem) `(wsize)
 | VPUNPCKL `(velem) `(wsize)
 | VEXTRACTI128
-| VEXTRACTI64X2
+| VEXTRACTI64X2 `(wsize)
 | VEXTRACTI64X4
 | VEXTRACTI32X8
 | VINSERTI128
 | VINSERTI64X4
-| VSHUFI32X4
+| VSHUFI32X4 `(wsize)
 | VPERM2I128
 | VPERMD `(wsize)
 | VPERMB `(wsize)
 | VPERMBMASK `(wsize) `(wsize)
 | VPERMQ `(wsize)
-| VPERMQ512
+| VPERMQ512 `(wsize)
 | VPMOVMSKB of wsize & wsize (* source size (U128/256) & dest. size (U32/64) *)
 | MOVEMASK of velem & wsize
 | VPMOVB2M of wsize & wsize (* source size (U128/512) & dest. size (U16/32/64) *)
@@ -577,6 +577,10 @@ Notation mk_instr_ww2_w_1230 name semi check prc valid pp_asm := ((fun (ksz:wsiz
 Notation mk_instr_ww8_w_120 name semi check prc valid pp_asm := ((fun sz =>
   mk_instr_safe (pp_sz name sz) (ww8_ty sz) (w_ty sz) [:: Eu 1 ; Ea 2] [:: Ea 0] (reg_msb_flag sz) (semi sz) (check sz) 3 (valid sz) (pp_asm sz)), (name%string,prc))  (only parsing).
 
+Notation mk_instr_ww8_w128_120 name semi check prc valid pp_asm := ((fun sz =>
+  mk_instr_safe (pp_sz name sz) (ww8_ty sz) (w128_ty) [:: Eu 1 ; Ea 2] [:: Ea 0] (reg_msb_flag sz) (semi sz) (check sz) 3 (valid sz) (pp_asm sz)), (name%string,prc))  (only parsing).
+
+
 Notation mk_instr_ww8_b2w_0c0 name semi check prc valid pp_asm := ((fun sz =>
   mk_instr_safe (pp_sz name sz) (ww8_ty sz) (b2w_ty sz) [:: Eu 0; Ef 1 RCX] [::F OF; F CF; Eu 0] (reg_msb_flag sz) (semi sz) (check sz) 2 (valid sz) (pp_asm sz)), (name%string,prc))  (only parsing).
 
@@ -643,6 +647,10 @@ Definition pp_name name sz args :=
   {| pp_aop_name := name;
      pp_aop_ext  := PP_name;
      pp_aop_args := mk_pp_args sz args; |}.
+Definition pp_iname_w_8_128  name sz args :=
+  {| pp_aop_name := name;
+     pp_aop_ext  := PP_name;
+     pp_aop_args := mk_zip_pp_args [:: U128; sz; U8] args; |}.
 
 Definition pp_name_ty name (ws:seq wsize) args :=
  {| pp_aop_name := name;
@@ -678,6 +686,8 @@ Definition pp_iname_w_8 name sz args :=
   {| pp_aop_name := name;
      pp_aop_ext  := PP_iname sz;
      pp_aop_args := mk_zip_pp_args [::sz; U8] args; |}.
+
+
 
 Definition pp_iname_ww_8 name sz args :=
   {| pp_aop_name := name;
@@ -841,11 +851,11 @@ Definition check_mov sz := [:: r_rmi sz; m_ri (max_32 sz)].
 
 Definition Ox86_MOV_instr               :=
   mk_instr_w_w "MOV" x86_MOV [:: Eu 1] [:: Eu 0] 2
-               check_mov (prim_8_64 MOV) size_8_64 (pp_iname "mov").
+               check_mov (prim_32_64 MOV) size_32_64 (pp_iname "mov").
 
 Definition x86_KMOV sz (x: word sz) : word sz := TODO_AVX512 "KMOV".
 
-Definition check_kmov := [:: k_krm; rm_k].
+Definition check_kmov sz := [:: k_krm; rm_k ].
 
 Definition Ox86_KMOV_instr               :=
   mk_instr_w_w_kmov "KMOV" x86_KMOV [:: Eu 1] [:: Eu 0] 2
@@ -1828,11 +1838,11 @@ Definition check_xmm_k_xmm_xmmm := [:: [::  xmm; k; xmm; xmmm true]].
 
 
 
-Definition x86_VSHUFI32X4 (v1 v2: u512) (m: u8): tpl (w_ty U512) :=
+Definition x86_VSHUFI32X4 sz (v1 v2: word sz) (m: u8): tpl (w_ty sz) :=
   TODO_AVX512 "VSHUFI32X4".
 
 Definition Ox86_VSHUFI32X4_instr :=
-mk_instr_pp "VSHUFI32X4" w512x2w8_ty w512_ty [:: Eu 1; Eu 2; Eu 3] [:: Eu 0] MSB_CLEAR x86_VSHUFI32X4 (check_xmm_xmm_xmmm_imm8 U512) 4 (primM VSHUFI32X4) (pp_name_ty "vshufi32x4" [::U512;U512; U512; U8]).
+mk_instr_w2w8_w_1230 "VSHUFI32X4" (@x86_VSHUFI32X4) check_xmm_xmm_xmmm_imm8 (prim_256_512 VSHUFI32X4) size_256_512 (pp_name "vshufi32x4").
 
 
 Definition wpblendw (m : u8) (w1 w2 : word U128) :=
@@ -1941,12 +1951,6 @@ Definition Ox86_VSHUFPS_instr :=
       (pp_name "vshufps").
 
 
-(* Definition x86_VPERMI2 (ve: velem) sz v1 v2 :=
-x86_u128_binop (lift2_vec ve *%R sz) v1 v2.
-
-Definition Ox86_VPERMI2_instr := mk_ve_instr_w2_w_120 "VPERMI2" x86_VPERMI2 check_xmm_xmm_xmmm_xmm (primV VPERMI2)
-(fun (ve:velem) sz => size_8_64 ve && size_128_512 sz)  (pp_viname "vpermi2"). *)
-
 Definition x86_VPERMT2Q sz (x y m: word sz) : tpl (w_ty sz) :=
   TODO_AVX512 "VPERMT2Q".
 
@@ -2028,12 +2032,10 @@ Definition Ox86_VEXTRACTI128_instr :=
 
 
 
-Definition x86_VEXTRACTI64X2 (v: u512) (i: u8) : tpl (w_ty U128) :=
-let r := if lsb i then wshr v (Z.of_nat U128) else v in
-zero_extend U128 r.              
+Definition x86_VEXTRACTI64X2 sz (v: word sz) (i: u8) : tpl (w_ty U128) :=
+  TODO_AVX512 "VEXTRACTI64X2".              
 Definition Ox86_VEXTRACTI64X2_instr :=
-mk_instr_pp "VEXTRACTI64X2" w512w8_ty w128_ty [:: Eu 1; Eu 2] [:: Eu 0] MSB_CLEAR x86_VEXTRACTI64X2
-            (check_xmmm_xmm_imm8 U512) 3 (primM VEXTRACTI64X2) (pp_name_ty "vextracti64x2" [::U128; U512; U8]).
+  mk_instr_ww8_w128_120 "VEXTRACTI64X2" x86_VEXTRACTI64X2 check_xmmm_xmm_imm8 (prim_256_512 VEXTRACTI64X2) size_256_512 (pp_iname_w_8_128 "vextracti64x2").
 
 
 Definition x86_VEXTRACTI64X4 (v: u512) (i: u8) : tpl (w_ty U256) :=
@@ -2109,12 +2111,11 @@ Definition x86_VPERMQ sz (v: word sz) (m: u8) : tpl w_ty sz :=
 Definition Ox86_VPERMQ_instr :=
 mk_instr_ww8_w_120 "VPERMQ" x86_VPERMQ check_xmm_xmm_imm8 (prim_256_512 VPERMQ) size_256_512 (pp_name "vpermq").
 
-Definition x86_VPERMQ512 (v1 v2: u512) : tpl (w_ty U512) :=
+Definition x86_VPERMQ512 sz (v1 v2: word sz) : tpl (w_ty sz) :=
   TODO_AVX512 "VPERMQ512".
 
 Definition Ox86_VPERMQ512_instr :=
-  mk_instr_pp "VPERMQ512" w512x2_ty w512_ty [:: Eu 1; Eu 2] [:: Eu 0] MSB_CLEAR x86_VPERMQ512
-              (check_xmm_xmm_xmmm U512) 3 (primM VPERMQ512) (pp_name_ty "vpermq" [::U512;U512;U512]).
+  mk_instr_w2_w_120 "VPERMQ512" x86_VPERMQ512 check_xmm_xmm_xmmm (prim_256_512 VPERMQ512) size_256_512 (pp_name "vpermq").
 
 (* TODO: remove *)
 Definition x86_VPMOVMSKB ssz dsz (v : word ssz): tpl (w_ty dsz) :=
@@ -2620,7 +2621,7 @@ Definition x86_instr_desc o : instr_desc_t :=
   | VMOV sz            => Ox86_VMOV_instr.1 sz
   | VPINSR sz          => Ox86_VPINSR_instr.1 sz
   | VEXTRACTI128       => Ox86_VEXTRACTI128_instr.1
-  | VEXTRACTI64X2       => Ox86_VEXTRACTI64X2_instr.1
+  | VEXTRACTI64X2 sz     => Ox86_VEXTRACTI64X2_instr.1 sz
   | VEXTRACTI64X4       => Ox86_VEXTRACTI64X4_instr.1
   | VEXTRACTI32X8       => Ox86_VEXTRACTI32X8_instr.1
   | VMOVDQA sz         => Ox86_VMOVDQA_instr.1 sz
@@ -2675,10 +2676,10 @@ Definition x86_instr_desc o : instr_desc_t :=
   | VPERMB sz          => Ox86_VPERMB_instr.1 sz
   | VPERMBMASK sz sz'          => Ox86_VPERMBMASK_instr.1 sz sz'
   | VPERMQ sz            => Ox86_VPERMQ_instr.1 sz
-  | VPERMQ512             => Ox86_VPERMQ512_instr.1
+  | VPERMQ512 sz            => Ox86_VPERMQ512_instr.1 sz
   | VINSERTI128        => Ox86_VINSERTI128_instr.1
   | VINSERTI64X4        => Ox86_VINSERTI64X4_instr.1
-  | VSHUFI32X4         => Ox86_VSHUFI32X4_instr.1
+  | VSHUFI32X4 sz        => Ox86_VSHUFI32X4_instr.1 sz
   | VPEXTR ve          => Ox86_VPEXTR_instr.1 ve
   | VPMOVMSKB sz sz'   => Ox86_PMOVMSKB_instr.1 sz sz'
   | MOVEMASK ve sz     => Ox86_MOVEMASK_instr.1 ve sz

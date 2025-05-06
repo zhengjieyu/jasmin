@@ -1,12 +1,19 @@
 export
 fn test_vpermq512(reg u64 tmp)
 {
- 
+  reg u256 ff0 ff1 idx0;
+
+  ff1 = #set0_256();
+  idx0 = [:u256 tmp];
+
+  ff0 = #VPERMQ512_256(idx0, ff1);
+  [:u256 tmp] = ff0;
+
   reg u512 f0 f1 idx;
 
   f1 = #set0_512();
-  idx = (u512)[tmp];
+  idx = [:u512 tmp];
 
-  f0 = #VPERMQ512(idx, f1);
-  (u512)[tmp] = f0;
+  f0 = #VPERMQ512_512(idx, f1);
+  [:u512 tmp] = f0;
 }

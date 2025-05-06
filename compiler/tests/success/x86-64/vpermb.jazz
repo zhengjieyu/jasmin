@@ -1,14 +1,24 @@
 export
 fn test_vpermb(reg u64 tmp)
 {
+
+  reg u128 ttt0 ttt1;
+
+  ttt0 = #set0_128();
+  ttt1 = #set0_128();
+
+  ttt0 = #VPERMB_128(ttt0, ttt1);
+  ttt0 = #VPERMB_128(ttt0, [:u128 tmp]);
+  [:u128 tmp] = ttt0;
+
   reg u256 t0 t1;
 
   t0 = #set0_256();
   t1 = #set0_256();
 
   t0 = #VPERMB_256(t0, t1);
-  t0 = #VPERMB_256(t0, (u256)[tmp]);
-  (u256)[tmp] = t0;
+  t0 = #VPERMB_256(t0, [:u256 tmp]);
+  [:u256 tmp] = t0;
 
   reg u512 tt0 tt1;
 
@@ -16,6 +26,6 @@ fn test_vpermb(reg u64 tmp)
   tt1 = #set0_512();
 
   tt0 = #VPERMB_512(tt0, tt1);
-  tt0 = #VPERMB_512(tt0, (u512)[tmp]);
-  (u512)[tmp] = tt0;
+  tt0 = #VPERMB_512(tt0, [:u512 tmp]);
+  [:u512 tmp] = tt0;
 }
