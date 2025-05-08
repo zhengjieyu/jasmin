@@ -880,7 +880,7 @@ Definition check_mov sz := [:: r_rmi sz; m_ri (max_32 sz)].
 
 Definition Ox86_MOV_instr               :=
   mk_instr_w_w "MOV" x86_MOV [:: Eu 1] [:: Eu 0] 2
-               check_mov (prim_32_64 MOV) size_32_64 (pp_iname "mov").
+               check_mov (prim_8_64 MOV) size_8_64 (pp_iname "mov").
 
 
 
