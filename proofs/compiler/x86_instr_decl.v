@@ -15,6 +15,8 @@ Variant x86_op : Type :=
   (* Data transfert *)
 | MOV    of wsize              (* copy *)
 | KMOV    of wsize              (* copy *)
+| KMOVREG1    of wsize          
+| KMOVREG2    of wsize          
 | MOVSX  of wsize & wsize      (* sign-extend *)
 | MOVZX  of wsize & wsize      (* zero-extend *)
 | CMOVcc of wsize              (* conditional copy *)
@@ -524,7 +526,18 @@ Notation mk_instr_w2_w_120_mask name semi check prc valid pp_asm :=
 Notation mk_instr_w_w_kmov name semi ain aout nargs check prc valid pp_asm :=
 ((fun sz =>
   mk_instr_safe (pp_sz name sz) (w_ty sz) (w_ty sz) ain aout (reg_msb_flag sz) (semi sz) (check) nargs (valid sz) (pp_asm sz)), (name%string,prc)) (only parsing).
-
+Definition movreg_sz (sz: wsize) : wsize :=
+  match sz with
+  | U8 | U16 => U32
+  | _ => sz
+  end.
+Notation mk_instr_w_w'_kmovreg1 name semi ain aout nargs check prc valid pp_asm :=
+  ((fun sz =>
+    mk_instr_safe (pp_sz name sz) (w_ty sz) (w_ty (movreg_sz sz)) ain aout (reg_msb_flag sz) (semi sz) (check) nargs (valid sz) (pp_asm sz)), (name%string,prc)) (only parsing).
+Notation mk_instr_w_w'_kmovreg2 name semi ain aout nargs check prc valid pp_asm :=
+    ((fun sz =>
+      mk_instr_safe (pp_sz name sz) (w_ty (movreg_sz sz)) (w_ty sz) ain aout (reg_msb_flag sz) (semi sz) (check) nargs (valid sz) (pp_asm sz)), (name%string,prc)) (only parsing).
+  
 Notation mk_instr_w_w'_10 name sign semi check prc valid pp_asm :=
  ((fun szo szi =>
   mk_instr_safe (pp_sz_sz name sign szo szi) (w_ty szi) (w_ty szo) [:: Eu 1] [:: Eu 0] (reg_msb_flag szo) (semi szi szo) (check szi szo) 2 (valid szi szo) (pp_asm szi szo)), (name%string,prc)) (only parsing).
@@ -793,6 +806,21 @@ let (name, ext) :=
   pp_aop_ext  := ext;
   pp_aop_args := mk_pp_args sz args; |}.
 
+Definition pp_kmovreg sz (args: asm_args) :=
+  pp_name_ty
+    (match sz with
+     | U8 => "kmovb"
+     | U16 => "kmovw"
+     | U32 => "kmovd"
+     | U64 => "kmovq"
+     | _   => "kmov_invalid"
+     end)%string
+    (match args with
+     | [:: Reg _ ; Regmask _ ] => [:: movreg_sz sz ; sz ]
+     | [:: Regmask _ ; Reg _ ] => [:: sz ; movreg_sz sz ]
+     | _ => [:: sz ; sz ]
+     end)
+    args.
 
 Definition pp_vmovdqu sz (args: asm_args) :=
   let (name, ext) :=
@@ -819,7 +847,8 @@ Definition rxm b := [:: CAregx; CAmem b].
 
 Definition rmi sz := [:: CAreg; CAmem true; CAimm CAimmC_none sz].
 Definition ri  sz := [:: CAreg; CAimm CAimmC_none sz].
-
+Definition r_k := [:: r; k].
+Definition k_r := [:: k; r].
 Definition m_r := [:: m false; r].
 Definition rm_k := [:: rm false; k].
 Definition r_rm_false := [:: r; rm false].
@@ -853,13 +882,31 @@ Definition Ox86_MOV_instr               :=
   mk_instr_w_w "MOV" x86_MOV [:: Eu 1] [:: Eu 0] 2
                check_mov (prim_32_64 MOV) size_32_64 (pp_iname "mov").
 
+
+
 Definition x86_KMOV sz (x: word sz) : word sz := TODO_AVX512 "KMOV".
 
-Definition check_kmov sz := [:: k_krm; rm_k ].
+Definition check_kmov := [:: k_krm; rm_k ].
 
 Definition Ox86_KMOV_instr               :=
   mk_instr_w_w_kmov "KMOV" x86_KMOV [:: Eu 1] [:: Eu 0] 2
               check_kmov (prim_8_64 KMOV) size_8_64 pp_kmov.
+
+
+Definition check_kmovreg1 := [:: r_k].  
+Definition check_kmovreg2 := [:: k_r].  
+
+Definition x86_KMOVREG1 (sz:wsize) (x: word sz) : tpl (w_ty (movreg_sz sz)) := TODO_AVX512 "KMOV".
+
+Definition x86_KMOVREG2 (sz:wsize) (x: word (movreg_sz sz)) : tpl (w_ty sz) := TODO_AVX512 "KMOV".
+
+Definition Ox86_KMOVREG1_instr               :=
+  mk_instr_w_w'_kmovreg1 "KMOVREG1" x86_KMOVREG1 [:: Eu 1] [:: Eu 0] 2
+              check_kmovreg1 (prim_8_64 KMOVREG1) size_8_64 pp_kmovreg.
+
+Definition Ox86_KMOVREG2_instr               :=
+mk_instr_w_w'_kmovreg2 "KMOVREG2" x86_KMOVREG2 [:: Eu 1] [:: Eu 0] 2
+            check_kmovreg2 (prim_8_64 KMOVREG2) size_8_64 pp_kmovreg.
 
 Definition check_movx (sz:wsize) := [:: [:: rx; rm true]; [:: rm true; rx]].
 
@@ -1549,11 +1596,6 @@ Definition check_vmovdq (_:wsize) := [:: xmm_xmmm; xmmm_xmm].
 
 Definition x86_VMOVDQ sz (v: word sz) : tpl (w_ty sz) := v.
 
-(* Definition Ox86_VMOVDQA_instr :=
-  mk_instr_w_w "VMOVDQA" x86_VMOVDQ [:: Ea 1] [:: Ea 0] 2 check_vmovdq (prim_128_256 VMOVDQA) size_128_256 (pp_name "vmovdqa").
-
-Definition Ox86_VMOVDQU_instr :=
-  mk_instr_w_w "VMOVDQU" x86_VMOVDQ [:: Eu 1] [:: Eu 0] 2 check_vmovdq (prim_128_256 VMOVDQU) size_128_256 (pp_name "vmovdqu"). *)
 
 Definition Ox86_VMOVDQA_instr :=
   mk_instr_w_w "VMOVDQA" x86_VMOVDQ [:: Ea 1] [:: Ea 0] 2 check_vmovdq (prim_128_512 VMOVDQA) size_128_512 pp_vmovdqa.
@@ -2559,6 +2601,8 @@ Definition x86_instr_desc o : instr_desc_t :=
   match o with
   | MOV sz             => Ox86_MOV_instr.1 sz
   | KMOV sz            => Ox86_KMOV_instr.1 sz
+  | KMOVREG1 sz       => Ox86_KMOVREG1_instr.1 sz
+  | KMOVREG2 sz       => Ox86_KMOVREG2_instr.1 sz
   | MOVSX sz sz'       => Ox86_MOVSX_instr.1 sz sz'
   | MOVZX sz sz'       => Ox86_MOVZX_instr.1 sz sz'
   | CMOVcc sz          => Ox86_CMOVcc_instr.1 sz
@@ -2733,6 +2777,8 @@ Definition x86_prim_string :=
  [::
    Ox86_MOV_instr.2;
    Ox86_KMOV_instr.2;
+   Ox86_KMOVREG1_instr.2;
+   Ox86_KMOVREG2_instr.2;
    Ox86_MOVSX_instr.2;
    Ox86_MOVZX_instr.2;
    Ox86_CMOVcc_instr.2;

@@ -106,6 +106,10 @@ Definition is_ptr (x: var) : bool :=
   | Reg (_, Pointer _) | Stack (Pointer _) => true
   | _ => false end.
 
+Definition is_reg (x: var) : bool :=
+  if Ident.id_kind x.(vname) is Reg(Normal, _) then true else false.
+
+
 Definition is_reg_ptr (x: var) : bool :=
   if Ident.id_kind x.(vname) is Reg (_, Pointer _) then true else false.
 

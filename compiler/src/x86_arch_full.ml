@@ -88,6 +88,8 @@ module X86_core = struct
     | MFENCE -> false (* Not DOIT *)
     | MOV _ -> true
     | KMOV _ -> true
+    | KMOVREG1 _ -> true
+    | KMOVREG2 _ -> true
     | MOVD _ -> true
     | MOVEMASK (VE8, _) -> true
     | MOVEMASK _ -> false (* Not DOIT *)

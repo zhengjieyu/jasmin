@@ -28,14 +28,25 @@ Definition is_regx_e (e:pexpr) :=
 Definition is_regx_l (x:lval) := 
   if x is Lvar x then is_regx x
   else false.
+Definition is_reg_e (e:pexpr) := 
+  if e is Pvar x then is_reg x.(gv)
+  else false.
+
+Definition is_reg_l (x:lval) := 
+  if x is Lvar x then is_reg x
+  else false.
 
 Definition mov_ws ws x y tag :=
-  if (is_regx_e y || is_regx_l x) && (U32 ≤ ws)%CMP then 
-    Copn [:: x] tag (Ox86 (MOVX ws)) [:: y]
-  else if (is_regmask_e y || is_regmask_l x) then
-    Copn [:: x] tag (Ox86 (KMOV ws)) [:: y]
-  else
-    Copn [:: x] tag (Ox86 (MOV ws)) [:: y].
+    if (is_regx_e y || is_regx_l x) && (U32 ≤ ws)%CMP then 
+      Copn [:: x] tag (Ox86 (MOVX ws)) [:: y]
+    else if (is_regmask_e y && is_reg_l x) then
+      Copn [:: x] tag (Ox86 (KMOVREG1 ws)) [:: y]
+    else if (is_reg_e y && is_regmask_l x) then
+      Copn [:: x] tag (Ox86 (KMOVREG2 ws)) [:: y]
+    else if (is_regmask_e y || is_regmask_l x) then
+      Copn [:: x] tag (Ox86 (KMOV ws)) [:: y]
+    else
+      Copn [:: x] tag (Ox86 (MOV ws)) [:: y].
 
 Section LOWERING.
 
