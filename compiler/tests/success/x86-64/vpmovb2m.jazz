@@ -1,0 +1,17 @@
+export fn test_vpmovb2m(reg u64 rp) 
+{
+  reg u512 f0;
+  f0 = [:u512 rp];
+  #regmask reg u64 s = #VPMOVB2M_u512u64(f0);
+  [:u64 rp] = s;
+
+  reg u256 ff0;
+  ff0 = [:u256 rp];
+  #regmask reg u32 s2 = #VPMOVB2M_u256u32(ff0);
+  [:u32 rp] = s2;
+
+  reg u128 fff0;
+  fff0 = [:u128 rp];
+  #regmask reg u16 s3 = #VPMOVB2M_u128u16(fff0);
+  [:u16 rp] = s3;
+}

@@ -1,0 +1,120 @@
+export fn test_vpblendmb(reg u64 rp) {
+    reg u128 f0;
+    reg u256 f1;
+    reg u512 f2;
+    reg u128 g0;
+    reg u256 g1;
+    reg u512 g2;
+    reg u128 h0;
+    reg u256 h1;
+    reg u512 h2;
+    #regmask reg u16 s0;
+    #regmask reg u32 s1;
+    #regmask reg u64 s2;
+    f0 = [:u128 rp];
+    f1 = [:u256 rp];
+    f2 = [:u512 rp];
+    g0 = [:u128 rp];
+    g1 = [:u256 rp];
+    g2 = [:u512 rp];
+    s0 = [:u16 rp];
+    s1 = [:u32 rp];
+    s2 = [:u64 rp];
+    h0 = #VPBLENDM_16u8u16(s0, f0, g0);
+    h1 = #VPBLENDM_32u8u32(s1, f1, g1);
+    h2 = #VPBLENDM_64u8u64(s2, f2, g2);
+    [:u128 rp] = h0;
+    [:u256 rp] = h1;
+    [:u512 rp] = h2;
+
+}
+export fn test_vpblendmw(reg u64 rp)
+{
+    reg u128 f0;
+    reg u256 f1;
+    reg u512 f2;
+    reg u128 g0;
+    reg u256 g1;
+    reg u512 g2;
+    reg u128 h0;
+    reg u256 h1;
+    reg u512 h2;
+    #regmask reg u8 s0;
+    #regmask reg u16 s1;
+    #regmask reg u32 s2;
+    f0 = [:u128 rp];
+    f1 = [:u256 rp];
+    f2 = [:u512 rp];
+    g0 = [:u128 rp];
+    g1 = [:u256 rp];
+    g2 = [:u512 rp];
+    s0 = [:u8 rp];
+    s1 = [:u16 rp];
+    s2 = [:u32 rp];
+    h0 = #VPBLENDM_8u16u8(s0, f0, g0);
+    h1 = #VPBLENDM_16u16u16(s1, f1, g1);
+    h2 = #VPBLENDM_32u16u32(s2, f2, g2);
+    [:u128 rp] = h0;
+    [:u256 rp] = h1;
+    [:u512 rp] = h2;
+}
+export fn test_vpblendmd(reg u64 rp)
+{
+    reg u128 f0;
+    reg u256 f1;
+    reg u512 f2;
+    reg u128 g0;
+    reg u256 g1;
+    reg u512 g2;
+    reg u128 h0;
+    reg u256 h1;
+    reg u512 h2;
+    #regmask reg u8 s0;
+    #regmask reg u8 s1;
+    #regmask reg u16 s2;
+    f0 = [:u128 rp];
+    f1 = [:u256 rp];
+    f2 = [:u512 rp];
+    g0 = [:u128 rp];
+    g1 = [:u256 rp];
+    g2 = [:u512 rp];
+    s0 = [:u8 rp];
+    s1 = [:u8 rp];
+    s2 = [:u16 rp];
+    h0 = #VPBLENDM_4u32u8(s0, f0, g0);
+    h1 = #VPBLENDM_8u32u8(s1, f1, g1);
+    h2 = #VPBLENDM_16u32u16(s2, f2, g2);
+    [:u128 rp] = h0;
+    [:u256 rp] = h1;
+    [:u512 rp] = h2;
+}
+export fn test_vpblendmq(reg u64 rp)
+{
+    reg u128 f0;
+    reg u256 f1;
+    reg u512 f2;
+    reg u128 g0;
+    reg u256 g1;
+    reg u512 g2;
+    reg u128 h0;
+    reg u256 h1;
+    reg u512 h2;
+    #regmask reg u8 s0;
+    #regmask reg u8 s1;
+    #regmask reg u8 s2;
+    f0 = [:u128 rp];
+    f1 = [:u256 rp];
+    f2 = [:u512 rp];
+    g0 = [:u128 rp];
+    g1 = [:u256 rp];
+    g2 = [:u512 rp];
+    s0 = [:u8 rp];
+    s1 = [:u8 rp];
+    s2 = [:u8 rp];
+    h0 = #VPBLENDM_2u64u8(s0, f0, g0);
+    h1 = #VPBLENDM_4u64u8(s1, f1, g1);
+    h2 = #VPBLENDM_8u64u8(s2, f2, g2);
+    [:u128 rp] = h0;
+    [:u256 rp] = h1;
+    [:u512 rp] = h2;
+}

@@ -1,0 +1,25 @@
+export fn test_vpcompress(reg u64 rp)
+{
+    #regmask reg u8 mask8;
+    #regmask reg u16 mask16;
+    #regmask reg u32 mask32;
+    #regmask reg u64 mask64;
+    reg u128 a0;
+    reg u256 a1;
+    reg u512 a2;
+    a0 = [:u128 rp];
+    a1 = [:u256 rp];
+    a2 = [:u512 rp];
+    [:u128 rp] = #VPCOMPRESS_16u8u16(mask16, a0);
+    [:u256 rp] = #VPCOMPRESS_32u8u32(mask32, a1);
+    [:u512 rp] = #VPCOMPRESS_64u8u64(mask64, a2);
+    [:u128 rp] = #VPCOMPRESS_8u16u8(mask8, a0);
+    [:u256 rp] = #VPCOMPRESS_16u16u16(mask16, a1);
+    [:u512 rp] = #VPCOMPRESS_32u16u32(mask32, a2);
+    [:u128 rp] = #VPCOMPRESS_4u32u8(mask8, a0);
+    [:u256 rp] = #VPCOMPRESS_8u32u8(mask8, a1);
+    [:u512 rp] = #VPCOMPRESS_16u32u16(mask16, a2);
+    [:u128 rp] = #VPCOMPRESS_2u64u8(mask8, a0);
+    [:u256 rp] = #VPCOMPRESS_4u64u8(mask8, a1);
+    [:u512 rp] = #VPCOMPRESS_8u64u8(mask8, a2);
+}

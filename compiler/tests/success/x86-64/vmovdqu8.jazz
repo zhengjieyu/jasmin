@@ -1,0 +1,15 @@
+export fn test_vmovdqu8(reg u64 rp)
+{
+    #regmask reg u16 s0;
+    #regmask reg u32 s1;
+    #regmask reg u64 s2;
+    reg u128 a0;
+    reg u256 a1;
+    reg u512 a2;
+    s0 = [:u16 rp];
+    s1 = [:u32 rp];
+    s2 = [:u64 rp];
+    a0 = #VMOVDQU8_u16u128(s0, [:u128 rp]);
+    a1 = #VMOVDQU8_u32u256(s1, [:u256 rp]);
+    a2 = #VMOVDQU8_u64u512(s2, [:u512 rp]);
+}

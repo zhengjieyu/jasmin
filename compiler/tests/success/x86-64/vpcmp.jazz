@@ -66,3 +66,36 @@ fn test_vpsign(reg u64 p) {
   reg u128 c = #VPSIGN_16s8(b, a);
   [:u128 p + 80] = c;
 }
+export 
+fn test_vpcmp(reg u64 rp){
+  #regmask reg u8 mask8;
+  #regmask reg u16 mask16;
+  #regmask reg u32 mask32;
+  #regmask reg u64 mask64;
+
+  reg u128 a0 b0;
+  reg u256 a1 b1;
+  reg u512 a2 b2;
+  a0 = [:u128 rp];
+  b0 = [:u128 rp];
+  a1 = [:u256 rp];
+  b1 = [:u256 rp];
+  a2 = [:u512 rp];
+  b2 = [:u512 rp];
+
+  mask8 = #VPCMP_8u16u8(a0, b0, 1);
+  mask8 = #VPCMP_4u32u8(a0, b0, 1);
+  mask8 = #VPCMP_8u32u8(a1, b1, 1);
+  mask8 = #VPCMP_4u64u8(a1, b1, 1);
+  mask8 = #VPCMP_8u64u8(a2, b2, 1);
+
+  mask16 = #VPCMP_16u8u16(a0, b0, 1);
+  mask16 = #VPCMP_16u16u16(a1, b1, 1);
+  mask16 = #VPCMP_16u32u16(a2, b2, 1);
+
+  mask32 = #VPCMP_32u8u32(a1, b1, 1);
+  mask32 = #VPCMP_32u16u32(a2, b2, 1);
+
+  mask64 = #VPCMP_64u8u64(a2, b2, 1);
+
+}

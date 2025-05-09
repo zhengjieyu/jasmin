@@ -1,0 +1,21 @@
+export fn test_vpermbmask(reg u64 rp)
+{
+    #regmask reg u16 s0;
+    #regmask reg u32 s1;
+    #regmask reg u64 s2;
+    reg u128 a0 b0 c0;
+    s0 = [:u16 rp];
+    a0 = [:u128 rp];
+    b0 = [:u128 rp];
+    c0 = #VPERMBMASK_u16u128(s0, a0, b0);
+    reg u256 a1 b1 c1;
+    s1 = [:u32 rp];
+    a1 = [:u256 rp];
+    b1 = [:u256 rp];
+    c1 = #VPERMBMASK_u32u256(s1, a1, b1);
+    reg u512 a2 b2 c2;
+    s2 = [:u64 rp];
+    a2 = [:u512 rp];
+    b2 = [:u512 rp];
+    c2 = #VPERMBMASK_u64u512(s2, a2, b2);
+}
