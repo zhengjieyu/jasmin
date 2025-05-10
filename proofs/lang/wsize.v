@@ -89,6 +89,19 @@ Definition wsize_cmp s s' :=
  | U512, U512 => Eq
  end.
 
+ Definition wsize_le s s' : bool :=
+ match wsize_cmp s s' with
+ | Lt | Eq => true
+ | Gt => false
+ end.
+
+Definition wsize_eq s s' : bool :=
+ match wsize_cmp s s' with
+ | Eq => true
+ | _ => false
+ end.
+
+
 #[export]
 Instance wsizeO : Cmp wsize_cmp.
 Proof.
@@ -202,6 +215,12 @@ Variant reg_kind : Type :=
 | Normal
 | Extra
 | Mask.
+
+(* -------------------------------------------------------------------- *)
+Variant kmovop : Type :=
+| Movmask
+| Loadmask (* k_r *)
+| Storemask. (* r_k *)
 
 Variant writable : Type := Constant | Writable.
 

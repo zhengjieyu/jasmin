@@ -16,7 +16,8 @@ Variant x86_op : Type :=
 | MOV    of wsize              (* copy *)
 | KMOV    of wsize              (* copy *)
 | KMOVREG1    of wsize          
-| KMOVREG2    of wsize          
+| KMOVREG2    of wsize      
+| KMOVALL    of wsize & wsize & kmovop           
 | MOVSX  of wsize & wsize      (* sign-extend *)
 | MOVZX  of wsize & wsize      (* zero-extend *)
 | CMOVcc of wsize              (* conditional copy *)
@@ -393,7 +394,9 @@ Definition primVw_range range (f: velem → wsize → wsize → x86_op) : prim_c
 Definition primWw_range range (f: wsize → wsize → x86_op) : prim_constructor x86_op :=
   PrimX86 range 
   (fun s => if s is PVx sz sz' then Some (f sz sz') else None).
-
+Definition primWk_range range (f: wsize → wsize → kmovop → x86_op) : prim_constructor x86_op :=
+  PrimX86 range 
+  (fun s => if s is PVwk sz sz' opk then Some (f sz sz' opk) else None).
 (* Definition primWw_16_64 := primWw_range [seq PVx sz sz' | sz <- [:: U16; U32; U64], sz' <- [::U128; U256; U512]]. *)
 Definition primWw_16_64 := prim_movxx [:: PVx U16 U128; PVx U32 U256; PVx U64 U512].
 
@@ -416,7 +419,15 @@ Definition primVw_8_64 :=
           [:: U128; U256; U512])
           [:: U8; U16; U32; U64])
         [:: VE8; VE16; VE32; VE64]))).
-
+Definition primWk_8_64 :=
+  primWk_range
+    (flatten (flatten
+      (map (fun sz =>
+        map (fun sz' =>
+          map (fun opk => PVwk sz sz' opk)
+          [:: Movmask; Loadmask; Storemask])
+          [:: U8; U16; U32; U64])
+        [:: U8; U16; U32; U64]))).
 
 Definition primV_128 := primV_range [seq PVv ve U128 | ve <- [:: VE8; VE16; VE32; VE64 ]].
 
@@ -822,6 +833,43 @@ Definition pp_kmovreg sz (args: asm_args) :=
      end)
     args.
 
+(* Definition pp_kmovall (sz sz' : wsize) (opk : kmovop) (args : asm_args) :=
+  let effective_sz :=
+    match opk with
+    | Movmask | Loadmask => sz
+    | Storemask         => sz'
+    end in
+  let (name, ext) :=
+    match effective_sz with
+    | U8  => ("kmovb"%string, PP_name)
+    | U16 => ("kmovw"%string, PP_name)
+    | U32 => ("kmovd"%string, PP_name)
+    | U64 => ("kmovq"%string, PP_name)
+    | _   => (""%string, PP_error)
+    end in
+  {|
+    pp_aop_name := name;
+    pp_aop_ext  := ext;
+    pp_aop_args := mk_zip_pp_args [::sz; sz'] args;
+  |}. *)
+
+
+Definition pp_kmovall (sz sz' : wsize) (opk : kmovop) (args : asm_args) :=
+  let effective_sz :=
+    match opk with
+    | Movmask | Loadmask => sz
+    | Storemask          => sz'
+    end in
+  pp_name_ty
+    (match effective_sz with
+    | U8  => "kmovb"
+    | U16 => "kmovw"
+    | U32 => "kmovd"
+    | U64 => "kmovq"
+    | _   => "kmov_invalid"
+  end)%string [:: sz; sz'] args.
+
+
 Definition pp_vmovdqu sz (args: asm_args) :=
   let (name, ext) :=
       match sz with
@@ -907,6 +955,39 @@ Definition Ox86_KMOVREG1_instr               :=
 Definition Ox86_KMOVREG2_instr               :=
 mk_instr_w_w'_kmovreg2 "KMOVREG2" x86_KMOVREG2 [:: Eu 1] [:: Eu 0] 2
             check_kmovreg2 (prim_8_64 KMOVREG2) size_8_64 pp_kmovreg.
+
+Notation mk_instr_w_w'_kmovall name semi ain aout nargs check prc valid pp_asm :=
+((fun (sz: wsize) (sz': wsize) (opk: kmovop) =>
+  mk_instr_safe (pp_sz_sz name false sz sz') (w_ty sz) (w_ty sz') ain aout (reg_msb_flag sz) (semi sz sz' opk) (check) nargs (valid sz sz' opk) (pp_asm sz sz' opk)), (name%string,prc)) (only parsing).
+
+
+
+Definition check_kmov_cond (sz sz': wsize) (opk: kmovop) : bool :=
+  match opk with
+  | Movmask =>
+      wsize_eq sz sz'
+  | Loadmask =>
+      if wsize_le sz U32 then
+        wsize_eq sz' U32
+      else
+        wsize_eq sz' sz
+  | Storemask =>
+      if wsize_le sz' U32 then
+        wsize_eq sz' U32 
+      else
+        wsize_eq sz' sz 
+  end.
+
+            
+Definition check_kmovall :=
+  [:: k_krm; rm_k].
+
+Definition x86_KMOVALL sz sz' (opk: kmovop) (x: word sz) : word sz' := TODO_AVX512 "KMOV".
+Definition Ox86_KMOVALL_instr               :=
+  mk_instr_w_w'_kmovall "KMOVALL" x86_KMOVALL [:: Eu 1] [:: Eu 0] 2
+              check_kmovall (primWk_8_64 KMOVALL) (fun sz sz' (opk: kmovop) => size_8_64 sz && size_8_64 sz' && check_kmov_cond sz sz' opk) pp_kmovall.
+
+
 
 Definition check_movx (sz:wsize) := [:: [:: rx; rm true]; [:: rm true; rx]].
 
@@ -2601,6 +2682,7 @@ Definition x86_instr_desc o : instr_desc_t :=
   match o with
   | MOV sz             => Ox86_MOV_instr.1 sz
   | KMOV sz            => Ox86_KMOV_instr.1 sz
+  | KMOVALL sz sz' opk          => Ox86_KMOVALL_instr.1 sz sz' opk
   | KMOVREG1 sz       => Ox86_KMOVREG1_instr.1 sz
   | KMOVREG2 sz       => Ox86_KMOVREG2_instr.1 sz
   | MOVSX sz sz'       => Ox86_MOVSX_instr.1 sz sz'
@@ -2777,6 +2859,7 @@ Definition x86_prim_string :=
  [::
    Ox86_MOV_instr.2;
    Ox86_KMOV_instr.2;
+   Ox86_KMOVALL_instr.2;
    Ox86_KMOVREG1_instr.2;
    Ox86_KMOVREG2_instr.2;
    Ox86_MOVSX_instr.2;

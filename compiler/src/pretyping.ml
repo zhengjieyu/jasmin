@@ -79,6 +79,7 @@ let pp_suffix fmt =
   | PVv (ve, sz) -> F.fprintf fmt "_%s" (string_of_velem Unsigned sz ve)
   | PVvw (ve, sz, sz') -> F.fprintf fmt "_%su%a" (string_of_velem Unsigned sz ve) pp_wsize sz'
   | PVsv (sg, ve, sz) -> F.fprintf fmt "_%s" (string_of_velem sg sz ve)
+  | PVwk (sz, sz', opk) -> F.fprintf fmt "_u%au%a" pp_wsize sz pp_wsize sz'
   | PVx (szo, szi) -> F.fprintf fmt "_u%au%a" pp_wsize szo pp_wsize szi
   | PVvv (ve, sz, ve', sz') -> F.fprintf fmt "_%s_%s" (string_of_velem Unsigned sz ve) (string_of_velem Unsigned sz' ve')
 

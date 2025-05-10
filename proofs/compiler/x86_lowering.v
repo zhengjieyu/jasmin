@@ -13,9 +13,14 @@ Section Section.
 
 Context {atoI : arch_toIdent}.
 
+
 Definition is_regmask_e (e:pexpr) := 
-  if e is Pvar x then is_regmask x.(gv)
-  else false.
+  match e with 
+  | Pvar x | Papp1 (Ozeroext _ _) (Pvar x) => is_regmask x.(gv)
+  | _ => false
+  end.
+
+
 
 Definition is_regmask_l (x:lval) := 
   if x is Lvar x then is_regmask x
@@ -32,11 +37,32 @@ Definition is_reg_e (e:pexpr) :=
   if e is Pvar x then is_reg x.(gv)
   else false.
 
+Definition size_of_e (e:pexpr) :=
+  match e with 
+  | Pvar x | Papp1 (Ozeroext _ _) (Pvar x) =>
+   if x.(gv).(v_var).(vtype) is sword ws then ws else U64
+  | _ => U64
+  end.
+
+
 Definition is_reg_l (x:lval) := 
   if x is Lvar x then is_reg x
   else false.
 
 Definition mov_ws ws x y tag :=
+  if (is_regx_e y || is_regx_l x) && (U32 ≤ ws)%CMP then 
+    Copn [:: x] tag (Ox86 (MOVX ws)) [:: y]
+  else if (is_regmask_e y && is_reg_l x) then
+    Copn [:: x] tag (Ox86 (KMOVALL (size_of_e y) ws Storemask)) [:: y]
+  else if (is_reg_e y && is_regmask_l x) then
+    Copn [:: x] tag (Ox86 (KMOVALL (size_of_e y) ws Loadmask)) [:: y]
+  else if (is_regmask_e y || is_regmask_l x) then
+    Copn [:: x] tag (Ox86 (KMOVALL ws ws Movmask)) [:: y]
+  else
+    Copn [:: x] tag (Ox86 (MOV ws)) [:: y].
+
+
+(* Definition mov_ws ws x y tag :=
     if (is_regx_e y || is_regx_l x) && (U32 ≤ ws)%CMP then 
       Copn [:: x] tag (Ox86 (MOVX ws)) [:: y]
     else if (is_regmask_e y && is_reg_l x) then
@@ -46,7 +72,7 @@ Definition mov_ws ws x y tag :=
     else if (is_regmask_e y || is_regmask_l x) then
       Copn [:: x] tag (Ox86 (KMOV ws)) [:: y]
     else
-      Copn [:: x] tag (Ox86 (MOV ws)) [:: y].
+      Copn [:: x] tag (Ox86 (MOV ws)) [:: y]. *)
 
 Section LOWERING.
 
