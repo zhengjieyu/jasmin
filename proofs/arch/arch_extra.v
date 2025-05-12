@@ -185,6 +185,7 @@ Module MkAToIdent : AToIdent_T.
 
   Let r_eqType  := ceqT_eqType (T:= reg).  Canonical r_eqType.
   Let rx_eqType := ceqT_eqType (T:= regx). Canonical rx_eqType.
+  Let regmask_eqType := ceqT_eqType (T:= regmask). Canonical regmask_eqType.
 
   Lemma inj_toI_reg_regxP : _inj_toI_reg_regx ->
     forall (r:reg) (rx:regx), to_ident r <> to_ident rx.
@@ -246,6 +247,7 @@ Definition sopn_constrained_register acr :=
   | ACR_exact x  => sopn.ACR_exact (to_var x)
   | ACR_vector x => sopn.ACR_vector (to_var x)
   | ACR_subset s => sopn.ACR_subset (map to_var s)
+  | ACR_subsetmask s => sopn.ACR_subsetmask (map to_var s)
   end.
 
 Definition sopn_arg_desc (ad:arg_desc) :=

@@ -642,6 +642,7 @@ module Regalloc (Arch : Arch_full.Arch)
         | ADExplicit (_, ACR_vector v) ->
            mallocate_one e (translate_var v) a
         | ADExplicit (_, ACR_subset _) (* TODO *)
+        | ADExplicit (_, ACR_subsetmask _) (* TODO *)
         | ADExplicit (_, ACR_any) -> ()) id.i_in es
 
 let allocate_forced_registers return_addresses translate_var nv (vars: int Hv.t) (cnf: conflicts)

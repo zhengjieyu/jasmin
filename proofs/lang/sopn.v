@@ -20,6 +20,7 @@ Variant arg_constrained_register :=
 | ACR_exact of var
 | ACR_vector of var
 | ACR_subset of seq var
+| ACR_subsetmask of seq var
 .
 
 Variant arg_desc :=

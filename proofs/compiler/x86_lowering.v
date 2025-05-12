@@ -44,22 +44,75 @@ Definition size_of_e (e:pexpr) :=
   | _ => U64
   end.
 
+Definition pexpr_wsize (e: pexpr) : wsize :=
+  match e with
+  | Pconst _ => U64 
+  | Pbool _ => U64
+  | Parr_init _ => U64
+  | Pvar x => if x.(gv).(v_var).(vtype) is sword ws then ws else U64
+  | Pget _ _ sz _ _ => sz
+  | Psub _ sz _ _ _  => sz
+  | Pload _ sz _ _ => sz
+  | Papp1 op _ =>
+    match op with
+    | Oword_of_int sz => sz
+    | Oint_of_word _ sz => sz
+    | Osignext szo szi => szi
+    | Ozeroext szo szi => szi
+    | Onot => U64
+    | Olnot sz => sz
+    | Oneg (Op_w sz) => sz
+    | Owi1 s o =>
+            match o with
+              | WIwint_of_int sz => sz 
+              | WIint_of_wint sz => sz  
+              | WIword_of_wint sz => sz 
+              | WIwint_of_word sz => sz 
+              | WIwint_ext szo szi => szo 
+              | WIneg sz => sz
+            end
+    | _ => U64
+    end
+    | Papp2 op _ _ =>
+      match op with
+        | Obeq | Oand | Oor => U64 
+        | Oadd (Op_w sz) | Omul (Op_w sz) | Osub (Op_w sz)
+        | Odiv _ (Op_w sz) | Omod _ (Op_w sz) => sz
+        | Olsl (Op_w sz) | Oasr (Op_w sz) => sz
+        | Oland sz | Olor sz | Olxor sz => sz
+        | Olsr sz | Oror sz | Orol sz => sz
+        | Ovadd _ sz | Ovsub _ sz | Ovmul _ sz
+        | Ovlsl _ sz | Ovlsr _ sz | Ovasr _ sz => sz
+        | Oeq _ | Oneq _ | Olt _ | Ole _ | Ogt _ | Oge _ => U64
+        | Owi2 s sz o =>
+          match o with
+          | WIadd | WImul | WIsub | WIdiv | WImod | WIshl | WIshr =>
+              sz  
+          | WIeq | WIneq | WIlt | WIle | WIgt | WIge =>
+              U64
+          end
+        | _ => U64
+        end
+  | PappN opN _ =>
+    match opN with
+    | Opack _ _ => U64 (* Opack packs elements into one word, hence the return is U64 *)
+    | Ocombine_flags _ => U64 (* Ocombine_flags returns a word, typically U64 for combining flags *)
+    end
+  | _ => U64 
+  end.
+
+
+
+
+
+
 
 Definition is_reg_l (x:lval) := 
   if x is Lvar x then is_reg x
   else false.
 
-Definition mov_ws ws x y tag :=
-  if (is_regx_e y || is_regx_l x) && (U32 ≤ ws)%CMP then 
-    Copn [:: x] tag (Ox86 (MOVX ws)) [:: y]
-  else if (is_regmask_e y && is_reg_l x) then
-    Copn [:: x] tag (Ox86 (KMOVALL (size_of_e y) ws Storemask)) [:: y]
-  else if (is_reg_e y && is_regmask_l x) then
-    Copn [:: x] tag (Ox86 (KMOVALL (size_of_e y) ws Loadmask)) [:: y]
-  else if (is_regmask_e y || is_regmask_l x) then
-    Copn [:: x] tag (Ox86 (KMOVALL ws ws Movmask)) [:: y]
-  else
-    Copn [:: x] tag (Ox86 (MOV ws)) [:: y].
+
+
 
 
 (* Definition mov_ws ws x y tag :=
@@ -127,6 +180,22 @@ Definition wsize_of_stype (ty: stype) : wsize :=
   | sword sz => sz
   | sbool | sint | sarr _ => U64
   end.
+
+Definition mov_ws ws x y tag :=
+  if (is_regx_e y || is_regx_l x) && (U32 ≤ ws)%CMP then 
+    Copn [:: x] tag (Ox86 (MOVX ws)) [:: y]
+  else if (is_regmask_e y && is_reg_l x) then
+    Copn [:: x] tag (Ox86 (KMOVALL (size_of_e y) ws Storemask)) [:: y]
+  else if (is_reg_e y && is_regmask_l x) then
+    Copn [:: x] tag (Ox86 (KMOVALL (size_of_e y) ws Loadmask)) [:: y]
+  else if (is_regmask_e y || is_regmask_l x) then
+    let sz := pexpr_wsize y in
+    if sz == ws then
+      Copn [:: x] tag (Ox86 (KMOVALL ws ws Movmask)) [:: y]
+    else
+      Cassgn x tag (stype_of_lval x) y
+  else
+    Copn [:: x] tag (Ox86 (MOV ws)) [:: y].
 
 Definition wsize_of_lval (lv: lval) : wsize :=
   match lv with
@@ -301,23 +370,26 @@ Definition lower_cassgn_classify ty e x : lower_cassgn_t :=
     | _ => chk false
     end (LowerCopn (Ox86 (MOVSX szo szi)) [:: a])
   | Papp1 (Ozeroext szo szi) a =>
-    match szi with
-    | U8 => k16 szo (LowerCopn (Ox86 (MOVZX szo szi)) [:: a])
-    | U16 => k32 szo (LowerCopn (Ox86 (MOVZX szo szi)) [:: a])
-    | U32 =>
-        match szo with
-        | U64 => kb true szo (LowerCopn (Oasm (ExtOp Ox86MOVZX32)) [:: a])
-        | U128 => kb true szo (LowerCopn (Ox86 (MOVD szi)) [:: a])
-        | U256 => kb true szo (LowerCopn (Oasm (BaseOp (Some szo, VMOV szi))) [:: a])
-        | _ => LowerAssgn
-        end
-    | U64 =>
-        match szo with
-        | U128 => kb true szo (LowerCopn (Ox86 (MOVD szi)) [:: a])
-        | U256 => kb true szo (LowerCopn (Oasm (BaseOp (Some szo, VMOV szi))) [:: a])
-        | _ => LowerAssgn
-        end
-    | _ => LowerAssgn
+    if is_regmask_e a then
+      LowerMov false
+    else
+      match szi with
+      | U8 => k16 szo (LowerCopn (Ox86 (MOVZX szo szi)) [:: a])
+      | U16 => k32 szo (LowerCopn (Ox86 (MOVZX szo szi)) [:: a])
+      | U32 =>
+          match szo with
+          | U64 => kb true szo (LowerCopn (Oasm (ExtOp Ox86MOVZX32)) [:: a])
+          | U128 => kb true szo (LowerCopn (Ox86 (MOVD szi)) [:: a])
+          | U256 => kb true szo (LowerCopn (Oasm (BaseOp (Some szo, VMOV szi))) [:: a])
+          | _ => LowerAssgn
+          end
+      | U64 =>
+          match szo with
+          | U128 => kb true szo (LowerCopn (Ox86 (MOVD szi)) [:: a])
+          | U256 => kb true szo (LowerCopn (Oasm (BaseOp (Some szo, VMOV szi))) [:: a])
+          | _ => LowerAssgn
+          end
+      | _ => LowerAssgn
     end
 
   | Papp2 op a b =>

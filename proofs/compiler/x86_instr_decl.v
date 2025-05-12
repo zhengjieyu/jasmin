@@ -574,7 +574,7 @@ Notation mk_instr_w2_b5w name semi ain aout nargs check prc valid pp_asm := ((fu
   mk_instr_safe (pp_sz name sz) (w2_ty sz sz) (b5w_ty sz) ain (implicit_flags ++ aout) (reg_msb_flag sz) (semi sz) (check sz) nargs (valid sz) (pp_asm sz)), (name%string,prc))  (only parsing).
 
 Notation mk_instr_w2_b5w_010 name semi check prc valid pp_asm := ((fun sz =>
-  mk_instr_safe (pp_sz name sz) (w2_ty sz sz) (b5w_ty sz) [:: Eu 0; Eu 1] (implicit_flags ++ [:: Eu 0]) (reg_msb_flag sz) (semi sz) (check sz) 2 (valid sz) (pp_asm sz)), (name%string,prc)) (only parsing).
+  mk_instr_safe (pp_sz name sz) (w2_ty sz sz) (b5w_ty sz) [:: Er 0 [:: RCX; RDX]; Eu 1] (implicit_flags ++ [:: Eu 0]) (reg_msb_flag sz) (semi sz) (check sz) 2 (valid sz) (pp_asm sz)), (name%string,prc)) (only parsing).
 
 Notation mk_instr_w2b_b5w_010 name semi check prc valid pp_asm := ((fun sz =>
   mk_instr_safe (pp_sz name sz) (w2b_ty sz sz) (b5w_ty sz) ([:: Eu 0; Eu 1] ++ [::iCF]) (implicit_flags ++ [:: Eu 0]) (reg_msb_flag sz) (semi sz) (check sz) 2 (valid sz) (pp_asm sz)), (name%string,prc))  (only parsing).
@@ -626,8 +626,8 @@ Notation mk_ve_instr_w2w8_w_1230 name semi check prc valid pp_asm := ((fun (ve:v
 
 
 
-Notation mk_ve_instr_ww2_w_1230 name semi check prc valid pp_asm := ((fun (ve:velem) (ksz:wsize) (sz:wsize) =>
-  mk_instr_safe (pp_ve_sz_sz name ve ksz sz) (ww2_ty ksz sz) (w_ty sz) [:: Ea 1; Eu 2 ; Ea 3] [:: Ea 0] (reg_msb_flag sz) (semi ve ksz sz) (check) 4 (valid ve ksz sz) (pp_asm ve sz)), (name%string,prc))  (only parsing).
+Notation mk_ve_instr_ww2_w_1230_mask name semi check prc valid pp_asm := ((fun (ve:velem) (ksz:wsize) (sz:wsize) =>
+  mk_instr_safe (pp_ve_sz_sz name ve ksz sz) (ww2_ty ksz sz) (w_ty sz) [:: Ek 1 [:: K0; K1; K2; K3; K4; K5; K6; K7]; Eu 2 ; Ea 3] [:: Ea 0] (reg_msb_flag sz) (semi ve ksz sz) (check) 4 (valid ve ksz sz) (pp_asm ve sz)), (name%string,prc))  (only parsing).
 
 Notation mk_ve_instr_w2_w_120_mask name semi check prc valid pp_asm := ((fun (ve:velem) (ksz:wsize) (sz:wsize) =>
   mk_instr_safe (pp_ve_sz_sz name ve ksz sz) (w2_ty ksz sz) (w_ty sz) [:: Eu 1 ; Eu 2] [:: Eu 0] (reg_msb_flag sz) (semi ve ksz sz) (check) 3 (valid ve ksz sz) (pp_asm ve sz)), (name%string,prc))  (only parsing).
@@ -857,8 +857,8 @@ Definition pp_kmovreg sz (args: asm_args) :=
 Definition pp_kmovall (sz sz' : wsize) (opk : kmovop) (args : asm_args) :=
   let effective_sz :=
     match opk with
-    | Movmask | Loadmask => sz
-    | Storemask          => sz'
+    | Movmask | Loadmask => sz'
+    | Storemask          => sz
     end in
   pp_name_ty
     (match effective_sz with
@@ -867,7 +867,7 @@ Definition pp_kmovall (sz sz' : wsize) (opk : kmovop) (args : asm_args) :=
     | U32 => "kmovd"
     | U64 => "kmovq"
     | _   => "kmov_invalid"
-  end)%string [:: sz; sz'] args.
+  end)%string [:: sz'; sz] args.
 
 
 Definition pp_vmovdqu sz (args: asm_args) :=
@@ -1990,7 +1990,7 @@ Definition x86_VPBLENDM (ve:velem) ksz sz (m: word ksz) (v1 v2: word sz)  : tpl 
   TODO_AVX512 "VPBLENDM".
 
 Definition Ox86_VPBLENDM_instr :=
-  mk_ve_instr_ww2_w_1230 "VPBLENDM"
+  mk_ve_instr_ww2_w_1230_mask "VPBLENDM"
   (@x86_VPBLENDM) check_xmm_k_xmm_xmmm (primVw_8_64 VPBLENDM)
   (fun ve ksz sz => size_8_64 ve && size_8_64 ksz && size_128_512 sz) (pp_viname_mask "vpblendm").
 
