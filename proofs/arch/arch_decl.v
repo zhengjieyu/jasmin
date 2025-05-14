@@ -279,7 +279,7 @@ Variant arg_constrained_register :=
 | ACR_exact of reg_t
 | ACR_vector of xreg_t
 | ACR_subset of seq reg_t
-| ACR_subsetmask of seq regmask_t
+| ACR_subsetinvalidmask of seq regmask_t
 .
 
 
@@ -298,7 +298,7 @@ Definition Ea n   := ADExplicit (AK_mem Aligned) n ACR_any.
 Definition Eu n   := ADExplicit (AK_mem Unaligned) n ACR_any.
 Definition Ec n   := ADExplicit AK_compute n ACR_any.
 Definition Ef n r := ADExplicit (AK_mem Aligned) n (ACR_exact  r).
-Definition Ek n (r : seq regmask_t) := ADExplicit (AK_mem Unaligned) n (ACR_subsetmask r).
+Definition Ek n (r : seq regmask_t) := ADExplicit (AK_mem Unaligned) n (ACR_subsetinvalidmask r).
 
 Definition Er n r := ADExplicit (AK_mem Unaligned) n (ACR_subset r).
 
@@ -313,8 +313,8 @@ Definition check_oreg or ai :=
   | ACR_vector _, _      => false
   | ACR_subset s, Reg r  => r \in (s : seq ceqT_eqType)
   | ACR_subset _, _      => false
-  | ACR_subsetmask s, Regmask r  =>  r \in (s : seq ceqT_eqType)
-  | ACR_subsetmask _, _      => false
+  | ACR_subsetinvalidmask s, Regmask r  =>  negb (r \in (s : seq ceqT_eqType)) 
+  | ACR_subsetinvalidmask _, _      => false
   | ACR_any, _           => true
   end.
 

@@ -247,7 +247,7 @@ Definition sopn_constrained_register acr :=
   | ACR_exact x  => sopn.ACR_exact (to_var x)
   | ACR_vector x => sopn.ACR_vector (to_var x)
   | ACR_subset s => sopn.ACR_subset (map to_var s)
-  | ACR_subsetmask s => sopn.ACR_subsetmask (map to_var s)
+  | ACR_subsetinvalidmask s => sopn.ACR_subsetinvalidmask (map to_var s)
   end.
 
 Definition sopn_arg_desc (ad:arg_desc) :=

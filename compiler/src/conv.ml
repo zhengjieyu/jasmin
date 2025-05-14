@@ -47,13 +47,24 @@ let ty_of_cty = function
 
 (* ------------------------------------------------------------------------ *)
 
+
+
 let cvar_of_var v =
    { Var.vtype = cty_of_ty v.v_ty; Var.vname = v }
+
+let ggvar_to_var (ggv : 'len ggvar) =
+    let gvar = L.unloc ggv.gv in  (* Remove the location information *)
+    { Var.vtype = cty_of_ty gvar.v_ty;   
+      Var.vname = gvar;  
+    }
 
 let var_of_cvar cv =
   let v = cv.Var.vname in
   assert (cty_of_ty v.v_ty = cv.Var.vtype);
   v
+
+let convert_var_list (var0_list: Var0.Var.var list) : var list =
+    List.map var_of_cvar var0_list
 
 let csv_of_sv s =
   let open Var0.SvExtra.Sv in

@@ -632,7 +632,7 @@ Notation mk_ve_instr_w2w8_w_1230 name semi check prc valid pp_asm := ((fun (ve:v
 
 
 Notation mk_ve_instr_ww2_w_1230_mask name semi check prc valid pp_asm := ((fun (ve:velem) (ksz:wsize) (sz:wsize) =>
-  mk_instr_safe (pp_ve_sz_sz name ve ksz sz) (ww2_ty ksz sz) (w_ty sz) [:: Ek 1 [:: K1; K2; K3; K4; K5; K6; K7]; Eu 2 ; Ea 3] [:: Ea 0] (reg_msb_flag sz) (semi ve ksz sz) (check) 4 (valid ve ksz sz) (pp_asm ve sz)), (name%string,prc))  (only parsing).
+  mk_instr_safe (pp_ve_sz_sz name ve ksz sz) (ww2_ty ksz sz) (w_ty sz) [:: Ek 1 [:: K0]; Eu 2 ; Ea 3] [:: Ea 0] (reg_msb_flag sz) (semi ve ksz sz) (check) 4 (valid ve ksz sz) (pp_asm ve sz)), (name%string,prc))  (only parsing).
 
 Notation mk_ve_instr_w2_w_120_mask name semi check prc valid pp_asm := ((fun (ve:velem) (ksz:wsize) (sz:wsize) =>
   mk_instr_safe (pp_ve_sz_sz name ve ksz sz) (w2_ty ksz sz) (w_ty sz) [:: Eu 1 ; Eu 2] [:: Eu 0] (reg_msb_flag sz) (semi ve ksz sz) (check) 3 (valid ve ksz sz) (pp_asm ve sz)), (name%string,prc))  (only parsing).

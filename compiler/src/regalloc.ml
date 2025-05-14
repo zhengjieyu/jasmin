@@ -374,6 +374,24 @@ let conflicts_in (i: Sv.t) (k: var -> var -> 'a -> 'a) : 'a -> 'a =
   in
   fun a -> loop a e
 
+  let conflicts_add_edge tbl loc (reg: var) (other_reg: var) (c: conflicts) : conflicts =
+    try
+      let i = Hv.find tbl reg in
+      let j = Hv.find tbl other_reg in
+  
+      if i = j then 
+        hierror_reg ~loc:loc "conflicting variables %a and %a must be merged due to"
+          (Printer.pp_var ~debug:true) reg
+          (Printer.pp_var ~debug:true) other_reg;
+
+      let c = add_conflicts i j c in
+      let c = add_conflicts j i c in
+      c
+    with Not_found -> c
+  
+  
+  
+
 let conflicts_add_one pd reg_size asmOp tbl tr loc (v: var) (w: var) (c: conflicts) : conflicts =
   try
     let i = Hv.find tbl v in
@@ -597,56 +615,88 @@ end
 
 module Regalloc (Arch : Arch_full.Arch)
   : Regalloc with type extended_op := (Arch.reg, Arch.regx, Arch.xreg, Arch.regmask, Arch.rflag, Arch.cond, Arch.asm_op, Arch.extra_op) Arch_extra.extended_op = struct
-
   let forced_registers translate_var loc nv (vars: int Hv.t) (cnf: conflicts)
-      (lvs: 'ty glvals) (op: 'asm sopn) (es: 'ty gexprs)
-      (a: A.allocation) : unit =
-    let allocate_one x y a =
-      let x = L.unloc x in
-      if types_cannot_conflict Arch.reg_size x.v_kind x.v_ty y.v_kind y.v_ty
-      then hierror_reg ~loc:(Lmore loc) "variable %a (declared at %a with type “%a”) must be allocated to register %a from an incompatible bank"
+    (lvs: 'ty glvals) (op: 'asm sopn) (es: 'ty gexprs)
+    (a: A.allocation) : conflicts =
+  
+  let allocate_one x y a =
+    let x = L.unloc x in
+    if types_cannot_conflict Arch.reg_size x.v_kind x.v_ty y.v_kind y.v_ty
+    then hierror_reg ~loc:(Lmore loc) "variable %a (declared at %a with type “%a”) must be allocated to register %a from an incompatible bank"
+        (Printer.pp_var ~debug:true) x
+        L.pp_sloc x.v_dloc
+        PrintCommon.pp_ty x.v_ty
+        (Printer.pp_var ~debug:false) y;
+    let i =
+      try Hv.find vars x
+      with Not_found ->
+        hierror_reg ~loc:(Lmore loc) "variable %a (declared at %a as “%a”) must be allocated to register %a but is unknown to the register allocator%s"
           (Printer.pp_var ~debug:true) x
           L.pp_sloc x.v_dloc
-          PrintCommon.pp_ty x.v_ty
-          (Printer.pp_var ~debug:false) y;
-      let i =
-        try Hv.find vars x
-        with Not_found ->
-          hierror_reg ~loc:(Lmore loc) "variable %a (declared at %a as “%a”) must be allocated to register %a but is unknown to the register allocator%s"
-            (Printer.pp_var ~debug:true) x
-            L.pp_sloc x.v_dloc
-            PrintCommon.pp_kind x.v_kind
-            (Printer.pp_var ~debug:false) y
-            (if is_reg_kind x.v_kind then "" else " (consider declaring this variable as “reg”)")
-      in
-      allocate_one nv vars loc cnf x i y a
+          PrintCommon.pp_kind x.v_kind
+          (Printer.pp_var ~debug:false) y
+          (if is_reg_kind x.v_kind then "" else " (consider declaring this variable as “reg”)")
     in
-    let mallocate_one x y a =
-      match x with Pvar x when is_gkvar x -> allocate_one x.gv y a | _ -> ()
-    in
-    let id = get_instr_desc Arch.reg_size Arch.asmOp op in
-    List.iter2 (fun ad lv ->
-        match ad with
-        | ADImplicit v ->
-           begin match lv with
-           | Lvar w -> allocate_one w (translate_var v) a
-           | _ -> assert false
-           end
-        | ADExplicit _ -> ()) id.i_out lvs;
-    List.iter2 (fun ad e ->
-        match ad with
-        | ADImplicit v ->
-           mallocate_one e (translate_var v) a
-        | ADExplicit (_, ACR_exact v) ->
-           mallocate_one e (translate_var v) a
-        | ADExplicit (_, ACR_vector v) ->
-           mallocate_one e (translate_var v) a
-        | ADExplicit (_, ACR_subset _) (* TODO *)
-        | ADExplicit (_, ACR_subsetmask _) (* TODO *)
-        | ADExplicit (_, ACR_any) -> ()) id.i_in es
+    allocate_one nv vars loc cnf x i y a
+  in
+
+  let mallocate_one x y a =
+    match x with Pvar x when is_gkvar x -> allocate_one x.gv y a | _ -> ()
+  in
+
+  let id = get_instr_desc Arch.reg_size Arch.asmOp op in
+
+  (* Handle i_out with List.iter2 for side-effects *)
+  List.iter2 (fun ad lv ->
+    match ad with
+    | ADImplicit v ->
+       begin match lv with
+       | Lvar w -> allocate_one w (translate_var v) a
+       | _ -> assert false
+       end
+    | ADExplicit _ -> ()) id.i_out lvs;
+
+  (* Now use List.fold_left2 to accumulate and return cnf *)
+  let cnf = 
+    List.fold_left2 (fun cnf ad e ->
+      match ad with
+      | ADImplicit v ->
+        ignore (mallocate_one e (translate_var v) a); 
+        cnf
+      | ADExplicit (_, ACR_exact v) ->
+        ignore (mallocate_one e (translate_var v) a); 
+        cnf
+      | ADExplicit (_, ACR_vector v) ->
+        ignore (mallocate_one e (translate_var v) a); 
+        cnf
+      | ADExplicit (_, ACR_subset _) (* TODO *)
+      | ADExplicit (_, (ACR_any)) -> cnf
+      | ADExplicit (_, ACR_subsetinvalidmask ks) ->
+          let open PrintCommon in
+          Format.printf "%a@." (pp_list ",@ " pp_var) ks;
+          match e with
+          | Pvar x -> 
+              let x_Varvar = Conv.ggvar_to_var x in
+              Format.printf "%a@." pp_var x_Varvar;
+              let ks_vars = Conv.convert_var_list ks in
+              let x_var = Conv.var_of_cvar x_Varvar in
+              List.fold_left (fun cnf reg ->
+                  conflicts_add_edge vars Lnone reg x_var cnf 
+              ) cnf ks_vars
+          | _ -> cnf  
+    ) cnf id.i_in es 
+  in
+
+  cnf
+
+        
+        
+
+
+
 
 let allocate_forced_registers return_addresses translate_var nv (vars: int Hv.t) (cnf: conflicts)
-    (f: ('info, 'asm) func) (a: A.allocation) : unit =
+    (f: ('info, 'asm) func) (a: A.allocation) : conflicts =
   let split ~ctxt ~num =
     function
     | hd :: tl -> hd, tl
@@ -689,22 +739,22 @@ let allocate_forced_registers return_addresses translate_var nv (vars: int Hv.t)
   in
   let alloc_args loc get = alloc_from_list loc ~ctxt:"parameters" Arch.argument_vars Arch.xmm_argument_vars Arch.mask_argument_vars get in
   let alloc_ret loc get = alloc_from_list loc ~ctxt:"return values" Arch.ret_vars Arch.xmm_ret_vars Arch.mask_argument_vars get in
-  let rec alloc_instr_r loc =
+  let rec alloc_instr_r loc c=
     function
     | Cfor (_, _, s)
-      -> alloc_stmt s
-    | Copn (lvs, _, op, es) -> forced_registers translate_var loc nv vars cnf lvs op es a
+      -> alloc_stmt s c
+    | Copn (lvs, _, op, es) -> forced_registers translate_var loc nv vars c lvs op es a
     | Csyscall(lvs, _, es) ->
        let get_a = function Pvar { gv ; gs = Slocal } -> L.unloc gv | _ -> assert false in
        let get_r = function Lvar gv -> L.unloc gv | _ -> assert false in
        alloc_args loc get_a es;
-       alloc_ret loc get_r lvs
-
+       alloc_ret loc get_r lvs;
+       c
     | Cwhile (_, s1, _, _, s2)
     | Cif (_, s1, s2)
-        -> alloc_stmt s1; alloc_stmt s2
+      -> alloc_stmt s1 c |> alloc_stmt s2
     | Cassgn _
-      -> ()
+      -> c
     | Ccall (lvs, _, es) ->
        (* TODO: check this *)
        (*
@@ -715,15 +765,16 @@ let allocate_forced_registers return_addresses translate_var nv (vars: int Hv.t)
         *)
        ignore lvs;
        ignore es;
-       ()
-  and alloc_instr { i_loc; i_desc } = alloc_instr_r i_loc i_desc
-  and alloc_stmt s = List.iter alloc_instr s
+       c
+  and alloc_instr c { i_loc; i_desc } = alloc_instr_r i_loc c i_desc
+  and alloc_stmt s c =
+    List.fold_left (fun c instr -> alloc_instr c instr) c s
   in
   let loc = L.i_loc0 f.f_loc in
   if FInfo.is_export f.f_cc then alloc_args loc identity f.f_args;
   if FInfo.is_export f.f_cc then alloc_ret loc L.unloc f.f_ret;
-  alloc_stmt f.f_body;
-  match Arch.callstyle with
+  let cnf = alloc_stmt f.f_body cnf in
+  (match Arch.callstyle with
   | Arch_full.ByReg { call = Some r; return } ->
     begin match Hf.find return_addresses f.f_name with
     | StackDirect -> ()
@@ -744,7 +795,8 @@ let allocate_forced_registers return_addresses translate_var nv (vars: int Hv.t)
       let i = Hv.find vars ra in
       allocate_one nv vars (Location.i_loc f.f_loc []) cnf ra i r a
     end
-  | _ -> ()
+  | _ -> ());
+  cnf
 
 (* Returns a variable from [regs] that is allocated to a friend variable of [i]. Defaults to [dflt]. *)
 let get_friend_registers (dflt: var) (fr: friend) (a: A.allocation) (i: int) (regs: var list) : var =
@@ -1329,7 +1381,13 @@ let global_allocation translate_var get_internal_size (funcs: ('info, 'asm) func
   in
   List.iter allocate_one Arch.all_registers;
 
-  List.iter (fun f -> allocate_forced_registers return_addresses translate_var nv vars conflicts f a) funcs;
+  let conflicts =
+    List.fold_left
+      (fun c f -> allocate_forced_registers return_addresses translate_var nv vars c f a)
+      conflicts
+      funcs
+  in
+  
 
   if !Glob_options.print_liveness then pp_liveness vars liveness_per_callsite liveness_table a;
 
