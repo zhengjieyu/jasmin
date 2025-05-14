@@ -14,6 +14,7 @@ Section Section.
 Context {atoI : arch_toIdent}.
 
 
+
 Definition is_regmask_e (e:pexpr) := 
   match e with 
   | Pvar x | Papp1 (Ozeroext _ _) (Pvar x) => is_regmask x.(gv)
@@ -46,19 +47,15 @@ Definition size_of_e (e:pexpr) :=
 
 Definition pexpr_wsize (e: pexpr) : wsize :=
   match e with
-  | Pconst _ => U64 
-  | Pbool _ => U64
-  | Parr_init _ => U64
   | Pvar x => if x.(gv).(v_var).(vtype) is sword ws then ws else U64
   | Pget _ _ sz _ _ => sz
-  | Psub _ sz _ _ _  => sz
   | Pload _ sz _ _ => sz
   | Papp1 op _ =>
     match op with
     | Oword_of_int sz => sz
     | Oint_of_word _ sz => sz
-    | Osignext szo szi => szi
-    | Ozeroext szo szi => szi
+    | Osignext szo szi => szo
+    | Ozeroext szo szi => szo
     | Onot => U64
     | Olnot sz => sz
     | Oneg (Op_w sz) => sz
@@ -93,11 +90,6 @@ Definition pexpr_wsize (e: pexpr) : wsize :=
           end
         | _ => U64
         end
-  | PappN opN _ =>
-    match opN with
-    | Opack _ _ => U64 (* Opack packs elements into one word, hence the return is U64 *)
-    | Ocombine_flags _ => U64 (* Ocombine_flags returns a word, typically U64 for combining flags *)
-    end
   | _ => U64 
   end.
 
@@ -193,7 +185,7 @@ Definition mov_ws ws x y tag :=
     if sz == ws then
       Copn [:: x] tag (Ox86 (KMOVALL ws ws Movmask)) [:: y]
     else
-      Cassgn x tag (stype_of_lval x) y
+      Cassgn x tag (sword ws) y
   else
     Copn [:: x] tag (Ox86 (MOV ws)) [:: y].
 

@@ -303,8 +303,6 @@ Definition Ek n (r : seq regmask_t) := ADExplicit (AK_mem Unaligned) n (ACR_subs
 Definition Er n r := ADExplicit (AK_mem Unaligned) n (ACR_subset r).
 
 
-Search ceqT_eqType.
-
 
 Definition check_oreg or ai :=
   match or, ai with

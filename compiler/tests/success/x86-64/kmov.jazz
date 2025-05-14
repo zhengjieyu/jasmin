@@ -1,88 +1,137 @@
-export fn test_kmov(reg u64 rp) -> reg u32, reg u64
+// export fn test_kmov(reg u64 rp) -> reg u32, reg u64
+// {
+//     #regmask reg u8 mask8;
+//     #regmask reg u16 mask16;
+//     #regmask reg u32 mask32;
+//     #regmask reg u64 mask64;
+//     reg u32 a;
+//     reg u32 b;
+//     reg u32 c;
+//     reg u64 d;
+//     a = [:u32 rp];
+//     b = [:u32 rp];
+//     c = [:u32 rp];
+//     d = [:u64 rp];
+//     // mov from reg to mask reg
+//     mask8 = a;
+//     mask16 = b;
+//     mask32 = c;
+//     mask64 = d;
+//     // store mask reg to memory
+//     [:u8 rp] = mask8;
+//     [:u16 rp] = mask16;
+//     [:u32 rp] = mask32;
+//     [:u64 rp] = mask64;
+//     //load from memory
+//     mask8 = [:u8 rp];
+//     mask16 = [:u16 rp];
+//     mask32 = [:u32 rp];
+//     mask64 = [:u64 rp];
+//     //from mask to reg
+//     // a = #KMOVREG1_8(mask8);
+//     // b = #KMOVREG1_16(mask16);
+//     a = (32u)mask8;
+//     b = (32u)mask16;
+//     [:u32 rp] = a;
+//     [:u32 rp] = b;
+//     c = mask32;
+//     d = mask64;
+//     return c, d;
+
+// }
+
+// export fn test_kmov2(reg u64 rp) -> reg u32, reg u64
+// {
+//     #regmask reg u8 mask8;
+//     #regmask reg u16 mask16;
+//     #regmask reg u32 mask32;
+//     #regmask reg u64 mask64;
+//     stack u32[2] stacka;
+//     stacka.[:u8 0] = [:u32 rp];
+//     stacka.[:u8 1] = [:u32 rp];
+//     mask8 = stacka.[:u8 0]; //test fails because inequivalent size between memory and mask register
+//     [:u8 rp] = mask8;
+//     reg u32 a;
+//     reg u32 b;
+//     reg u32 c;
+//     reg u64 d;
+//     a = [:u32 rp];
+//     b = [:u32 rp];
+//     c = [:u32 rp];
+//     d = [:u64 rp];
+//     // mov from reg to mask reg
+//     mask8 = a;
+//     mask16 = b;
+//     mask32 = c;
+//     mask64 = d;
+//     // store mask reg to memory
+//     [:u8 rp] = mask8;
+//     [:u16 rp] = mask16;
+//     [:u32 rp] = mask32;
+//     [:u64 rp] = mask64;
+//     //load from memory
+//     mask8 = [:u8 rp];
+//     mask16 = [:u16 rp];
+//     mask32 = [:u32 rp];
+//     mask64 = [:u64 rp];
+//     //from mask to reg
+//     // a = #KMOVREG1_8(mask8);
+//     // b = #KMOVREG1_16(mask16);
+//     // a = (32u)mask8;
+//     // b = (32u)mask16;
+//     [:u32 rp] = a;
+//     [:u32 rp] = b;
+//     c = mask32;
+//     d = mask64;
+//     return c, d;
+
+// }
+export fn test_kmovintrinsic(reg u64 rp)
 {
     #regmask reg u8 mask8;
     #regmask reg u16 mask16;
     #regmask reg u32 mask32;
     #regmask reg u64 mask64;
-    reg u32 a;
-    reg u32 b;
+    reg u8 a;
+    reg u16 b;
     reg u32 c;
     reg u64 d;
-    a = [:u32 rp];
-    b = [:u32 rp];
+    a = [:u8 rp];
+    b = [:u16 rp];
     c = [:u32 rp];
     d = [:u64 rp];
-    // mov from reg to mask reg
-    mask8 = a;
-    mask16 = b;
-    mask32 = c;
-    mask64 = d;
-    // store mask reg to memory
-    [:u8 rp] = mask8;
-    [:u16 rp] = mask16;
-    [:u32 rp] = mask32;
-    [:u64 rp] = mask64;
-    //load from memory
-    mask8 = [:u8 rp];
-    mask16 = [:u16 rp];
-    mask32 = [:u32 rp];
-    mask64 = [:u64 rp];
-    //from mask to reg
-    // a = #KMOVREG1_8(mask8);
-    // b = #KMOVREG1_16(mask16);
-    a = (32u)mask8;
-    b = (32u)mask16;
-    [:u32 rp] = a;
-    [:u32 rp] = b;
-    c = mask32;
-    d = mask64;
-    return c, d;
 
-}
+   
+    mask8 = #KMOVALL_u8u8([:u8 rp]);
+    mask16 = #KMOVALL_u16u16([:u16 rp]);
+    mask32 = #KMOVALL_u32u32([:u32 rp]);
+    mask64 = #KMOVALL_u64u64([:u64 rp]);
 
-export fn test_kmov2(reg u64 rp) -> reg u32, reg u64
-{
-    #regmask reg u8 mask8;
-    #regmask reg u16 mask16;
-    #regmask reg u32 mask32;
-    #regmask reg u64 mask64;
-    stack u32[2] stacka;
-    stacka.[:u8 0] = [:u32 rp];
-    stacka.[:u8 1] = [:u32 rp];
-    mask8 = stacka.[:u8 0];
-    [:u8 rp] = mask8;
-    reg u32 a;
-    reg u32 b;
-    reg u32 c;
-    reg u64 d;
-    a = [:u32 rp];
-    b = [:u32 rp];
-    c = [:u32 rp];
-    d = [:u64 rp];
-    // mov from reg to mask reg
-    mask8 = a;
-    mask16 = b;
-    mask32 = c;
-    mask64 = d;
-    // store mask reg to memory
-    [:u8 rp] = mask8;
-    [:u16 rp] = mask16;
-    [:u32 rp] = mask32;
-    [:u64 rp] = mask64;
-    //load from memory
-    mask8 = [:u8 rp];
-    mask16 = [:u16 rp];
-    mask32 = [:u32 rp];
-    mask64 = [:u64 rp];
-    //from mask to reg
-    // a = #KMOVREG1_8(mask8);
-    // b = #KMOVREG1_16(mask16);
-    // a = (32u)mask8;
-    // b = (32u)mask16;
-    [:u32 rp] = a;
-    [:u32 rp] = b;
-    c = mask32;
-    d = mask64;
-    return c, d;
+    [:u8 rp] = #KMOVALL_u8u8(mask8);
+    [:u16 rp] = #KMOVALL_u16u16(mask16);
+    [:u32 rp] = #KMOVALL_u32u32(mask32);
+    [:u64 rp] = #KMOVALL_u64u64(mask64);
+
+ 
+
+    mask8 = #KMOVALL_r32k8(c);
+    mask16 = #KMOVALL_r32k16(c);
+    mask32 = #KMOVALL_r32k32(c);
+    mask64 = #KMOVALL_r64k64(d);
+
+
+    [:u8 rp] = #KMOVALL_u8u8(mask8);
+    [:u16 rp] = #KMOVALL_u16u16(mask16);
+    [:u32 rp] = #KMOVALL_u32u32(mask32);
+    [:u64 rp] = #KMOVALL_u64u64(mask64);
+
+    c = #KMOVALL_k8r32(mask8);
+    c = #KMOVALL_k16r32(mask16);
+    c = #KMOVALL_k32r32(mask32);
+    d = #KMOVALL_k64r64(mask64);
+
+
+    [:u32 rp] = c;
+    [:u64 rp] = d;
 
 }

@@ -352,6 +352,9 @@ Definition compile_arg rip ii (ade: (arg_desc * stype) * rexpr) (m: nmap asm_arg
     end
   end.
 
+Check compile_arg.
+
+
 Definition compile_args rip ii adts (es: rexprs) (m: nmap asm_arg) :=
   foldM (compile_arg rip ii) m (zip adts es).
 

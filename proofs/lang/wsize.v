@@ -18,7 +18,11 @@ Variant wsize :=
   | U128
   | U256
   | U512.
-
+(* -------------------------------------------------------------------- *)
+Variant kmovop : Type :=
+| Movmask
+| Loadmask (* k_r *)
+| Storemask. (* r_k *)
 (* Size in bits of the elements of a vector. *)
 Variant velem := VE8 | VE16 | VE32 | VE64.
 
@@ -209,6 +213,21 @@ Definition pp_ve_sz_ve_sz (s: string) (ve: velem) (sz: wsize) (ve': velem) (sz':
 
 Definition pp_sz_sz (s: string) (sign:bool) (sz sz': wsize) (_: unit) : string :=
   s ++ "_u" ++ string_of_wsize sz ++ (if sign then "s" else "u")%string ++ string_of_wsize sz'.
+  
+Check pp_sz_sz.
+  
+Definition pp_sz_sz_opk (s: string) (sign: bool) (sz sz': wsize) (opk: kmovop) (_: unit) : string :=
+  let sz_str := string_of_wsize sz in
+  let sz'_str := string_of_wsize sz' in
+  let suffix :=
+    match opk with
+    | Movmask => String.append "u" (String.append sz_str (String.append (if sign then "s" else "u") sz'_str))
+    | Loadmask => String.append "r" (String.append sz_str (String.append "k" sz'_str))
+    | Storemask => String.append "k" (String.append sz_str (String.append "r" sz'_str))
+    end in
+  String.append s (String.append "_" suffix).
+
+
 
 (* -------------------------------------------------------------------- *)
 Variant reg_kind : Type :=
@@ -216,11 +235,7 @@ Variant reg_kind : Type :=
 | Extra
 | Mask.
 
-(* -------------------------------------------------------------------- *)
-Variant kmovop : Type :=
-| Movmask
-| Loadmask (* k_r *)
-| Storemask. (* r_k *)
+
 
 Variant writable : Type := Constant | Writable.
 
