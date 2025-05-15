@@ -537,7 +537,7 @@ Notation mk_instr_w_w name semi ain aout nargs check prc valid pp_asm :=
 (* for load/store according mask register *)
 Notation mk_instr_w2_w_120_mask name semi check prc valid pp_asm :=
  ((fun ksz sz =>
-  mk_instr_safe (pp_sz_sz name false ksz sz) (w2_ty ksz sz) (w_ty sz) [:: Ea 1 ; Eu 2] [:: Ea 0] (reg_msb_flag sz) (semi ksz sz) (check) 3 (valid ksz sz) (pp_asm sz)), (name%string,prc)) (only parsing).
+  mk_instr_safe (pp_sz_sz name false ksz sz) (w2_ty ksz sz) (w_ty sz) [:: Ek 1 [:: K0] ; Eu 2] [:: Ea 0] (reg_msb_flag sz) (semi ksz sz) (check) 3 (valid ksz sz) (pp_asm sz)), (name%string,prc)) (only parsing).
 
 Notation mk_instr_w_w_kmov name semi ain aout nargs check prc valid pp_asm :=
 ((fun sz =>
@@ -599,8 +599,8 @@ Notation mk_instr_division sg name semi check prc valid pp_asm semi_errty semi_s
 Notation mk_instr_w2_w_120 name semi check prc valid pp_asm := ((fun sz =>
   mk_instr_safe (pp_sz name sz) (w2_ty sz sz) (w_ty sz) [:: Ea 1 ; Eu 2] [:: Ea 0] MSB_CLEAR (semi sz) (check sz) 3 (valid sz) (pp_asm sz)), (name%string,prc))  (only parsing).
 
-Notation mk_instr_ww2_w_1230 name semi check prc valid pp_asm := ((fun (ksz:wsize) (sz:wsize) =>
-  mk_instr_safe (pp_sz_sz name false ksz sz) (ww2_ty ksz sz) (w_ty sz) [:: Ea 1 ; Eu 2 ; Eu 3] [:: Ea 0] MSB_CLEAR (semi ksz sz) (check) 4 (valid ksz sz) (pp_asm sz)), (name%string,prc))  (only parsing).
+Notation mk_instr_ww2_w_1230_mask name semi check prc valid pp_asm := ((fun (ksz:wsize) (sz:wsize) =>
+  mk_instr_safe (pp_sz_sz name false ksz sz) (ww2_ty ksz sz) (w_ty sz) [:: Ek 1 [:: K0]; Eu 2 ; Eu 3] [:: Ea 0] MSB_CLEAR (semi ksz sz) (check) 4 (valid ksz sz) (pp_asm sz)), (name%string,prc))  (only parsing).
 
 
 Notation mk_instr_ww8_w_120 name semi check prc valid pp_asm := ((fun sz =>
@@ -635,7 +635,7 @@ Notation mk_ve_instr_ww2_w_1230_mask name semi check prc valid pp_asm := ((fun (
   mk_instr_safe (pp_ve_sz_sz name ve ksz sz) (ww2_ty ksz sz) (w_ty sz) [:: Ek 1 [:: K0]; Eu 2 ; Ea 3] [:: Ea 0] (reg_msb_flag sz) (semi ve ksz sz) (check) 4 (valid ve ksz sz) (pp_asm ve sz)), (name%string,prc))  (only parsing).
 
 Notation mk_ve_instr_w2_w_120_mask name semi check prc valid pp_asm := ((fun (ve:velem) (ksz:wsize) (sz:wsize) =>
-  mk_instr_safe (pp_ve_sz_sz name ve ksz sz) (w2_ty ksz sz) (w_ty sz) [:: Eu 1 ; Eu 2] [:: Eu 0] (reg_msb_flag sz) (semi ve ksz sz) (check) 3 (valid ve ksz sz) (pp_asm ve sz)), (name%string,prc))  (only parsing).
+  mk_instr_safe (pp_ve_sz_sz name ve ksz sz) (w2_ty ksz sz) (w_ty sz) [:: Ek 1 [:: K0] ; Eu 2] [:: Eu 0] (reg_msb_flag sz) (semi ve ksz sz) (check) 3 (valid ve ksz sz) (pp_asm ve sz)), (name%string,prc))  (only parsing).
 
 
 Notation mk_instr_w_w128_10 name msb semi check prc valid pp_asm := ((fun sz =>
@@ -2217,7 +2217,7 @@ Definition x86_VPERMBMASK ksz sz (m: word ksz) (v1 v2: word sz): tpl w_ty sz :=
 
 
 Definition Ox86_VPERMBMASK_instr :=
-  mk_instr_ww2_w_1230 "VPERMBMASK" x86_VPERMBMASK check_xmm_k_xmm_xmmm (primWw_16_64 VPERMBMASK) (fun ksz sz => size_16_64 ksz && size_128_512 sz) (pp_name_mask "vpermb").
+  mk_instr_ww2_w_1230_mask "VPERMBMASK" x86_VPERMBMASK check_xmm_k_xmm_xmmm (primWw_16_64 VPERMBMASK) (fun ksz sz => size_16_64 ksz && size_128_512 sz) (pp_name_mask "vpermb").
 
 
 
