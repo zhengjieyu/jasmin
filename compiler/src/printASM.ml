@@ -27,16 +27,20 @@ let pp_label fmt name =
 let pp_instr fmt name params =
   (* Post-process the joined parameter string:
       remove any spaces or commas before an opening brace *)
-  let post_process s =
-    let re = Str.regexp ", {" in
-    Str.global_replace re "{" s
-  in
-  match params with
-  | [] -> Format.fprintf fmt "\t%s" name
-  | _ ->
-      let raw = String.concat ", " params in
-      let cleaned = post_process raw in
-      Format.fprintf fmt "\t%-*s\t%s" iwidth name cleaned
+      let rec replace_all str ~sub ~by =
+        let (replaced, new_str) = BatString.replace ~str ~sub ~by in
+        if replaced then replace_all new_str ~sub ~by else new_str
+      in
+      let post_process s =
+        replace_all s ~sub:", {" ~by:"{"
+      
+      in
+      match params with
+      | [] -> Format.fprintf fmt "\t%s" name
+      | _ ->
+          let raw = String.concat ", " params in
+          let cleaned = post_process raw in
+          Format.fprintf fmt "\t%-*s\t%s" iwidth name cleaned
   
   
 
