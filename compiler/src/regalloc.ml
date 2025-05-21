@@ -206,6 +206,7 @@ let kind_compatible (x: v_kind) (y: v_kind) : bool =
     -> true
   | Stack a, Stack b
   | Reg (Normal, a), Reg (Normal, b)
+  | Reg (Mask, a), Reg (Mask, b)
   | Reg (Extra, a), Reg (Extra, b)
     -> pointer_compatible a b
   | _, _ -> false
@@ -392,6 +393,7 @@ let conflicts_in (i: Sv.t) (k: var -> var -> 'a -> 'a) : 'a -> 'a =
   
   
 
+
 let conflicts_add_one pd reg_size asmOp tbl tr loc (v: var) (w: var) (c: conflicts) : conflicts =
   try
     let i = Hv.find tbl v in
@@ -403,6 +405,7 @@ let conflicts_add_one pd reg_size asmOp tbl tr loc (v: var) (w: var) (c: conflic
     if types_cannot_conflict reg_size v.v_kind v.v_ty w.v_kind w.v_ty then c else
     c |> add_conflicts i j |> add_conflicts j i
   with Not_found -> c
+    
 
 (* Some instructions can declare conflicts between the registers appearing
    in the arguments and in the result. We collect all these conflicts. *)
@@ -615,7 +618,7 @@ end
 
 module Regalloc (Arch : Arch_full.Arch)
   : Regalloc with type extended_op := (Arch.reg, Arch.regx, Arch.xreg, Arch.regmask, Arch.rflag, Arch.cond, Arch.asm_op, Arch.extra_op) Arch_extra.extended_op = struct
-  let forced_registers translate_var loc nv (vars: int Hv.t) (cnf: conflicts)
+  let forced_registers translate_var loc nv (vars: int Hv.t) tr (cnf: conflicts)
     (lvs: 'ty glvals) (op: 'asm sopn) (es: 'ty gexprs)
     (a: A.allocation) : conflicts =
   
@@ -661,32 +664,33 @@ module Regalloc (Arch : Arch_full.Arch)
     List.fold_left2 (fun cnf ad e ->
       match ad with
       | ADImplicit v ->
-        ignore (mallocate_one e (translate_var v) a); 
+        mallocate_one e (translate_var v) a; 
         cnf
       | ADExplicit (_, ACR_exact v) ->
-        ignore (mallocate_one e (translate_var v) a); 
+        mallocate_one e (translate_var v) a; 
         cnf
       | ADExplicit (_, ACR_vector v) ->
-        ignore (mallocate_one e (translate_var v) a); 
+        mallocate_one e (translate_var v) a;
         cnf
       | ADExplicit (_, ACR_subset _) (* TODO *)
       | ADExplicit (_, (ACR_any)) -> cnf
       | ADExplicit (_, ACR_subsetinvalidmask ks) ->
-          let open PrintCommon in
-          Format.printf "%a@." (pp_list ",@ " pp_var) ks;
+        let open PrintCommon in
+          let ks = List.rev_map translate_var ks in
           match e with
           | Pvar x -> 
-              let x_Varvar = Conv.ggvar_to_var x in
-              Format.printf "%a@." pp_var x_Varvar;
-              let ks_vars = Conv.convert_var_list ks in
-              let x_var = Conv.var_of_cvar x_Varvar in
-              List.fold_left (fun cnf reg ->
-                  conflicts_add_edge vars Lnone reg x_var cnf 
-              ) cnf ks_vars
+            Format.eprintf "Variable %s has register kind a %a@."
+            (L.unloc x.gv).v_name PrintCommon.pp_kind (L.unloc x.gv).v_kind;
+            
+              List.fold_left (fun cnf r ->
+                Format.eprintf "Variable %s has register kind %a@."
+    r.v_name PrintCommon.pp_kind r.v_kind;
+                conflicts_add_one Arch.pointer_data Arch.reg_size Arch.asmOp vars tr Lnone (L.unloc x.gv) r cnf
+    
+              ) cnf ks
           | _ -> cnf  
     ) cnf id.i_in es 
   in
-
   cnf
 
         
@@ -695,7 +699,7 @@ module Regalloc (Arch : Arch_full.Arch)
 
 
 
-let allocate_forced_registers return_addresses translate_var nv (vars: int Hv.t) (cnf: conflicts)
+let allocate_forced_registers return_addresses translate_var nv (vars: int Hv.t) tr (cnf: conflicts)
     (f: ('info, 'asm) func) (a: A.allocation) : conflicts =
   let split ~ctxt ~num =
     function
@@ -743,7 +747,7 @@ let allocate_forced_registers return_addresses translate_var nv (vars: int Hv.t)
     function
     | Cfor (_, _, s)
       -> alloc_stmt s c
-    | Copn (lvs, _, op, es) -> forced_registers translate_var loc nv vars c lvs op es a
+    | Copn (lvs, _, op, es) -> forced_registers translate_var loc nv vars tr c lvs op es a
     | Csyscall(lvs, _, es) ->
        let get_a = function Pvar { gv ; gs = Slocal } -> L.unloc gv | _ -> assert false in
        let get_r = function Lvar gv -> L.unloc gv | _ -> assert false in
@@ -1383,7 +1387,7 @@ let global_allocation translate_var get_internal_size (funcs: ('info, 'asm) func
 
   let conflicts =
     List.fold_left
-      (fun c f -> allocate_forced_registers return_addresses translate_var nv vars c f a)
+      (fun c f -> allocate_forced_registers return_addresses translate_var nv vars tr c f a)
       conflicts
       funcs
   in

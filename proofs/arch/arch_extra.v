@@ -201,7 +201,7 @@ Module MkAToIdent : AToIdent_T.
     Let toI_r  := MkToIdent.mk (T:= reg) (toid Normal (sword reg_size)) in
     Let toI_rx := MkToIdent.mk (T:= regx) (toid Extra (sword reg_size)) in
     Let toI_x  := MkToIdent.mk (T:= xreg) (toid Normal (sword xreg_size)) in
-    Let toI_regmask  := MkToIdent.mk (T:= regmask) (toid Normal (sword reg_size)) in
+    Let toI_regmask  := MkToIdent.mk (T:= regmask) (toid Mask (sword reg_size)) in
     Let toI_f  := MkToIdent.mk (T:= rflag) (toid Normal sbool) in
     match @idP _inj_toI_reg_regx with
     | ReflectT h =>

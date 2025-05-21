@@ -15,6 +15,7 @@ Import compiler_util oseq.
 
 Module E.
 
+Search to_var. 
 Definition pass_name := "asmgen"%string.
 
 Definition gen_error (internal:bool) (ii:option instr_info) (vi: option var_info) (msg:pp_error) :=

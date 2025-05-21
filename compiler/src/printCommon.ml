@@ -165,7 +165,7 @@ let pp_kind fmt = function
   | Const -> fprintf fmt "param"
   | Stack ptr -> fprintf fmt "stack%a" pp_pointer ptr
   | Reg (k, ptr) ->
-      fprintf fmt "%sreg%a" (if k = Normal then "" else "#mmx ") pp_pointer ptr
+      fprintf fmt "%sreg%a" (if k = Normal then "" else if k = Mask then "#mask" else "#mmx ") pp_pointer ptr
   | Inline -> fprintf fmt "inline"
   | Global -> fprintf fmt "global"
 
@@ -205,7 +205,6 @@ let pp_arr_slice pp_gvar pp_expr pp_len fmt aa ws x e len =
 (* -------------------------------------------------------------------- *)
 let pp_len fmt len = fprintf fmt "%i" len
 let pp_ty fmt = pp_gtype pp_len fmt
-
 (* -------------------------------------------------------------------- *)
 let pp_datas fmt data =
   let pp_w fmt w =

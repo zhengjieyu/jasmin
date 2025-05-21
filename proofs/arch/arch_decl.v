@@ -313,7 +313,7 @@ Definition check_oreg or ai :=
   | ACR_vector _, _      => false
   | ACR_subset s, Reg r  => r \in (s : seq ceqT_eqType)
   | ACR_subset _, _      => false
-  | ACR_subsetinvalidmask s, Regmask r  =>  negb (r \in (s : seq ceqT_eqType)) 
+  | ACR_subsetinvalidmask s, Regmask r  =>  r \notin (s : seq ceqT_eqType)
   | ACR_subsetinvalidmask _, _      => false
   | ACR_any, _           => true
   end.
