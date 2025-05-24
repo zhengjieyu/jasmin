@@ -183,7 +183,7 @@ module X86_core = struct
     | VPERMB _ -> true
     | VPERMBMASK _ -> true
     | VPERMQ _ -> true
-    | VPERMQ512 _ -> true
+    | VPERMQXVAR _ -> true
     | VPEXTR _ -> true
     | VPINSR _ -> true
     | VPMADDUBSW _ -> true

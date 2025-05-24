@@ -164,7 +164,7 @@ Variant x86_op : Type :=
 | VPERMB `(wsize)
 | VPERMBMASK `(wsize) `(wsize)
 | VPERMQ `(wsize)
-| VPERMQ512 `(wsize)
+| VPERMQXVAR `(wsize)
 | VPMOVMSKB of wsize & wsize (* source size (U128/256) & dest. size (U32/64) *)
 | MOVEMASK of velem & wsize
 | VPMOVB2M of wsize & wsize (* source size (U128/512) & dest. size (U16/32/64) *)
@@ -2227,11 +2227,11 @@ Definition x86_VPERMQ sz (v: word sz) (m: u8) : tpl w_ty sz :=
 Definition Ox86_VPERMQ_instr :=
 mk_instr_ww8_w_120 "VPERMQ" x86_VPERMQ check_xmm_xmm_imm8 (prim_256_512 VPERMQ) size_256_512 (pp_name "vpermq").
 
-Definition x86_VPERMQ512 sz (v1 v2: word sz) : tpl (w_ty sz) :=
-  TODO_AVX512 "VPERMQ512".
+Definition x86_VPERMQXVAR sz (v1 v2: word sz) : tpl (w_ty sz) :=
+  TODO_AVX512 "VPERMQXVAR".
 
-Definition Ox86_VPERMQ512_instr :=
-  mk_instr_w2_w_120 "VPERMQ512" x86_VPERMQ512 check_xmm_xmm_xmmm (prim_256_512 VPERMQ512) size_256_512 (pp_name "vpermq").
+Definition Ox86_VPERMQXVAR_instr :=
+  mk_instr_w2_w_120 "VPERMQXVAR" x86_VPERMQXVAR check_xmm_xmm_xmmm (prim_256_512 VPERMQXVAR) size_256_512 (pp_name "vpermq").
 
 (* TODO: remove *)
 Definition x86_VPMOVMSKB ssz dsz (v : word ssz): tpl (w_ty dsz) :=
@@ -2795,7 +2795,7 @@ Definition x86_instr_desc o : instr_desc_t :=
   | VPERMB sz          => Ox86_VPERMB_instr.1 sz
   | VPERMBMASK sz sz'          => Ox86_VPERMBMASK_instr.1 sz sz'
   | VPERMQ sz            => Ox86_VPERMQ_instr.1 sz
-  | VPERMQ512 sz            => Ox86_VPERMQ512_instr.1 sz
+  | VPERMQXVAR sz            => Ox86_VPERMQXVAR_instr.1 sz
   | VINSERTI128        => Ox86_VINSERTI128_instr.1
   | VINSERTI64X4        => Ox86_VINSERTI64X4_instr.1
   | VSHUFI32X4 sz        => Ox86_VSHUFI32X4_instr.1 sz
@@ -2972,7 +2972,7 @@ Definition x86_prim_string :=
    Ox86_VPERMB_instr.2;
    Ox86_VPERMBMASK_instr.2;
    Ox86_VPERMQ_instr.2;
-   Ox86_VPERMQ512_instr.2;
+   Ox86_VPERMQXVAR_instr.2;
    Ox86_VINSERTI128_instr.2;
    Ox86_VINSERTI64X4_instr.2;
    Ox86_VSHUFI32X4_instr.2;
