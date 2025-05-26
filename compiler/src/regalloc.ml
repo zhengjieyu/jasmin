@@ -679,12 +679,12 @@ module Regalloc (Arch : Arch_full.Arch)
           let ks = List.rev_map translate_var ks in
           match e with
           | Pvar x -> 
-            Format.eprintf "Variable %s has register kind a %a@."
-            (L.unloc x.gv).v_name PrintCommon.pp_kind (L.unloc x.gv).v_kind;
+            (* Format.eprintf "Variable %s has register kind a %a@."
+            (L.unloc x.gv).v_name PrintCommon.pp_kind (L.unloc x.gv).v_kind; *)
             
               List.fold_left (fun cnf r ->
-                Format.eprintf "Variable %s has register kind %a@."
-    r.v_name PrintCommon.pp_kind r.v_kind;
+                (* Format.eprintf "Variable %s has register kind %a@."
+    r.v_name PrintCommon.pp_kind r.v_kind; *)
                 conflicts_add_one Arch.pointer_data Arch.reg_size Arch.asmOp vars tr Lnone (L.unloc x.gv) r cnf
     
               ) cnf ks

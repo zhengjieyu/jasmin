@@ -1678,7 +1678,7 @@ Definition Ox86_VMOVDQU_instr :=
   mk_instr_w_w "VMOVDQU" x86_VMOVDQ [:: Eu 1] [:: Eu 0] 2 check_vmovdq (prim_128_512 VMOVDQU) size_128_512 pp_vmovdqu.
 
 (* load/store according to mask register *)
-Definition check_xmm_k_xmmm := [:: [::  xmm; k; xmmm true]].
+Definition check_xmm_k_xmmm := [:: [::  xmmm true; k; xmmm true]].
 Definition x86_VMOVDQ8 ksz sz (m: word ksz) (v: word sz) : tpl (w_ty sz) :=  TODO_AVX512 "VMOVDQ8".
 
 Definition Ox86_VMOVDQU8_instr :=
