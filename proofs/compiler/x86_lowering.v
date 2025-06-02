@@ -344,7 +344,6 @@ Definition lower_cassgn_classify ty e x : lower_cassgn_t :=
   | Pload _ sz _ _ =>
       if (sz ≤ U64)%CMP
       then LowerMov (is_lval_in_memory x)
-      else if (sz ≤ U256)%CMP then kb true sz (LowerCopn (Ox86 (VMOVDQU sz)) [:: e ])
       else kb true sz (LowerCopn (Ox86 (VMOVDQU sz)) [:: e ])
 
   | Papp1 (Oword_of_int sz) (Pconst z) =>

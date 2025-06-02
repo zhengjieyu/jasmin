@@ -139,9 +139,9 @@ Definition size_512 sz := (sz == U512)%CMP.
 
 Definition size_128 sz := (sz == U128)%CMP.
 
-Lemma wsize_nle_u128_size_256_512 sz :
-  (sz ≤ U128)%CMP = false →
-  size_256_512 sz.
+Lemma wsize_nle_u64_size_128_512 sz :
+  (sz ≤ U64)%CMP = false →
+  size_128_512 sz.
 Proof. by case: sz. Qed.
 
 (* -------------------------------------------------------------------- *)

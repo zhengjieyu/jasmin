@@ -415,8 +415,8 @@ Section PROOF.
   Lemma size_16_64_ve (ve:velem) : (U16 ≤ ve)%CMP -> size_16_64 ve.
   Proof. by rewrite /size_16_64 => ->; case:ve. Qed.
 
-  Lemma size_256_512_ge sz : (U256 <= sz)%CMP -> size_256_512 sz.
-  Proof. by move=> h; rewrite /size_256_512 h wsize_ge_U512. Qed.
+  Lemma size_128_512_ge sz : (U128 <= sz)%CMP -> size_128_512 sz.
+  Proof. by move=> h; rewrite /size_128_512 h wsize_ge_U512. Qed.
 
   Lemma mulr_ok l sz w1 w2 (z1 : word w1) (z2:word w2) e1 e2 o e' s s':
     sem_pexpr true gd s e1 = ok (Vword z1) ->
@@ -552,8 +552,7 @@ Section PROOF.
     | LowerAssgn => True
     end.
   Proof.
-  Admitted.
-    (* rewrite /lower_cassgn_classify.
+    rewrite /lower_cassgn_classify.
     move: e Hs=> [z|b|n|x|al aa ws x e | aa ws len x e |al sz x e| o e|o e1 e2| op es |e e1 e2] //.
     + case: x => - [] [] [] // sz vn vi vs //= /[dup] ok_v.
       case/type_of_get_gvar => sz' [Hs Hs'].
@@ -568,7 +567,7 @@ Section PROOF.
         by eexists _, _; split; last reflexivity.
       move => hsz_le_64.
       case: ifP => h128_le_sz''.
-      * by rewrite /= ok_v /exec_sopn /sopn_sem /sopn_sem_ /= ok_w /x86_VMOVDQ /size_256_512 h128_le_sz'' wsize_ge_U512.
+      * by rewrite /= ok_v /exec_sopn /sopn_sem /sopn_sem_ /= ok_w /x86_VMOVDQ /size_128_512 h128_le_sz'' wsize_ge_U512.
       case: ifP => // hsz''.
       rewrite /= ok_v /exec_sopn /sopn_sem /sopn_sem_ /= /x86_MOVX /size_32_64 hsz'' ok_w.
       have : (sz'' ≤ U64)%CMP; last by move ->.
@@ -582,7 +581,7 @@ Section PROOF.
         split; first exact: (cmp_le_trans hle).
         by eauto.
       case: ifP => h128_le_sz'.
-      * by rewrite /= ok_a ok_j /= ok_i /= ok_w /exec_sopn /sopn_sem /sopn_sem_ /= /x86_VMOVDQ /size_256_512 h128_le_sz' ok_w' wsize_ge_U512.
+      * by rewrite /= ok_a ok_j /= ok_i /= ok_w /exec_sopn /sopn_sem /sopn_sem_ /= /x86_VMOVDQ /size_128_512 h128_le_sz' ok_w' wsize_ge_U512.
       case: ifP => // hsz''.
       rewrite /= ok_a ok_j /= ok_i /= ok_w /exec_sopn /sopn_sem /sopn_sem_ /= /x86_MOVX /size_32_64 hsz'' ok_w'.
       have : (sz' ≤ U64)%CMP; last by move ->.
@@ -620,6 +619,8 @@ Section PROOF.
       (* Ozeroext *)
       + rewrite /= /sem_sop1 /=; t_xrbindP => sz sz' x ok_x x' /to_wordI' [szx [wx [hle ??]]] ?.
         subst x x' v.
+        case he: is_regmask_e.
+        * admit.
         case: sz' Hv' hle => // /truncate_valE [sz' [? [? /truncate_wordP[hle' ->] ?]]] hle; subst ty v'.
         - case: andP => // - [] hs /eqP[] ?; subst sz.
           by rewrite /= ok_x /= zero_extend_u /exec_sopn /= truncate_word_le // {hle} /sopn_sem /sopn_sem_ /= /x86_MOVZX /size_16_64 hs.
@@ -846,7 +847,7 @@ Section PROOF.
             by rewrite /wandn Hw.
           case : eqP => //= ?; subst ty.
           rewrite /exec_sopn /sopn_sem /sopn_sem_ /= ha1 /= ha2 /= hva1 /= hva2 /=.
-          rewrite /x86_VPANDN (wsize_nle_u64_size_128_256 hty) /=.
+          rewrite /x86_VPANDN (wsize_nle_u64_size_128_512 hty) /=.
           by move: Hv' hwa2; rewrite /truncate_val /= !truncate_word_u => /ok_inj <- /ok_inj <-.
         case: eqP; last by rewrite andbF => _ _ /=; case: ifP.
         move => ?; subst ty; rewrite /= /sem_sop2 /=; t_xrbindP => v1 ok_v1 v2 ok_v2.
@@ -860,7 +861,7 @@ Section PROOF.
           by rewrite /x86_AND /size_8_64 hty /= Hw.
         (* VPAND *)
         rewrite /x86_VPAND /=.
-        by rewrite (wsize_nle_u64_size_128_256 hty) /=.
+        by rewrite (wsize_nle_u64_size_128_512 hty) /=.
       (* Olor Op_w *)
       + case: (_ =P ty) => /=; last by rewrite andbF !if_same.
         move => ?; subst ty; rewrite /= /sem_sop2 /=; t_xrbindP => v1 ok_v1 v2 ok_v2.
@@ -880,7 +881,7 @@ Section PROOF.
           by rewrite /x86_OR /size_8_64 hty /= Hw.
         (* VPOR *)
         rewrite /x86_VPOR /=.
-        by rewrite (wsize_nle_u64_size_128_256 hty).
+        by rewrite (wsize_nle_u64_size_128_512 hty).
       (* Olxor Op_w *)
       + case: eqP; last by rewrite andbF => _ _ /=; case: ifP.
         move => ?; subst ty; rewrite /= /sem_sop2 /=; t_xrbindP => v1 ok_v1 v2 ok_v2.
@@ -894,7 +895,7 @@ Section PROOF.
           by rewrite /x86_XOR /size_8_64 hty /= Hw.
         (* VPXOR *)
         rewrite /x86_VPXOR /=.
-        by rewrite (wsize_nle_u64_size_128_256 hty).
+        by rewrite (wsize_nle_u64_size_128_512 hty).
       (* Olsr *)
       + case good_shift: check_shift_amount => [ sa | ]; last by [].
         case: andP => // - [hsz64] /eqP ?; subst ty.
@@ -991,7 +992,7 @@ Section PROOF.
         move => ?; subst v.
         move: Hv'; rewrite /truncate_val /= truncate_word_u => /ok_inj ?; subst v'.
         rewrite ok_v1 /= ok_v2 /= /x86_VPADD /=.
-        by rewrite (size_128_256_ge hle) /= !truncate_word_le.
+        by rewrite (size_128_512_ge hle) /= !truncate_word_le.
       (* Ovsub ve sz *)
       + case: ifP => // /andP [hle /eqP ?]; subst ty.
         rewrite /= /sem_sop2 /exec_sopn /sopn_sem /sopn_sem_ /=;t_xrbindP => v1 ok_v1 v2 ok_v2.
@@ -1000,7 +1001,7 @@ Section PROOF.
         move => ?; subst v.
         move: Hv'; rewrite /truncate_val /= truncate_word_u => /ok_inj ?; subst v'.
         rewrite ok_v1 /= ok_v2 /= /x86_VPSUB /=.
-        by rewrite (size_128_256_ge hle) /= !truncate_word_le.
+        by rewrite (size_128_512_ge hle) /= !truncate_word_le.
       (* Ovmul ve sz *)
       + case: ifP => // /andP [/andP[hle1 hle2] /eqP ?]; subst ty.
         rewrite /= /sem_sop2 /exec_sopn /sopn_sem /sopn_sem_ /=;t_xrbindP => v1 ok_v1 v2 ok_v2.
@@ -1009,7 +1010,7 @@ Section PROOF.
         move => ?; subst v.
         move: Hv'; rewrite /truncate_val /= truncate_word_u => /ok_inj ?; subst v'.
         rewrite ok_v1 /= ok_v2 /= /x86_VPMULL /=.
-        rewrite /size_16_32 hle1 (size_128_256_ge hle2).
+        rewrite /size_16_32 hle1 (size_128_512_ge hle2).
         by rewrite !truncate_word_le.
       (* Ovlsr ve sz *)
       + case: ifP => // /andP [/andP [hle1 hle2] /eqP ?]; subst ty.
@@ -1019,7 +1020,7 @@ Section PROOF.
         move => ?; subst v.
         move: Hv'; rewrite /truncate_val /= truncate_word_u => /ok_inj ?; subst v'.
         rewrite ok_v1 /= ok_v2 /= /x86_VPSRL /x86_u128_shift /=.
-        rewrite (size_128_256_ge hle2) (size_16_64_ve hle1) /=.
+        rewrite (size_128_512_ge hle2) (size_16_64_ve hle1) /=.
         by rewrite !truncate_word_le.
       (* Ovlsl ve sz *)
       + case: ifP => // /andP [/andP [hle1 hle2] /eqP ?]; subst ty.
@@ -1029,7 +1030,7 @@ Section PROOF.
         move => ?; subst v.
         move: Hv'; rewrite /truncate_val /= truncate_word_u => /ok_inj ?; subst v'.
         rewrite ok_v1 /= ok_v2 /= /x86_VPSLL /x86_u128_shift /=.
-        rewrite (size_128_256_ge hle2) (size_16_64_ve hle1) /=.
+        rewrite (size_128_512_ge hle2) (size_16_64_ve hle1) /=.
         by rewrite !truncate_word_le.
       (* Ovasr ve sz *)
       + case: ifP => // /andP [/andP [hle1 hle2] /eqP ?]; subst ty.
@@ -1039,7 +1040,7 @@ Section PROOF.
         move => ?; subst v.
         move: Hv'; rewrite /truncate_val /= truncate_word_u => /ok_inj ?; subst v'.
         rewrite ok_v1 /= ok_v2 /= /x86_VPSRA /x86_u128_shift /=.
-        rewrite (size_128_256_ge hle2) hle1 /=.
+        rewrite (size_128_512_ge hle2) hle1 /=.
         by rewrite !truncate_word_le.
     (* PappN *)
     + case: op => // - [] // - [] //.
@@ -1057,7 +1058,7 @@ Section PROOF.
      (* Pif *)
      rewrite /size_16_64.
      by case: stype_of_lval => // w hv; case: andP => // - [] /andP[] -> -> /eqP <-; eauto.
-  Qed. *)
+  Admitted.
 
   Lemma vmap_eq_except_set q s x v:
     Sv.In x q → s.[ x <- v] =[\q] s.
