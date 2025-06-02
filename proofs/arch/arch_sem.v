@@ -85,6 +85,7 @@ End Section. End RflagMap.
 (* -------------------------------------------------------------------- *)
 Notation regmap   := RegMap.map.
 Notation regxmap  := RegXMap.map.
+Notation regmaskmap  := RegMaskMap.map.
 Notation xregmap  := XRegMap.map.
 Notation rflagmap := RflagMap.map.
 
@@ -99,6 +100,7 @@ Record asmmem : Type := AsmMem {
   asm_mem  : mem;
   asm_reg  : regmap;
   asm_regx : regxmap;
+  asm_regmask :regmaskmap;
   asm_xreg : xregmap;
   asm_flag : rflagmap;
 }.
@@ -242,7 +244,7 @@ Definition eval_asm_arg k (s: asmmem) (a: asm_arg) (ty: stype) : exec value :=
     | _        => type_error
     end
   | XReg x     => ok (Vword (s.(asm_xreg) x))
-  | Regmask _ => type_error
+  | Regmask k => ok (Vword (s.(asm_regmask) k))
   end.
 
 Definition eval_arg_in_v (s:asmmem) (args:asm_args) (a:arg_desc) (ty:stype) : exec value :=
@@ -280,6 +282,7 @@ Definition mem_write_rflag (s : asmmem) (f:rflag_t) (b:option bool) :=
      asm_regx := s.(asm_regx);
      asm_rip  := s.(asm_rip); 
      asm_xreg := s.(asm_xreg);
+     asm_regmask := s.(asm_regmask);
      asm_flag := RflagMap.set s.(asm_flag) f (o2rflagv b);
    |}.
 
@@ -292,6 +295,7 @@ Definition mem_write_mem al (l : pointer) sz (w : word sz) (s : asmmem) :=
      asm_regx := s.(asm_regx);
      asm_rip  := s.(asm_rip); 
      asm_xreg := s.(asm_xreg);
+     asm_regmask := s.(asm_regmask);
      asm_flag := s.(asm_flag);
   |}.
 
@@ -315,6 +319,7 @@ Definition mem_write_reg (f: msb_flag) (r: reg_t) sz (w: word sz) (m: asmmem) :=
     asm_regx := m.(asm_regx);
     asm_rip  := m.(asm_rip); 
     asm_xreg := m.(asm_xreg);
+    asm_regmask := m.(asm_regmask);
     asm_flag := m.(asm_flag);
   |}.
 
@@ -327,6 +332,20 @@ Definition mem_write_regx (f: msb_flag) (r: regx_t) sz (w: word sz) (m: asmmem) 
     asm_regx := RegXMap.set m.(asm_regx) r (word_extend f (m.(asm_regx) r) w);
     asm_rip  := m.(asm_rip); 
     asm_xreg := m.(asm_xreg);
+    asm_regmask := m.(asm_regmask);
+    asm_flag := m.(asm_flag);
+  |}.
+
+
+Definition mem_write_regmask (f: msb_flag) (r: regmask_t) sz (w: word sz) (m: asmmem) :=
+  {|
+    asm_mem  := m.(asm_mem);
+    asm_scs  := m.(asm_scs);
+    asm_reg  := m.(asm_reg);
+    asm_regx := m.(asm_regx);
+    asm_rip  := m.(asm_rip); 
+    asm_xreg := m.(asm_xreg);
+    asm_regmask := RegMaskMap.set m.(asm_regmask) r (word_extend f (m.(asm_regmask) r) w);
     asm_flag := m.(asm_flag);
   |}.
 
@@ -339,6 +358,7 @@ Definition mem_write_xreg (f: msb_flag) (r: xreg_t) sz (w: word sz) (m: asmmem) 
     asm_regx := m.(asm_regx);
     asm_rip  := m.(asm_rip);
     asm_xreg := XRegMap.set m.(asm_xreg) r (word_extend f (m.(asm_xreg) r) w);
+    asm_regmask := m.(asm_regmask);
     asm_flag := m.(asm_flag);
   |}.
 
@@ -356,6 +376,7 @@ Definition mem_write_word (f:msb_flag) (s:asmmem) (args:asm_args) (ad:arg_desc) 
       | Reg r   => ok (mem_write_reg  f r w s)
       | Regx r  => ok (mem_write_regx  f r w s)
       | XReg x  => ok (mem_write_xreg f x w s)
+      | Regmask rm => ok (mem_write_regmask f rm w s)
       | Addr addr =>
           if k is AK_mem al
           then mem_write_mem al (decode_addr s addr) w s
@@ -534,6 +555,7 @@ Proof.
   move => ? ? _; case: d.1 => [ [] | ] //=.
   - by move => ? /ok_inj <-.
   move => k ? ?; case: onth => //; t_xrbindP => - [] // ? _.
+  - by move=> /ok_inj <-.
   - by move=> /ok_inj <-.
   - by move=> /ok_inj <-.
   - case: k => // al.

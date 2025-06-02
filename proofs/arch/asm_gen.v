@@ -261,19 +261,6 @@ Definition assemble_word_load rip ii al (sz: wsize) (e: rexpr) :=
     Let _ := assert (w1 == w2)
                     (E.werror ii e "out of bound constant") in
     ok (Imm w)
-  | Rexpr (Fapp1 (Ozeroext sz1 sz2) e1) =>
-    Let _ := assert (sz != sz1)
-                    (E.werror ii e "zeroext result size mismatch") in
-    match e1 with
-      | Fconst z =>
-          let w := wrepr sz2 z in
-          let w' := zero_extend sz1 w in
-          ok (Imm w')
-      | Fvar x =>
-          Let r := xreg_of_var ii x in
-          ok r
-      | _ => Error (E.werror ii e "unsupported operand in Ozeroext")
-    end
   | Rexpr (Fvar x) =>
     xreg_of_var ii x
   | Load al' sz' v e' =>

@@ -209,13 +209,12 @@ Lemma x86_lassign_correct s x ws e (w : word ws) s':
   write_lexpr x (Vword w) s = ok s' ->
   sem_fopn_args lcmd s = ok s'.
 Proof.
-Admitted.
-  (* move=> /=; t_xrbindP => v -> /= hv hwr.
+  move=> /=; t_xrbindP => v -> /= hv hwr.
   rewrite /exec_sopn /=.
   case: ifP => /= h; rewrite hv /= /sopn_sem /sopn_sem_ /=.
   + by rewrite /x86_MOV /= /size_8_64 h /= hwr.
   by rewrite /x86_VMOVDQ (wsize_nle_u64_size_128_256 h) /= hwr.
-Qed. *)
+Qed.
 
 Lemma x86_lmove_correct : lmove_correct x86_liparams.
 Proof.

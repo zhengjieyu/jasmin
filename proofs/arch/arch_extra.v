@@ -156,6 +156,8 @@ Class arch_toIdent :=
   ; toI_regmask  : ToIdent regmask
   ; toI_f  : ToIdent rflag
   ; inj_toI_reg_regx : forall (r:reg) (rx:regx), to_ident r <> to_ident rx
+  ; inj_toI_reg_regmask : forall (r:reg) (rm:regmask), to_ident r <> to_ident rm
+  ; inj_toI_regx_regmask : forall (rx:regx) (rm:regmask), to_ident rx <> to_ident rm
   }.
 
 #[global]
@@ -178,10 +180,17 @@ Module MkAToIdent : AToIdent_T.
 
   Section AUX.
 
-  Context {rtI : ToIdent reg} {rxtI : ToIdent regx}.
+  Context {rtI : ToIdent reg} {rxtI : ToIdent regx } {rmtI : ToIdent regmask }.
 
   Definition _inj_toI_reg_regx :=
      all (fun r:reg => all (fun rx:regx => to_ident r != to_ident rx) cenum) cenum.
+
+  Definition _inj_toI_reg_regmask :=
+    all (fun r:reg => all (fun rm:regmask => to_ident r != to_ident rm) cenum) cenum.
+  
+  Definition _inj_toI_regx_regmask :=
+    all (fun rx:regx => all (fun rm:regmask => to_ident rx != to_ident rm) cenum) cenum.
+
 
   Let r_eqType  := ceqT_eqType (T:= reg).  Canonical r_eqType.
   Let rx_eqType := ceqT_eqType (T:= regx). Canonical rx_eqType.
@@ -195,6 +204,21 @@ Module MkAToIdent : AToIdent_T.
     by have := hx rx; rewrite mem_cenum /= => /(_ erefl) /eqP.
   Qed.
 
+  Lemma inj_toI_reg_regmaskP : _inj_toI_reg_regmask ->
+  forall (r:reg) (rm:regmask), to_ident r <> to_ident rm.
+  Proof.
+    rewrite /_inj_toI_reg_regmask => /allP h r rm.
+    have := h r; rewrite mem_cenum /= => /(_ erefl) /allP hm.
+    by have := hm rm; rewrite mem_cenum /= => /(_ erefl) /eqP.
+  Qed.
+
+  Lemma inj_toI_regx_regmaskP : _inj_toI_regx_regmask ->
+  forall (rx:regx) (rm:regmask), to_ident rx <> to_ident rm.
+  Proof.
+    rewrite /_inj_toI_regx_regmask => /allP h rx rm.
+    have := h rx; rewrite mem_cenum /= => /(_ erefl) /allP hm.
+    by have := hm rm; rewrite mem_cenum /= => /(_ erefl) /eqP.
+  Qed.
   End AUX.
 
   Definition mk (toid : reg_kind -> stype -> string -> Ident.ident) :=
@@ -203,16 +227,18 @@ Module MkAToIdent : AToIdent_T.
     Let toI_x  := MkToIdent.mk (T:= xreg) (toid Normal (sword xreg_size)) in
     Let toI_regmask  := MkToIdent.mk (T:= regmask) (toid Mask (sword reg_size)) in
     Let toI_f  := MkToIdent.mk (T:= rflag) (toid Normal sbool) in
-    match @idP _inj_toI_reg_regx with
-    | ReflectT h =>
+    match @idP _inj_toI_reg_regx, @idP _inj_toI_reg_regmask, @idP _inj_toI_regx_regmask with
+    | ReflectT h, ReflectT h0, ReflectT h1=>
         ok {| toI_r := toI_r
             ; toI_rx := toI_rx
             ; toI_x  := toI_x
             ; toI_regmask := toI_regmask
             ; toI_f  := toI_f
             ; inj_toI_reg_regx := inj_toI_reg_regxP h
+            ; inj_toI_reg_regmask := inj_toI_reg_regmaskP h0
+            ; inj_toI_regx_regmask := inj_toI_regx_regmaskP h1
            |}
-    | _ => Error (pp_internal_error_s "arch_to_ident generation" "inj_toI_reg_regx")
+    | _, _, _ => Error (pp_internal_error_s "arch_to_ident generation" "inj_toI_reg_regx")
     end.
 
   End Section.
@@ -227,8 +253,20 @@ Lemma to_var_reg_neq_regx (r : reg_t) (x : regx_t) :
   to_var r <> to_var x.
 Proof. rewrite /to_var => -[]; apply: inj_toI_reg_regx. Qed.
 
+Lemma to_var_reg_neq_regmask (r : reg_t) (rm : regmask_t) :
+  to_var r <> to_var rm.
+Proof. rewrite /to_var => -[]; apply: inj_toI_reg_regmask. Qed.
+
+Lemma to_var_regx_neq_regmask (rx : regx_t) (rm : regmask_t) :
+  to_var rx <> to_var rm.
+Proof. rewrite /to_var => -[]; apply: inj_toI_regx_regmask. Qed.
+
 Lemma to_var_reg_neq_xreg (r : reg_t) (x : xreg_t) :
   to_var r <> to_var x.
+Proof. move=> [] hsize _; apply/eqP/reg_size_neq_xreg_size:hsize. Qed.
+
+Lemma to_var_regmask_neq_xreg (rm : regmask_t) (x : xreg_t) :
+  to_var rm <> to_var x.
 Proof. move=> [] hsize _; apply/eqP/reg_size_neq_xreg_size:hsize. Qed.
 
 Lemma to_var_regx_neq_xreg (r : regx_t) (x : xreg_t) :

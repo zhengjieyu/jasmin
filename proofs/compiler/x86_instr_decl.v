@@ -537,7 +537,7 @@ Notation mk_instr_w_w name semi ain aout nargs check prc valid pp_asm :=
 (* for load/store according mask register *)
 Notation mk_instr_w2_w_120_mask name semi check prc valid pp_asm :=
  ((fun ksz sz =>
-  mk_instr_safe (pp_sz_sz name false ksz sz) (w2_ty ksz sz) (w_ty sz) [:: Ek 1 [:: K0] ; Eu 2] [:: Ea 0] (reg_msb_flag sz) (semi ksz sz) (check) 3 (valid ksz sz) (pp_asm sz)), (name%string,prc)) (only parsing).
+  mk_instr_safe (pp_sz_sz name false ksz sz) (w2_ty ksz sz) (w_ty sz) [:: Ek 1 [:: K0] ; Eu 2] [:: Eu 0] (reg_msb_flag sz) (semi ksz sz) (check) 3 (valid ksz sz) (pp_asm sz)), (name%string,prc)) (only parsing).
 
 Notation mk_instr_w_w_kmov name semi ain aout nargs check prc valid pp_asm :=
 ((fun sz =>
