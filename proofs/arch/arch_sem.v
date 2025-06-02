@@ -116,6 +116,7 @@ Definition preserved_register (r : asm_typed_reg) (m0 m1 : asmmem) :=
   | ARegX r => (asm_regx m0) r = (asm_regx m1) r
   | AXReg r => (asm_xreg m0) r = (asm_xreg m1) r
   | ABReg r => (asm_flag m0) r = (asm_flag m1) r
+  | ARegmask _ => False
   end.
 
 (* FIXME we need to generalize this *)
@@ -241,6 +242,7 @@ Definition eval_asm_arg k (s: asmmem) (a: asm_arg) (ty: stype) : exec value :=
     | _        => type_error
     end
   | XReg x     => ok (Vword (s.(asm_xreg) x))
+  | Regmask _ => type_error
   end.
 
 Definition eval_arg_in_v (s:asmmem) (args:asm_args) (a:arg_desc) (ty:stype) : exec value :=
