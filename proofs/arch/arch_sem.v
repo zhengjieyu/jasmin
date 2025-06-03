@@ -118,7 +118,7 @@ Definition preserved_register (r : asm_typed_reg) (m0 m1 : asmmem) :=
   | ARegX r => (asm_regx m0) r = (asm_regx m1) r
   | AXReg r => (asm_xreg m0) r = (asm_xreg m1) r
   | ABReg r => (asm_flag m0) r = (asm_flag m1) r
-  | ARegmask _ => False
+  | ARegmask r => (asm_regmask m0) r = (asm_regmask m1) r
   end.
 
 (* FIXME we need to generalize this *)

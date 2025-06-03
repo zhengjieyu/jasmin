@@ -119,6 +119,9 @@ Proof.
   apply/eqP. move=> []. apply/eqP. exact: reg_size_neq_xreg_size.
 Qed.
 
+
+
+
 (* -------------------------------------------------------------------- *)
 (* Addresses.
  * An address consists of

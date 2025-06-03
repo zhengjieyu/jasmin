@@ -5,7 +5,11 @@
 From HB Require Import structures.
 From mathcomp Require Import ssreflect ssrfun ssrbool seq eqtype fintype.
 From Coq Require Import ZArith.
+Print LoadPath.
 Require Import strings utils.
+Require Import String.
+Local Open Scope string_scope.
+
 Import Utf8.
 Import word_ssrZ.
 
@@ -221,11 +225,14 @@ Definition pp_sz_sz_opk (s: string) (sign: bool) (sz sz': wsize) (opk: kmovop) (
   let sz'_str := string_of_wsize sz' in
   let suffix :=
     match opk with
-    | Movmask => String.append "u" (String.append sz_str (String.append (if sign then "s" else "u") sz'_str))
-    | Loadmask => String.append "r" (String.append sz_str (String.append "k" sz'_str))
-    | Storemask => String.append "k" (String.append sz_str (String.append "r" sz'_str))
+    | Movmask => 
+      "u" ++ sz_str ++ (if sign then "s" else "u") ++ sz'_str
+    | Loadmask =>
+      "r" ++ sz_str ++ "k" ++ sz'_str
+    | Storemask => 
+      "k" ++ sz_str ++ "r" ++ sz'_str
     end in
-  String.append s (String.append "_" suffix).
+  s ++ "_" ++ suffix.
 
 
 

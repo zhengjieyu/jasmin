@@ -1029,6 +1029,7 @@ Proof.
   case: onth => // -[] // r _; case: check_oreg => //=.
   + by rewrite /mem_write_reg !word_extend_CLEAR zero_extend_cut.
   + by rewrite /mem_write_regx !word_extend_CLEAR zero_extend_cut.
+  + by rewrite /mem_write_regmask !word_extend_CLEAR zero_extend_cut.
   by rewrite /mem_write_xreg !word_extend_CLEAR zero_extend_cut.
 Qed.
 
@@ -1070,7 +1071,7 @@ Lemma enforce_imm_arg_kind_correct a c a' :
   enforce_imm_arg_kind a c = Some a' ->
   check_arg_kind a' c.
 Proof.
-  case: a; case: c => [|||| b |] //=; try by move=> ? [<-].
+  case: a; case: c => [||||| b |] //=; try by move=> ? [<-].
   move=> checker ws1 ws2 w.
   by case: ifP => // /andP [] /eqP -> /= h [<-] /=; rewrite h eqxx.
 Qed.
@@ -1312,6 +1313,7 @@ Proof.
     case: a h => // r ok_r; (eexists; first reflexivity).
     + exact: (ofgetreg eqm ok_r ok_v).
     + exact: (ofgetregx eqm ok_r ok_v).
+    + exact: (ofgetregmask eqm ok_r ok_v).
     exact: (ofgetxreg eqm ok_r ok_v).
   move => al' sz' ? ? _ /=; t_xrbindP => /eqP <-{sz'} ok_al' d ok_d <- ptr w ok_w ok_ptr uptr u ok_u ok_uptr ? ok_rd ?; subst v => /=.
   case: (eqm) => _ eqmem _ _ _ _ _.
@@ -1331,6 +1333,9 @@ Context
   (p' : asm_prog)
   (ok_p' : assemble_prog agparams p = ok p').
 
+Print assemble_prog.
+Locate assemble_prog.
+
 Notation rip := (mk_ptr (lp_rip p)).
 Notation rsp := (mk_ptr (lp_rsp p)).
 
@@ -1347,13 +1352,15 @@ Lemma assemble_progP :
 Proof.
   move: ok_p'.
   rewrite /assemble_prog.
-  t_xrbindP => /andP [/eqP ok_rip /eqP ok_ripx] /eqP ok_rsp fds ok_fds <-.
+  t_xrbindP => /andP [/andP [/eqP ok_rip /eqP ok_ripx] /eqP ok_ripmask] /eqP ok_rsp fds ok_fds <-.
   split => //.
   split => r heq //.
   - move: ok_rip.
     by rewrite -heq /to_reg to_varK.
   - move: ok_ripx.
     by rewrite -heq /to_regx to_varK.
+  - move: ok_ripmask.
+    by rewrite -heq /to_regmask to_varK.
   - move: heq.
     rewrite /to_var /rtype.
     move=> [] hsz _.
@@ -1402,6 +1409,9 @@ Proof. apply: enum_in_Sv => ??. rewrite /all_vars !Sv.union_spec. by auto. Qed.
 Lemma regx_in_all (r:regx_t): Sv.In (to_var r) all_vars.
 Proof. apply: enum_in_Sv => ??. rewrite /all_vars !Sv.union_spec. by auto. Qed.
 
+Lemma regmask_in_all (r:regmask_t): Sv.In (to_var r) all_vars.
+Proof. apply: enum_in_Sv => ??. rewrite /all_vars !Sv.union_spec. by auto. Qed.
+
 Lemma xreg_in_all (r:xreg_t): Sv.In (to_var r) all_vars.
 Proof. apply: enum_in_Sv => ??. rewrite /all_vars !Sv.union_spec. by auto. Qed.
 
@@ -1413,7 +1423,8 @@ Proof.
   case: x => //= r'.
   + by move=> h; have -> := inj_to_var h.
   + by move=> h; elim (to_var_reg_neq_regx h).
-  by move=> h; elim (to_var_reg_neq_xreg h).
+  + by move=> h; elim (to_var_reg_neq_xreg h).
+  by move=> h; elim (to_var_reg_neq_regmask h).
 Qed.
 
 Lemma to_var_typed_regx r x : to_var r = var_of_asm_typed_reg x -> x = ARegX r.
@@ -1421,7 +1432,17 @@ Proof.
   case: x => //= r'.
   + by move=> h; elim (to_var_reg_neq_regx (sym_eq h)).
   + by move=> h; have -> := inj_to_var h.
-  by move=> h; elim (to_var_regx_neq_xreg h).
+  + by move=> h; elim (to_var_regx_neq_xreg h).
+  by move=> h; elim (to_var_regx_neq_regmask h).
+Qed.
+
+Lemma to_var_typed_regmask r x : to_var r = var_of_asm_typed_reg x -> x = ARegmask r.
+Proof.
+  case: x => //= r'.
+  + by move=> h; elim (to_var_reg_neq_regmask (sym_eq h)).
+  + by move=> h; elim (to_var_regx_neq_regmask (sym_eq h)).
+  + by move=> h; elim (to_var_regmask_neq_xreg h).
+  by move=> h; have -> := inj_to_var h.
 Qed.
 
 Lemma to_var_typed_xreg r x : to_var r = var_of_asm_typed_reg x -> x = AXReg r.
@@ -1429,7 +1450,8 @@ Proof.
   case: x => //= r'.
   + by move=> h; elim (to_var_reg_neq_xreg (sym_eq h)).
   + by move=> h; elim (to_var_regx_neq_xreg (sym_eq h)).
-  by move=> h; have -> := inj_to_var h.
+  + by move=> h; have -> := inj_to_var h.
+  + by move=> h; elim (to_var_regmask_neq_xreg (sym_eq h)).
 Qed.
 
 Lemma to_var_typed_flag r x : to_var r = var_of_asm_typed_reg x -> x = ABReg r.
@@ -1621,7 +1643,7 @@ Proof.
   t_xrbindP=> ves hves [[scs m] vs] ho; t_xrbindP=> s hw ?; subst ls' => /=.
   apply (match_state_step1 (ls':= ((of_estate s (lfn ls) (lpc ls).+1))) hnth).
   rewrite ok_fd /=.
-  case: (hloeq) ho => /= -> -> _ _ _ _ _ _ ho.
+  case: (hloeq) ho => /= -> -> _ _ _ _ _ _ _ ho.
   have [xs' hxs'] := (eval_syscall_spec2 ho).
   rewrite hxs' /=.
   eexists; first reflexivity.
@@ -1688,12 +1710,12 @@ Proof.
   - by apply: write_lvals_emem hw; apply: get_lvar_to_lvals.
 
   - rewrite heqx /X; first by rewrite hgetrip hrip.
-    case: assemble_progP => -[] hripr hriprx hripxr hripf _ _ _.
+    case: assemble_progP => -[] hripr hriprx hriprm hripxr hripf _ _ _.
     move=> /Sv.union_spec [] hin.
     + have := SvP.MP.FM.diff_1 hin.
-      rewrite /= /all_vars !Sv.union_spec => -[ | [ | []]] /sv_of_listP
+      rewrite /= /all_vars !Sv.union_spec => -[ | [ | [ | []]]] /sv_of_listP
         /(mapP (T1:= @ceqT_eqType _ _)) => -[r _ hr];
-        [elim: (hripr r)|elim: (hriprx r)|elim: (hripxr r)|elim: (hripf r)];
+        [elim: (hripr r)|elim: (hriprx r)|elim: (hriprm r)|elim: (hripxr r)|elim: (hripf r)];
         by rewrite hr.
     move: hin.
     rewrite /R /= vrvs_to_lvals.
@@ -1724,6 +1746,21 @@ Proof.
     + have := regx_in_all r; SvD.fsetdec.
     rewrite /one_varmap.callee_saved /= => /sv_of_listP /mapP [x] /hpr.
     move=> h /to_var_typed_regx ?; subst x.
+    rewrite -h heqx // /X.
+    SvD.fsetdec.
+
+  - move=> r.
+    have hinR : ~ Sv.In (to_var r) R.
+    + rewrite /R /= vrvs_to_lvals => /sv_of_listP.
+      move=> /(mapP (T1 := @ceqT_eqType _ _)) [x _] /(@sym_eq var).
+      exact: to_var_reg_neq_regmask.
+    case: (Sv_memP (to_var r) syscall_kill) => hinK.
+    + by have /(_ erefl) -> /= := hkill _ hinK hinR.
+    move: (hinK); rewrite /syscall_kill => hnin.
+    have : Sv.In (to_var r) one_varmap.callee_saved.
+    + have := regmask_in_all r; SvD.fsetdec.
+    rewrite /one_varmap.callee_saved /= => /sv_of_listP /mapP [x] /hpr.
+    move=> h /to_var_typed_regmask ?; subst x.
     rewrite -h heqx // /X.
     SvD.fsetdec.
 
@@ -1830,7 +1867,7 @@ Proof.
     rewrite /eval_PUSH truncate_word_u /=.
     rewrite to_var_rsp in hsp.
     have -> := var_of_regP_eq hloeq hsp htow_sp.
-    rewrite /mem_write_mem; case: (hloeq) => /= _ <- _ _ _ _ _ _.
+    rewrite /mem_write_mem; case: (hloeq) => /= _ <- _ _ _ _ _ _ _.
     rewrite hm1 /=; apply: eval_jumpP; last by apply hjump.
     set vi := {| v_var := to_var ad_rsp; v_info := dummy_var_info |}.
     set ls1 := (X in to_estate X).
@@ -1845,7 +1882,7 @@ Proof.
     rewrite /eval_POP truncate_word_u /=.
     rewrite to_var_rsp in hsp.
     have -> := var_of_regP_eq hloeq hsp htow_sp.
-    case: (hloeq) => /= _ <- _ _ _ _ _ _.
+    case: (hloeq) => /= _ <- _ _ _ _ _ _ _.
     rewrite ok_ptr /=.
     change reg_size with Uptr in ptr.
     replace (decode_label _ ptr) with (Some r);
@@ -1969,14 +2006,14 @@ Proof.
   have /saved_registers E :
     Sv.In (var_of_asm_typed_reg r) (sv_of_list var_of_asm_typed_reg callee_saved).
   - by apply/sv_of_listP.
-  case: M => /= _ _ _ _ Mr Mrx Mxr Mf.
-  case: M' => /= _ _ _ _ Mr' Mrx' Mxr' Mf'.
+  case: M => /= _ _ _ _ Mr Mrx Mrm Mxr Mf.
+  case: M' => /= _ _ _ _ Mr' Mrx' Mrm' Mxr' Mf'.
   assert (h1 := Vm.getP vm (var_of_asm_typed_reg r)).
   move/ok_vm: hr h1.
   case: r E => r /= E;
-    [ move: (Mr' r) (Mr r) | move: (Mrx' r) (Mrx r) | move: (Mxr' r) (Mxr r) | move: (Mf' r) (Mf r) ];
+    [ move: (Mr' r) (Mr r) | move: (Mrx' r) (Mrx r) | move: (Mxr' r) (Mxr r) | move: (Mrm' r) (Mrm r) | move: (Mf' r) (Mf r) ];
     rewrite /get_var E.
-  1-3: by move=> + + + /compat_valEl /= h;
+  1-4: by move=> + + + /compat_valEl /= h;
    case h => [-> //| [ws' [w ->]]] hle1 /= X' X /is_okP[] ? /truncate_wordP []
    /(cmp_le_antisym hle1) ? _; subst ws';
    rewrite -(word_uincl_eq X) -(word_uincl_eq X').
@@ -2035,12 +2072,14 @@ Definition vmap_of_asm_mem
   let pword_of_reg r   := (asm_reg s r : sem_ot (sword reg_size)) in
   let pword_of_regx rx := (asm_regx s rx: sem_ot (sword reg_size)) in
   let pword_of_xreg xr := (asm_xreg s xr: sem_ot (sword xreg_size)) in
+  let pword_of_regmask rm := (asm_regmask s rm: sem_ot (sword reg_size)) in
   let pbool_of_flag f  := (if asm_flag s f is Def b then Some b else None : sem_ot sbool) in
   let vm := Vm.init.[mk_ptr rsp <- Vword sp]
                    .[mk_ptr rip <- Vword (asm_rip s)] in
   let vm := vmap_set_vars pword_of_reg vm registers in
   let vm := vmap_set_vars pword_of_regx vm registerxs in
   let vm := vmap_set_vars pword_of_xreg vm xregisters in
+  let vm := vmap_set_vars pword_of_regmask vm registermasks in
   let vm := vmap_set_vars (t := sbool) pbool_of_flag vm rflags in
   vm.
 
@@ -2048,8 +2087,8 @@ Definition get_typed_reg_value (st : asmmem) (r : asm_typed_reg) : value :=
   match r with
   | ARReg r => Vword (asm_reg  st r)
   | ARegX r => Vword (asm_regx st r)
-  | ARegmask r => Vword (asm_regmask st r)
   | AXReg r => Vword (asm_xreg st r)
+  | ARegmask r => Vword (asm_regmask st r)
   | ABReg r => of_rbool (asm_flag st r)
   end.
 

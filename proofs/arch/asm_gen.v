@@ -642,7 +642,8 @@ Definition assemble_prog (p : lprog) : cexec asm_prog :=
   Let _ :=
     assert
       ((to_reg  rip == None :> option ceqT_eqType) &&
-       (to_regx rip == None :> option ceqT_eqType))
+       (to_regx rip == None :> option ceqT_eqType) &&
+       (to_regmask rip == None :> option ceqT_eqType))
       (E.gen_error true None None (pp_s "Invalid RIP"))
   in
   Let _ :=
@@ -667,10 +668,12 @@ Lemma vflagsP x : Sv.In x vflags -> vtype x = sbool.
 Proof. by move=> /sv_of_listP /in_map [? _ ->]. Qed.
 
 Definition all_vars :=
-    Sv.union (sv_of_list to_var registers)
-   (Sv.union (sv_of_list to_var registerxs)
-   (Sv.union (sv_of_list to_var xregisters)
-             vflags)).
+  Sv.union (sv_of_list to_var registers)
+  (Sv.union (sv_of_list to_var registerxs)
+  (Sv.union (sv_of_list to_var registermasks)
+  (Sv.union (sv_of_list to_var xregisters)
+            vflags))).
+
 
 #[global] Instance ovm_i : one_varmap.one_varmap_info := {
   syscall_sig  :=
