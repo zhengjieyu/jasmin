@@ -357,7 +357,7 @@ Notation assemble_extra_correct :=
   (assemble_extra_correct riscv_agparams) (only parsing).
 
 (* FIXME: the following line fixes type inference with Coq 8.16 *)
-Local Instance the_asm : asm _ _ _ _ _ _ := _.
+Local Instance the_asm : asm _ _ _ _ _ _ _ := _.
 
 (* TODO: move *)
 Lemma negb_wlt ws sg (w1 w2 : word ws) : ~~ (wlt sg w1 w2) = wle sg w2 w1.

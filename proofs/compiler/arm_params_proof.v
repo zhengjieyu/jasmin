@@ -360,7 +360,7 @@ Notation assemble_extra_correct :=
   (assemble_extra_correct arm_agparams) (only parsing).
 
 (* FIXME: the following line fixes type inference with Coq 8.16 *)
-Local Instance the_asm : asm _ _ _ _ _ _ := _.
+Local Instance the_asm : asm _ _ _ _ _ _ _ := _.
 
 Lemma condt_of_rflagP rf r :
   arm_eval_cond (get_rf rf) (condt_of_rflag r) = to_bool (of_rbool (rf r)).

@@ -552,7 +552,7 @@ Section PROOF.
     | LowerAssgn => True
     end.
   Proof.
-    rewrite /lower_cassgn_classify.
+    (* rewrite /lower_cassgn_classify.
     move: e Hs=> [z|b|n|x|al aa ws x e | aa ws len x e |al sz x e| o e|o e1 e2| op es |e e1 e2] //.
     + case: x => - [] [] [] // sz vn vi vs //= /[dup] ok_v.
       case/type_of_get_gvar => sz' [Hs Hs'].
@@ -1057,7 +1057,7 @@ Section PROOF.
       by rewrite /= -!/(wrepr U128 _) !wrepr_unsigned.
      (* Pif *)
      rewrite /size_16_64.
-     by case: stype_of_lval => // w hv; case: andP => // - [] /andP[] -> -> /eqP <-; eauto.
+     by case: stype_of_lval => // w hv; case: andP => // - [] /andP[] -> -> /eqP <-; eauto. *)
   Admitted.
 
   Lemma vmap_eq_except_set q s x v:

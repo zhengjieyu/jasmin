@@ -450,9 +450,7 @@ Lemma loop_large_bodyP s1 s2 n :
         s3.(evm).[zfi] = Vbool (ZF_of_word (wrepr U64 n - wrepr U64 (wsize_size ws)))
       & state_rel_loop_large loop_large_vars s1 s3 (n - wsize_size ws) top].
 Proof.
-Admitted.
-
-  (* move=> hsr hlt.
+  move=> hsr hlt.
   have hn: (0 < wsize_size ws <= n)%Z.
   + split=> //.
     have := hsr.(sr_aligned).
@@ -494,7 +492,7 @@ Admitted.
     do 6 rewrite (@get_var_neq _ _ _ vlri) //.
     rewrite [get_var _ _ vlri]/get_var hsr.(srll_vlr) /=.
     rewrite /exec_sopn /= truncate_word_u /= /sopn_sem /sopn_sem_ /= /x86_VMOVDQ.
-    rewrite wsize_nle_u64_size_128_256 /=; last by apply /negbTE /negP.
+    rewrite wsize_nle_u64_size_128_512 /=; last by apply /negbTE /negP.
     rewrite get_var_eq //=.
     rewrite get_var_neq;
       last by move=> h; apply /rsp_nin /sv_of_listP;
@@ -554,7 +552,8 @@ Admitted.
     rewrite Z.mul_1_r GRing.addrC GRing.subrK.
     by rewrite WArray.arr_is_align.
   by lia.
-Qed. *)
+Qed.
+
 
 Lemma loop_large_loopP s1 s2 n :
   state_rel_loop_large loop_large_vars s1 s2 n top ->
@@ -628,8 +627,7 @@ Lemma loop_large_initP (s1 : estate) :
     lsem lp (of_estate s1 fn (size lc)) (of_estate s2 fn (size lc + 6)) /\
     state_rel_loop_large loop_large_vars s1 s2 stk_max top.
 Proof.
-Admitted.
-(* Local Opaque wsize_size.
+Local Opaque wsize_size.
   move=> hvalid hrsp.
   have hlinear:
     [elaborate (is_linear_of lp fn (lc ++ loop_large_cmd rspn lbl ws_align ws stk_max ++ cmd))].
@@ -698,7 +696,7 @@ Admitted.
     by rewrite Vm.setP_eq.
   by lia.
 Local Transparent wsize_size.
-Qed. *)
+Qed.
 
 Lemma loop_large_finalP (s1 s2 : estate) :
   state_rel_loop_large loop_large_vars s1 s2 0 top ->
@@ -1076,8 +1074,7 @@ Lemma unrolled_large_bodyP s1 s2 n :
                 (of_estate s3 fn (size lc + 4 + n.+1))
       & state_rel_unrolled_large unrolled_large_vars s1 s3 (stk_max - Z.of_nat n.+1 * wsize_size ws) top].
 Proof.
-Admitted.
-(* Local Opaque wsize_size Z.of_nat.
+Local Opaque wsize_size Z.of_nat.
   move=> hsr hlt.
   have hlinear:
     [elaborate (is_linear_of lp fn (lc ++ unrolled_large_cmd rspn ws_align ws stk_max))].
@@ -1127,7 +1124,7 @@ Admitted.
     rewrite /eval_instr /=.
     rewrite [get_var _ _ vlri]/get_var hsr.(srul_vlr) /=.
     rewrite /exec_sopn /= (@truncate_word_u ws) /= /sopn_sem /sopn_sem_ /= /x86_VMOVDQ.
-    rewrite wsize_nle_u64_size_128_256 /=; last by apply /negbTE /negP.
+    rewrite wsize_nle_u64_size_128_512 /=; last by apply /negbTE /negP.
     rewrite /get_var /= hsr.(sr_rsp) /= !truncate_word_u /=.
     rewrite hm' /=.
     rewrite /of_estate /= /lnext_pc /=.
@@ -1168,7 +1165,7 @@ Admitted.
     by rewrite WArray.arr_is_align.
   by lia.
 Local Transparent wsize_size Z.of_nat.
-Qed. *)
+Qed.
 
 Lemma unrolled_large_loopP s1 s2 :
   state_rel_unrolled_large unrolled_large_vars s1 s2 stk_max top ->
@@ -1214,8 +1211,7 @@ Lemma unrolled_large_initP (s1 : estate) :
     lsem lp (of_estate s1 fn (size lc)) (of_estate s2 fn (size lc + 4)) /\
     state_rel_unrolled_large unrolled_large_vars s1 s2 stk_max top.
 Proof.
-Admitted.
-(* Local Opaque wsize_size.
+Local Opaque wsize_size.
   move=> hvalid hrsp.
   have hlinear:
     [elaborate (is_linear_of lp fn (lc ++ unrolled_large_cmd rspn ws_align ws stk_max))].
@@ -1270,7 +1266,7 @@ Admitted.
   + by rewrite Vm.setP_eq.
   by lia.
 Local Transparent wsize_size.
-Qed. *)
+Qed.
 
 Lemma unrolled_large_finalP (s1 s2 : estate) :
   state_rel_unrolled_large unrolled_large_vars s1 s2 0 top ->

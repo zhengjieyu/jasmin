@@ -1141,7 +1141,7 @@ Proof.
   - by case: LM' => /= _ <-.
   - by case: LM' => <-.
   move=> hszs pr hnvalid.
-  case: LM' => /= _ <- _ _ _ _ _ _.
+  case: LM' => /= _ <- _ _ _ _ _ _ _.
   by apply (hzero hszs pr hnvalid).
 Qed.
 
