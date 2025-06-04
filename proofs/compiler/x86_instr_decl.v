@@ -4,6 +4,10 @@ From mathcomp Require Import ssralg word word_ssrZ.
 Require Import utils strings word waes sha256 sem_type global oseq sopn.
 Import Utf8 Relation_Operators ZArith.
 
+From Coq Require Import String.
+Local Open Scope string_scope.
+
+
 Require Export arch_decl.
 Require Import x86_decl.
 

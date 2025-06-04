@@ -107,17 +107,7 @@ Definition is_reg_l (x:lval) :=
 
 
 
-(* Definition mov_ws ws x y tag :=
-    if (is_regx_e y || is_regx_l x) && (U32 ≤ ws)%CMP then 
-      Copn [:: x] tag (Ox86 (MOVX ws)) [:: y]
-    else if (is_regmask_e y && is_reg_l x) then
-      Copn [:: x] tag (Ox86 (KMOVREG1 ws)) [:: y]
-    else if (is_reg_e y && is_regmask_l x) then
-      Copn [:: x] tag (Ox86 (KMOVREG2 ws)) [:: y]
-    else if (is_regmask_e y || is_regmask_l x) then
-      Copn [:: x] tag (Ox86 (KMOV ws)) [:: y]
-    else
-      Copn [:: x] tag (Ox86 (MOV ws)) [:: y]. *)
+
 
 Section LOWERING.
 
@@ -173,7 +163,7 @@ Definition wsize_of_stype (ty: stype) : wsize :=
   | sbool | sint | sarr _ => U64
   end.
 
-Definition mov_ws ws x y tag :=
+(* Definition mov_ws ws x y tag :=
   if (is_regx_e y || is_regx_l x) && (U32 ≤ ws)%CMP then 
     Copn [:: x] tag (Ox86 (MOVX ws)) [:: y]
   else if (is_regmask_e y && is_reg_l x) then
@@ -187,7 +177,13 @@ Definition mov_ws ws x y tag :=
     else
       Cassgn x tag (sword ws) y
   else
-    Copn [:: x] tag (Ox86 (MOV ws)) [:: y].
+    Copn [:: x] tag (Ox86 (MOV ws)) [:: y]. *)
+
+Definition mov_ws ws x y tag :=
+  if (is_regx_e y || is_regx_l x) && (U32 ≤ ws)%CMP then 
+    Copn [:: x] tag (Ox86 (MOVX ws)) [:: y]
+  else
+    Copn [:: x] tag (Ox86 (MOV ws)) [:: y].   
 
 Definition wsize_of_lval (lv: lval) : wsize :=
   match lv with
@@ -331,11 +327,18 @@ Definition lower_cassgn_classify ty e x : lower_cassgn_t :=
   let k8 sz := kb (sz ≤ U64)%CMP sz in
   let k16 sz := kb ((U16 ≤ sz) && (sz ≤ U64))%CMP sz in
   let k32 sz := kb ((U32 ≤ sz) && (sz ≤ U64))%CMP sz in
+  let szty := wsize_of_stype ty in
   match e with
   | Pget _ _ sz {| gv := v |} _
   | Pvar {| gv := ({| v_var := {| vtype := sword sz |} |} as v) |} =>
-    if (sz ≤ U64)%CMP
-    then LowerMov (if is_var_in_memory v then is_lval_in_memory x else false)
+    if (sz ≤ U64)%CMP then
+      if (is_regmask_e e && is_reg_l x) then
+        LowerCopn (Ox86 (KMOVALL sz szty Storemask)) [:: e]
+      else if (is_reg_e e && is_regmask_l x) then 
+        LowerCopn (Ox86 (KMOVALL sz szty Loadmask)) [:: e]
+      else if (is_regmask_e e || is_regmask_l x) && (sz == szty) then
+        LowerCopn (Ox86 (KMOVALL szty szty Movmask)) [:: e]
+      else LowerMov (if is_var_in_memory v then is_lval_in_memory x else false)
     else if ty is sword szo
     then if (U128 ≤ szo)%CMP then LowerCopn (Ox86 (VMOVDQU szo)) [:: e ]
     else if (U32 ≤ szo)%CMP then LowerCopn (Ox86 (MOVV szo)) [:: e ]
@@ -362,7 +365,10 @@ Definition lower_cassgn_classify ty e x : lower_cassgn_t :=
     end (LowerCopn (Ox86 (MOVSX szo szi)) [:: a])
   | Papp1 (Ozeroext szo szi) a =>
     if is_regmask_e a then
-      LowerMov false
+      if is_reg_l x then
+        LowerCopn (Ox86 (KMOVALL szi szo Storemask)) [:: e]
+      else 
+        LowerCopn (Ox86 (KMOVALL szo szo Movmask)) [:: e]
     else
       match szi with
       | U8 => k16 szo (LowerCopn (Ox86 (MOVZX szo szi)) [:: a])

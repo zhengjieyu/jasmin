@@ -2102,12 +2102,29 @@ Proof.
   assert (h := sword_reg_neq_xreg).
   case: r => r.
   all: repeat (rewrite get_var_vmap_set_vars_other_type; last done).
+  + rewrite get_var_vmap_set_vars_other; last first.
+    +  apply/allP => /= x _.
+     apply/eqP/nesym/to_var_reg_neq_regmask.
+  rewrite get_var_vmap_set_vars_other_type; last done.
   + rewrite get_var_vmap_set_vars_other.
-    + rewrite get_var_vmap_set_vars_finite //=; exact cenumP.
+   + rewrite get_var_vmap_set_vars_finite //=; exact cenumP.
     by apply/allP => /= x _; rewrite eq_sym; apply/eqP/to_var_reg_neq_regx.
-  + by rewrite get_var_vmap_set_vars_finite //=; exact: cenumP.
-  + by rewrite get_var_vmap_set_vars_finite //=; exact: cenumP.
-  by rewrite get_var_vmap_set_vars_finite /=;[case: (asm_flag s r)| exact: cenumP].
+
+  + rewrite get_var_vmap_set_vars_other; last first.
+    +  apply/allP => /= x _.
+     apply/eqP/nesym/to_var_regx_neq_regmask.
+  rewrite get_var_vmap_set_vars_other_type; last done.
+   + rewrite get_var_vmap_set_vars_finite //=; exact cenumP.
+
+   + rewrite get_var_vmap_set_vars_other; last first.
+     +  apply/allP => /= x _.
+     apply/eqP/to_var_regmask_neq_xreg.
+    + rewrite get_var_vmap_set_vars_finite //=; exact cenumP.
+
+   + rewrite get_var_vmap_set_vars_finite //=; exact cenumP.
+
+   by rewrite get_var_vmap_set_vars_finite /=;[case: (asm_flag s r)| exact: cenumP].
+
 Qed.
 
 Definition estate_of_asm_mem
@@ -2122,22 +2139,23 @@ Proof.
   split => //=.
   - rewrite /vmap_of_asm_mem.
     rewrite get_var_vmap_set_vars_other_type //.
+    rewrite get_var_vmap_set_vars_other; last first.
+    + apply/allP => /= r _; apply/eqP. exact: rip_not_regmask.
     rewrite get_var_vmap_set_vars_other_type;
-      last exact: sword_reg_neq_xreg.
+    last exact: sword_reg_neq_xreg.
     rewrite get_var_vmap_set_vars_other; last first.
     + apply/allP => /= r _; apply/eqP. exact: rip_not_regx.
     rewrite get_var_vmap_set_vars_other; last first.
     + apply/allP => /= r _; apply/eqP. exact: rip_not_reg.
-    rewrite get_var_vmap_set_vars_other; last first.
-    + apply/allP => /= r _; apply/eqP. exact: rip_not_regmask.
     by rewrite Vm.setP_eq //= cmp_le_refl.
-  - by move => r; rewrite (get_var_vmap_of_asm_mem _ _ _ _ (ARReg r)).
-  - by move => r; rewrite (get_var_vmap_of_asm_mem _ _ _ _ (ARegX r)).
-  - by move => r; rewrite (get_var_vmap_of_asm_mem _ _ _ _ (ARegmask r)).
-  - by move => r; rewrite (get_var_vmap_of_asm_mem _ _ _ _ (AXReg r)).
-  by move => r; rewrite (get_var_vmap_of_asm_mem _ _ _ _ (ABReg r)).
-Qed.
 
+    - by move => r; rewrite (get_var_vmap_of_asm_mem _ _ _ _ (ARReg r)).
+    - by move => r; rewrite (get_var_vmap_of_asm_mem _ _ _ _ (ARegX r)).
+    - by move => r; rewrite (get_var_vmap_of_asm_mem _ _ _ _ (ARegmask r)).
+    - by move => r; rewrite (get_var_vmap_of_asm_mem _ _ _ _ (AXReg r)).
+    by move => r; rewrite (get_var_vmap_of_asm_mem _ _ _ _ (ABReg r)).
+  Qed.
+   
 End PROG.
 
 Lemma lom_eqv_ext rip s xs vm :
