@@ -957,17 +957,11 @@ Notation mk_instr_w_w'_kmovall name semi ain aout nargs check prc valid pp_asm :
 Definition check_kmov_cond (sz sz': wsize) (opk: kmovop) : bool :=
   match opk with
   | Movmask =>
-      wsize_eq sz sz'
+      sz == sz'
   | Loadmask =>
-      if wsize_le sz' U32 then
-        wsize_eq sz U32
-      else
-        wsize_eq sz' sz
+      sz == cmp_max sz' U32
   | Storemask =>
-      if wsize_le sz U32 then
-        wsize_eq sz' U32 
-      else
-        wsize_eq sz' sz 
+      sz' == cmp_max sz U32
   end.
 
             
@@ -979,7 +973,7 @@ Definition check_kmovall (opk : kmovop) :=
   end.
 
 
-Definition x86_KMOVALL sz sz' (opk: kmovop) (x: word sz) : tpl (w_ty sz') := TODO_AVX512 "KMOV".
+Definition x86_KMOVALL sz sz' (opk: kmovop) (x: word sz) : tpl (w_ty sz') := zero_extend sz' x.
 Definition Ox86_KMOVALL_instr               :=
   mk_instr_w_w'_kmovall "KMOVALL" x86_KMOVALL [:: Eu 1] [:: Eu 0] 2
               check_kmovall (primWk_8_64 KMOVALL) (fun sz sz' (opk: kmovop) => size_8_64 sz && size_8_64 sz' && check_kmov_cond sz sz' opk) pp_kmovall.

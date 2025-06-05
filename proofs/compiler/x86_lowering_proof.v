@@ -552,7 +552,7 @@ Section PROOF.
     | LowerAssgn => True
     end.
   Proof.
-    (* rewrite /lower_cassgn_classify.
+    rewrite /lower_cassgn_classify.
     move: e Hs=> [z|b|n|x|al aa ws x e | aa ws len x e |al sz x e| o e|o e1 e2| op es |e e1 e2] //.
     + case: x => - [] [] [] // sz vn vi vs //= /[dup] ok_v.
       case/type_of_get_gvar => sz' [Hs Hs'].
@@ -562,7 +562,32 @@ Section PROOF.
       case/truncate_valI: Hv' => s'' [] w'' [] ? ok_w ?; subst.
       case: Hs => ?; subst s''.
       case: ifP.
-      * move => h; eexists; first reflexivity.
+      *move => h.
+      case: andP.
+      - case => sourceis_regmask destinationis_reg.
+        case : ifP; last done.
+        move => storemaskisvalid.
+        rewrite /= ok_v /exec_sopn /sopn_sem /= /size_8_64 h 
+        (cmp_le_trans hle (cmp_le_trans Hs' h)) storemaskisvalid /sopn_sem_ /= /x86_KMOVALL.
+        have ?: sz'' = sz.
+        move : storemaskisvalid. apply (@cmp_maxP _ _ _ sz U32 (λ z, sz'' == z → sz'' = sz)); last first.
+        by move => _ /eqP.
+        move => szle32 /eqP ?;subst.
+        apply : cmp_le_antisym; last done.
+        exact : (cmp_le_trans hle). subst.
+        by rewrite ok_w /= zero_extend_u.
+        
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      eexists; first reflexivity.
         split; first exact: (cmp_le_trans hle (cmp_le_trans Hs' h)).
         by eexists _, _; split; last reflexivity.
       move => hsz_le_64.
@@ -1057,8 +1082,8 @@ Section PROOF.
       by rewrite /= -!/(wrepr U128 _) !wrepr_unsigned.
      (* Pif *)
      rewrite /size_16_64.
-     by case: stype_of_lval => // w hv; case: andP => // - [] /andP[] -> -> /eqP <-; eauto. *)
-  Admitted.
+     by case: stype_of_lval => // w hv; case: andP => // - [] /andP[] -> -> /eqP <-; eauto.
+  Qed.
 
   Lemma vmap_eq_except_set q s x v:
     Sv.In x q → s.[ x <- v] =[\q] s.

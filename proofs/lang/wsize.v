@@ -97,17 +97,6 @@ Definition wsize_cmp s s' :=
  | U512, U512 => Eq
  end.
 
- Definition wsize_le s s' : bool :=
- match wsize_cmp s s' with
- | Lt | Eq => true
- | Gt => false
- end.
-
-Definition wsize_eq s s' : bool :=
- match wsize_cmp s s' with
- | Eq => true
- | _ => false
- end.
 
 
 #[export]
