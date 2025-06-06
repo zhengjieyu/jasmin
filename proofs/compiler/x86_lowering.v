@@ -336,7 +336,7 @@ Definition lower_cassgn_classify ty e x : lower_cassgn_t :=
         chk (szty == cmp_max sz U32)
         (LowerCopn (Ox86 (KMOVALL sz szty Storemask)) [:: e])
       else if (is_reg_e e && is_regmask_l x) then 
-        chk (sz == cmp_max szty U32)
+        chk ((U32 ≤ szty)%CMP && (sz == szty))
         (LowerCopn (Ox86 (KMOVALL sz szty Loadmask)) [:: e])
       else if (is_regmask_e e || is_regmask_l x) then
         chk (sz == szty)
@@ -367,13 +367,16 @@ Definition lower_cassgn_classify ty e x : lower_cassgn_t :=
     | _ => chk false
     end (LowerCopn (Ox86 (MOVSX szo szi)) [:: a])
   | Papp1 (Ozeroext szo szi) a =>
-    if is_regmask_e a then
+    if ((is_regmask_e a) && ((szi ≤ szo)%CMP && (szo ≤ U64)%CMP)) then
       if is_reg_l x then
-        chk (szty == cmp_max szi U32)
-        (LowerCopn (Ox86 (KMOVALL szi szo Storemask)) [:: e])
+        chk (szo == cmp_max szi U32)
+        (LowerCopn (Ox86 (KMOVALL szi szo Storemask)) [:: a])
+      else if is_regmask_l x then
+        chk ((U32 ≤ szo)%CMP && (szi == szty))
+        (LowerCopn (Ox86 (KMOVALL szi szo Loadmask)) [:: a])
       else 
-        chk (szty == szi)
-        (LowerCopn (Ox86 (KMOVALL szo szo Movmask)) [:: e])
+        chk (szo == szi)
+        (LowerCopn (Ox86 (KMOVALL szo szo Movmask)) [:: a])
     else
       match szi with
       | U8 => k16 szo (LowerCopn (Ox86 (MOVZX szo szi)) [:: a])
