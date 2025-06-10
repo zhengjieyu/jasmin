@@ -88,7 +88,7 @@ Variant prim_x86_suffix :=
   | PVs of signedness & wsize
   | PVv of velem & wsize
   | PVvw of velem & wsize & wsize
-  | PVwk of wsize & wsize & kmovop
+  | PVwk of wsize & kmovop
   | PVsv of signedness & velem & wsize
   | PVx of wsize & wsize
   | PVvv of velem & wsize & velem & wsize

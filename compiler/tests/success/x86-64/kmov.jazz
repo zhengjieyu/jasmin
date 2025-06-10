@@ -1,3 +1,14 @@
+export fn test_kmov(reg u64 rp) 
+{
+    #regmask reg u8 mask8;
+    reg u8 a;
+    a = [:u8 rp];
+    mask8 = a;
+    [:u8 rp] = mask8;
+
+}
+
+
 // export fn test_kmov(reg u64 rp) -> reg u32, reg u64
 // {
 //     #regmask reg u8 mask8;
@@ -86,52 +97,52 @@
 //     return c, d;
 
 // }
-export fn test_kmovintrinsic(reg u64 rp)
-{
-    #regmask reg u8 mask8;
-    #regmask reg u16 mask16;
-    #regmask reg u32 mask32;
-    #regmask reg u64 mask64;
-    reg u8 a;
-    reg u16 b;
-    reg u32 c;
-    reg u64 d;
-    a = [:u8 rp];
-    b = [:u16 rp];
-    c = [:u32 rp];
-    d = [:u64 rp];
+// export fn test_kmovintrinsic(reg u64 rp)
+// {
+//     #regmask reg u8 mask8;
+//     #regmask reg u16 mask16;
+//     #regmask reg u32 mask32;
+//     #regmask reg u64 mask64;
+//     reg u8 a;
+//     reg u16 b;
+//     reg u32 c;
+//     reg u64 d;
+//     a = [:u8 rp];
+//     b = [:u16 rp];
+//     c = [:u32 rp];
+//     d = [:u64 rp];
 
    
-    mask8 = #KMOVALL_u8u8([:u8 rp]);
-    mask16 = #KMOVALL_u16u16([:u16 rp]);
-    mask32 = #KMOVALL_u32u32([:u32 rp]);
-    mask64 = #KMOVALL_u64u64([:u64 rp]);
+//     mask8 = #KMOVALL_u8u8([:u8 rp]);
+//     mask16 = #KMOVALL_u16u16([:u16 rp]);
+//     mask32 = #KMOVALL_u32u32([:u32 rp]);
+//     mask64 = #KMOVALL_u64u64([:u64 rp]);
 
-    [:u8 rp] = #KMOVALL_u8u8(mask8);
-    [:u16 rp] = #KMOVALL_u16u16(mask16);
-    [:u32 rp] = #KMOVALL_u32u32(mask32);
-    [:u64 rp] = #KMOVALL_u64u64(mask64);
+//     [:u8 rp] = #KMOVALL_u8u8(mask8);
+//     [:u16 rp] = #KMOVALL_u16u16(mask16);
+//     [:u32 rp] = #KMOVALL_u32u32(mask32);
+//     [:u64 rp] = #KMOVALL_u64u64(mask64);
 
  
 
-    mask8 = #KMOVALL_r32k8(c);
-    mask16 = #KMOVALL_r32k16(c);
-    mask32 = #KMOVALL_r32k32(c);
-    mask64 = #KMOVALL_r64k64(d);
+//     mask8 = #KMOVALL_r32k8(c);
+//     mask16 = #KMOVALL_r32k16(c);
+//     mask32 = #KMOVALL_r32k32(c);
+//     mask64 = #KMOVALL_r64k64(d);
 
 
-    [:u8 rp] = #KMOVALL_u8u8(mask8);
-    [:u16 rp] = #KMOVALL_u16u16(mask16);
-    [:u32 rp] = #KMOVALL_u32u32(mask32);
-    [:u64 rp] = #KMOVALL_u64u64(mask64);
+//     [:u8 rp] = #KMOVALL_u8u8(mask8);
+//     [:u16 rp] = #KMOVALL_u16u16(mask16);
+//     [:u32 rp] = #KMOVALL_u32u32(mask32);
+//     [:u64 rp] = #KMOVALL_u64u64(mask64);
 
-    c = #KMOVALL_k8r32(mask8);
-    c = #KMOVALL_k16r32(mask16);
-    c = #KMOVALL_k32r32(mask32);
-    d = #KMOVALL_k64r64(mask64);
+//     c = #KMOVALL_k8r32(mask8);
+//     c = #KMOVALL_k16r32(mask16);
+//     c = #KMOVALL_k32r32(mask32);
+//     d = #KMOVALL_k64r64(mask64);
 
 
-    [:u32 rp] = c;
-    [:u64 rp] = d;
+//     [:u32 rp] = c;
+//     [:u64 rp] = d;
 
-}
+// }

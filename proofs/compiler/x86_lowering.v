@@ -332,15 +332,14 @@ Definition lower_cassgn_classify ty e x : lower_cassgn_t :=
   | Pget _ _ sz {| gv := v |} _
   | Pvar {| gv := ({| v_var := {| vtype := sword sz |} |} as v) |} =>
     if (sz ≤ U64)%CMP then
-      if (is_regmask_e e && is_reg_l x) then
-        chk (szty == cmp_max sz U32)
-        (LowerCopn (Ox86 (KMOVALL sz szty Storemask)) [:: e])
-      else if (is_reg_e e && is_regmask_l x) then 
-        chk ((U32 ≤ szty)%CMP && (sz == szty))
-        (LowerCopn (Ox86 (KMOVALL sz szty Loadmask)) [:: e])
-      else if (is_regmask_e e || is_regmask_l x) then
-        chk (sz == szty)
-        (LowerCopn (Ox86 (KMOVALL szty szty Movmask)) [:: e])
+      if (is_lval_in_memory x && is_regmask_e e) then
+        (LowerCopn (Ox86 (KMOVALL szty Movmask)) [:: e])
+      else if (is_regmask_l x) then 
+        chk ((szty == sz)&&(szty == U64))
+        (LowerCopn (Ox86 (KMOVALL szty Loadmask)) [:: e])
+      else if (is_regmask_e e) then
+        chk ((U32  ≤ szty)%CMP)
+        (LowerCopn (Ox86 (KMOVALL szty Storemask)) [:: e])
       else LowerMov (if is_var_in_memory v then is_lval_in_memory x else false)
     else if ty is sword szo
     then if (U128 ≤ szo)%CMP then LowerCopn (Ox86 (VMOVDQU szo)) [:: e ]
@@ -367,35 +366,33 @@ Definition lower_cassgn_classify ty e x : lower_cassgn_t :=
     | _ => chk false
     end (LowerCopn (Ox86 (MOVSX szo szi)) [:: a])
   | Papp1 (Ozeroext szo szi) a =>
-    if ((is_regmask_e a) && ((szi ≤ szo)%CMP && (szo ≤ U64)%CMP)) then
-      if is_reg_l x then
-        chk (szo == cmp_max szi U32)
-        (LowerCopn (Ox86 (KMOVALL szi szo Storemask)) [:: a])
-      else if is_regmask_l x then
-        chk ((U32 ≤ szo)%CMP && (szi == szty))
-        (LowerCopn (Ox86 (KMOVALL szi szo Loadmask)) [:: a])
-      else 
-        chk (szo == szi)
-        (LowerCopn (Ox86 (KMOVALL szo szo Movmask)) [:: a])
-    else
-      match szi with
-      | U8 => k16 szo (LowerCopn (Ox86 (MOVZX szo szi)) [:: a])
-      | U16 => k32 szo (LowerCopn (Ox86 (MOVZX szo szi)) [:: a])
-      | U32 =>
-          match szo with
-          | U64 => kb true szo (LowerCopn (Oasm (ExtOp Ox86MOVZX32)) [:: a])
-          | U128 => kb true szo (LowerCopn (Ox86 (MOVD szi)) [:: a])
-          | U256 => kb true szo (LowerCopn (Oasm (BaseOp (Some szo, VMOV szi))) [:: a])
-          | _ => LowerAssgn
-          end
-      | U64 =>
-          match szo with
-          | U128 => kb true szo (LowerCopn (Ox86 (MOVD szi)) [:: a])
-          | U256 => kb true szo (LowerCopn (Oasm (BaseOp (Some szo, VMOV szi))) [:: a])
-          | _ => LowerAssgn
-          end
-      | _ => LowerAssgn
-    end
+      if (is_lval_in_memory x && is_regmask_e a) then
+        LowerAssgn
+      else if (is_regmask_l x) then 
+        chk ((szo ≤ U64)%CMP)
+        (LowerCopn (Ox86 (KMOVALL szi Loadmask)) [:: a])
+      else if (is_regmask_e a) then
+        chk ((szo == cmp_max szi U32) && (szo ≤ U64)%CMP)
+        (LowerCopn (Ox86 (KMOVALL szi Storemask)) [:: a])
+      else
+        match szi with
+        | U8 => k16 szo (LowerCopn (Ox86 (MOVZX szo szi)) [:: a])
+        | U16 => k32 szo (LowerCopn (Ox86 (MOVZX szo szi)) [:: a])
+        | U32 =>
+            match szo with
+            | U64 => kb true szo (LowerCopn (Oasm (ExtOp Ox86MOVZX32)) [:: a])
+            | U128 => kb true szo (LowerCopn (Ox86 (MOVD szi)) [:: a])
+            | U256 => kb true szo (LowerCopn (Oasm (BaseOp (Some szo, VMOV szi))) [:: a])
+            | _ => LowerAssgn
+            end
+        | U64 =>
+            match szo with
+            | U128 => kb true szo (LowerCopn (Ox86 (MOVD szi)) [:: a])
+            | U256 => kb true szo (LowerCopn (Oasm (BaseOp (Some szo, VMOV szi))) [:: a])
+            | _ => LowerAssgn
+            end
+        | _ => LowerAssgn
+      end
 
   | Papp2 op a b =>
     match op with

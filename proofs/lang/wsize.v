@@ -209,17 +209,16 @@ Definition pp_sz_sz (s: string) (sign:bool) (sz sz': wsize) (_: unit) : string :
   
 Check pp_sz_sz.
   
-Definition pp_sz_sz_opk (s: string) (sign: bool) (sz sz': wsize) (opk: kmovop) (_: unit) : string :=
+Definition pp_sz_opk (s: string) (sign: bool) (sz: wsize) (opk: kmovop) (_: unit) : string :=
   let sz_str := string_of_wsize sz in
-  let sz'_str := string_of_wsize sz' in
   let suffix :=
     match opk with
     | Movmask => 
-      "u" ++ sz_str ++ (if sign then "s" else "u") ++ sz'_str
+      "u" ++ sz_str ++ "o1"
     | Loadmask =>
-      "r" ++ sz_str ++ "k" ++ sz'_str
+      "u" ++ sz_str ++ "o2" 
     | Storemask => 
-      "k" ++ sz_str ++ "r" ++ sz'_str
+      "u" ++ sz_str ++ "o3"
     end in
   s ++ "_" ++ suffix.
 

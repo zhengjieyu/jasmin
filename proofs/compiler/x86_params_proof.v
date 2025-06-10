@@ -501,8 +501,7 @@ Lemma assemble_extra_concat128 rip ii lvs args m xs ys m' s ops ops' :
   exists2 s' : asmmem,
     foldM (fun '(op'', asm_args) => [eta eval_op op'' asm_args]) s ops' = ok s' & lom_eqv rip m' s'.
 Proof.
-Admitted.
-  (* case: args => // h [] // [] // [] // [l li] [] //=.
+  case: args => // h [] // [] // [] // [l li] [] //=.
   rewrite /exec_sopn /sopn_sem /sopn_sem_ /=.
   t_xrbindP => vh hvh _ vl hvl <- <-{xs}.
   t_xrbindP => _ wh hwh wl hwl <- <-{ys} /=.
@@ -532,7 +531,7 @@ Admitted.
   case: (evm m).[to_var lr] hd hwl => //= ws wl' _ /truncate_wordP [] hle ? /andP[] _ /eqP ?; subst.
   rewrite /word_uincl mul0n.
   by rewrite (@subword0 U128 U256) zero_extend_idem.
-Qed. *)
+Qed.
 
 Lemma assemble_slh_move_correct : assemble_extra_correct Ox86SLHmove.
 Proof.

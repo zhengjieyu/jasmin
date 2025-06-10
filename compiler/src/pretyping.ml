@@ -79,14 +79,14 @@ let pp_suffix fmt =
   | PVv (ve, sz) -> F.fprintf fmt "_%s" (string_of_velem Unsigned sz ve)
   | PVvw (ve, sz, sz') -> F.fprintf fmt "_%su%a" (string_of_velem Unsigned sz ve) pp_wsize sz'
   | PVsv (sg, ve, sz) -> F.fprintf fmt "_%s" (string_of_velem sg sz ve)
-  | PVwk (sz, sz', opk) ->
+  | PVwk (sz, opk) ->
     begin match opk with
     | Movmask ->
-        F.fprintf fmt "_u%au%a" pp_wsize sz pp_wsize sz'
+        F.fprintf fmt "_u%a%s" pp_wsize sz "o1"
     | Loadmask ->
-        F.fprintf fmt "_r%ak%a" pp_wsize sz pp_wsize sz'
+        F.fprintf fmt "_u%a%s" pp_wsize sz "o2"
     | Storemask ->
-        F.fprintf fmt "_k%ar%a" pp_wsize sz pp_wsize sz'
+        F.fprintf fmt "_u%a%s" pp_wsize sz "o3"
     end
   | PVx (szo, szi) -> F.fprintf fmt "_u%au%a" pp_wsize szo pp_wsize szi
   | PVvv (ve, sz, ve', sz') -> F.fprintf fmt "_%s_%s" (string_of_velem Unsigned sz ve) (string_of_velem Unsigned sz' ve')
@@ -1591,18 +1591,18 @@ let extract_size str : string * Sopn.prim_x86_suffix option =
     | "8u64u8"   -> PVvw (W.VE64, W.U8, W.U512)
 
     
-    | "u8u8"  -> PVwk (W.U8, W.U8, Movmask)
-    | "u16u16"   -> PVwk (W.U16, W.U16, Movmask)
-    | "u32u32"   -> PVwk (W.U32, W.U32, Movmask)
-    | "u64u64"   -> PVwk (W.U64, W.U64, Movmask)
-    | "k8r32"  -> PVwk (W.U8, W.U32, Storemask)
-    | "k16r32" -> PVwk (W.U16, W.U32, Storemask)
-    | "k32r32"   -> PVwk (W.U32, W.U32, Storemask)
-    | "k64r64"   -> PVwk (W.U64, W.U64, Storemask)
-    | "r32k8"  -> PVwk (W.U32, W.U8, Loadmask)
-    | "r32k16" -> PVwk (W.U32, W.U16, Loadmask)
-    | "r32k32" -> PVwk (W.U32, W.U32, Loadmask)
-    | "r64k64"   -> PVwk (W.U64, W.U64, Loadmask)
+    | "u8o1"  -> PVwk (W.U8, Movmask)
+    | "u16o1"   -> PVwk (W.U16, Movmask)
+    | "u32o1"   -> PVwk (W.U32, Movmask)
+    | "u64o1"   -> PVwk (W.U64, Movmask)
+    | "u8o2"  -> PVwk (W.U8, Loadmask)
+    | "u16o2" -> PVwk (W.U16, Loadmask)
+    | "u32o2"   -> PVwk (W.U32, Loadmask)
+    | "u64o2"   -> PVwk (W.U64, Loadmask)
+    | "u8o3"  -> PVwk (W.U32, Storemask)
+    | "u16o3" -> PVwk (W.U32, Storemask)
+    | "u32o3" -> PVwk (W.U32, Storemask)
+    | "u64o3"   -> PVwk (W.U64, Storemask)
     
     | "2s8"   -> PVsv (W.Signed, W.VE8,  W.U16)
     | "4s8"   -> PVsv (W.Signed, W.VE8,  W.U32)
