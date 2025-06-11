@@ -522,15 +522,16 @@ Proof.
   move: hidc hyr hlr hev2 hev3 hwm.
   case: oargs => // a0 [] // a1 [] // a2 [] // a3 l hcheck /= [?] [?] hev2 hev3 /= hwm; subst a0 a1.
   rewrite /eval_op /= /exec_instr_op /= /eval_instr_op hcheck /= hev2 hev3 /= hvh' hv1 /=.
-  move: hwm; rewrite /mem_write_vals /= /mem_write_val /= !truncate_word_u /= truncate_word_u /= => <-; do 2!f_equal.
+  have le_8_9 : (U256 ≤ xreg_size)%CMP by [].
+  move: hwm; rewrite /mem_write_vals /= /mem_write_val /= !(truncate_word_le _ le_8_9) /= !truncate_word_u /= => <-; do 2!f_equal.
   rewrite /x86_VINSERTI128 /winserti128 /split_vec /=; f_equal.
   congr (fun x => [::x; wh]).
-  case: hlow => _ _ _ _ _ _ hu _.
+  case: hlow => _ _ _ _ _ _ _ hu _.
   move /get_varP: hvl => -[]/= ? hd _; subst vl.
   have := hu lr.
   case: (evm m).[to_var lr] hd hwl => //= ws wl' _ /truncate_wordP [] hle ? /andP[] _ /eqP ?; subst.
   rewrite /word_uincl mul0n.
-  by rewrite (@subword0 U128 U256) zero_extend_idem.
+  by rewrite (@subword0 U128 U256) !zero_extend_idem.
 Qed.
 
 Lemma assemble_slh_move_correct : assemble_extra_correct Ox86SLHmove.

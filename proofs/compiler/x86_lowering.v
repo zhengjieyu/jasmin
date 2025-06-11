@@ -333,13 +333,11 @@ Definition lower_cassgn_classify ty e x : lower_cassgn_t :=
   | Pvar {| gv := ({| v_var := {| vtype := sword sz |} |} as v) |} =>
     if (sz ≤ U64)%CMP then
       if (is_lval_in_memory x && is_regmask_e e) then
-        (LowerCopn (Ox86 (KMOVALL szty Movmask)) [:: e])
-      else if (is_regmask_l x) then 
-        chk ((szty == sz)&&(szty == U64))
-        (LowerCopn (Ox86 (KMOVALL szty Loadmask)) [:: e])
+        LowerCopn (Ox86 (KMOVALL szty Movmask)) [:: e]
+      else if (is_regmask_l x) then
+        LowerCopn (Ox86 (KMOVALL szty Loadmask)) [:: e]
       else if (is_regmask_e e) then
-        chk ((U32  ≤ szty)%CMP)
-        (LowerCopn (Ox86 (KMOVALL szty Storemask)) [:: e])
+        LowerCopn (Ox86 (KMOVALL szty Storemask)) [:: e]
       else LowerMov (if is_var_in_memory v then is_lval_in_memory x else false)
     else if ty is sword szo
     then if (U128 ≤ szo)%CMP then LowerCopn (Ox86 (VMOVDQU szo)) [:: e ]
@@ -348,7 +346,10 @@ Definition lower_cassgn_classify ty e x : lower_cassgn_t :=
     else LowerAssgn
   | Pload _ sz _ _ =>
       if (sz ≤ U64)%CMP
-      then LowerMov (is_lval_in_memory x)
+      then
+        if is_regmask_l x then
+          LowerCopn (Ox86 (KMOVALL szty Loadmask)) [:: e ]
+        else LowerMov (is_lval_in_memory x)
       else kb true sz (LowerCopn (Ox86 (VMOVDQU sz)) [:: e ])
 
   | Papp1 (Oword_of_int sz) (Pconst z) =>
@@ -366,15 +367,6 @@ Definition lower_cassgn_classify ty e x : lower_cassgn_t :=
     | _ => chk false
     end (LowerCopn (Ox86 (MOVSX szo szi)) [:: a])
   | Papp1 (Ozeroext szo szi) a =>
-      if (is_lval_in_memory x && is_regmask_e a) then
-        LowerAssgn
-      else if (is_regmask_l x) then 
-        chk ((szo ≤ U64)%CMP)
-        (LowerCopn (Ox86 (KMOVALL szi Loadmask)) [:: a])
-      else if (is_regmask_e a) then
-        chk ((szo == cmp_max szi U32) && (szo ≤ U64)%CMP)
-        (LowerCopn (Ox86 (KMOVALL szi Storemask)) [:: a])
-      else
         match szi with
         | U8 => k16 szo (LowerCopn (Ox86 (MOVZX szo szi)) [:: a])
         | U16 => k32 szo (LowerCopn (Ox86 (MOVZX szo szi)) [:: a])

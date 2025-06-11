@@ -962,7 +962,7 @@ mk_instr_w_w'_kmovreg2 "KMOVREG2" x86_KMOVREG2 [:: Eu 1] [:: Eu 0] 2
      
 Notation mk_instr_w_w'_kmovall name semi ain aout nargs check prc valid pp_asm :=
 ((fun (sz: wsize) (opk: kmovop) =>
-  mk_instr_safe (pp_sz_opk name false sz opk) (w_ty sz) (w_ty (kmov_returnsz sz opk)) ain aout (reg_msb_flag sz) (semi sz opk) (check opk) nargs (valid sz) (pp_asm sz opk)), (name%string,prc)) (only parsing).
+  mk_instr_safe (pp_sz_opk name false sz opk) (w_ty sz) (w_ty sz) ain aout (reg_msb_flag sz) (semi sz opk) (check opk) nargs (valid sz) (pp_asm sz opk)), (name%string,prc)) (only parsing).
 
 
 
@@ -979,7 +979,7 @@ Definition check_kmovall (opk : kmovop) :=
 
 
 
-Definition x86_KMOVALL (sz: wsize) (opk: kmovop) (x: word sz) : tpl (w_ty (kmov_returnsz sz opk)) := zero_extend (kmov_returnsz sz opk) x.
+Definition x86_KMOVALL (sz: wsize) (opk: kmovop) (x: word sz) : tpl (w_ty sz) := x.
 Definition Ox86_KMOVALL_instr               :=
   mk_instr_w_w'_kmovall "KMOVALL" x86_KMOVALL [:: Eu 1] [:: Eu 0] 2
               check_kmovall (primWk_8_64 KMOVALL) (fun sz => size_8_64 sz) pp_kmovall.
