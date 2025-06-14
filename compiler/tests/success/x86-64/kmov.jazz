@@ -1,11 +1,8 @@
 export fn test_kmov(reg u64 rp) 
 {
     #regmask reg u8 mask8;
-    reg u8 a;
-    a = [:u8 rp];
-    mask8 = a;
+    mask8 = [:u8 rp];
     [:u8 rp] = mask8;
-
 }
 
 

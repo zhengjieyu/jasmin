@@ -552,8 +552,7 @@ Qed.
 
 Lemma assemble_extra_op op : assemble_extra_correct op.
 Proof.
-Admitted.
-  (* move=> rip ii lvs args m xs ys m' s ops ops'.
+  move=> rip ii lvs args m xs ys m' s ops ops'.
   case: op => //.
   (* Oset0 *)
   + move=> sz; rewrite /exec_sopn /sopn_sem /sopn_sem_ /=.
@@ -570,16 +569,29 @@ Admitted.
       case ok_y: xreg_of_var => [y|//].
       assert (h := xreg_of_varI ok_y); move: h => {}ok_y.
       rewrite !andbT /compat_imm.
-      case: y ok_y => // r xr; rewrite !orbF => /eqP ? /eqP ? _; subst a0 a1; only 2-3: by [].
+      case: y ok_y => // r xr; rewrite !orbF => /eqP ? /eqP ? _; subst a0 a1; only 2,4: by [].
       rewrite /eval_op /exec_instr_op /= /eval_instr_op /=.
       rewrite truncate_word_le // /x86_XOR /size_8_64 hsz64 /= wxor_xx.
       set id := instr_desc_op (XOR sz).
+
       rewrite /SF_of_word msb0.
-      by have [s' -> /= ?]:= (@compile_lvals _ _ _ _ _ _ _ _ _ _ _
+      by have [s' -> /= ?]:= (@compile_lvals _ _ _ _ _ _ _ _ _ _ _ _
              rip ii m lvs m' s [:: Reg r; Reg r]
              id.(id_out) id.(id_tout)
              (let vf := Some false in let: vt := Some true in (::vf, vf, vf, vt, vt & (0%R: word sz)))
              (reg_msb_flag sz) (refl_equal _) hw hlo hcd id.(id_check_dest)); eauto.
+    
+    rewrite /eval_op /exec_instr_op /= /eval_instr_op /=.
+    rewrite /x86_XOR /size_8_64 hsz64 /=.  
+    set id := instr_desc_op (XOR sz).
+    by have [s' -> /= ?]:= (@compile_lvals _ _ _ _ _ _ _ _ _ _ _ _
+             rip ii m lvs m' s [:: Regmask r; Regmask r]
+             id.(id_out) id.(id_tout)
+             (let vf := Some false in let: vt := Some true in (::vf, vf, vf, vt, vt & (0%R: word sz)))
+             (reg_msb_flag sz) (refl_equal _) hw hlo hcd id.(id_check_dest)); eauto.
+
+
+
     case: xs => // ok_xs /ok_inj <-{ys} hw.
     case: rev => [ // | [ // | d ] ds ] /ok_inj <-{ops} /=.
     t_xrbindP => -[op' asm_args] hass <- hlo /=.
@@ -854,7 +866,7 @@ Transparent cat.
   rewrite Vm.setP_neq // Vm.setP_neq // /vm3 /m2 /vm2 /m1 /vm1 /m0 /vm0 /vm1' /=.
   case: (to_var xr =P z) => [<- | /eqP ?]; first by rewrite !Vm.setP_eq.
   by rewrite !Vm.setP_neq.
-Qed. *)
+Qed.
 
 Definition x86_hagparams : h_asm_gen_params (ap_agp x86_params) :=
   {|
