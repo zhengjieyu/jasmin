@@ -735,8 +735,10 @@ Opaque cat.
     apply: (assemble_opsP eval_assemble_cond hmap erefl _ hlo).
     by rewrite /= hes /exec_sopn /= hw hmsf /= /sopn_sem /sopn_sem_ /= /x86_POR /= hws.
     (* Mask register *)
+    case: xs => // vw.
   (* ws > U64 *)
   case: rk => /=; t_xrbindP; first last.
+  case: xs => // vw.
   - (* Never happens. *)
     case: xs => // vw.
     t_xrbindP=> -[] // vmsf.
