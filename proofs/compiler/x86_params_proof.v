@@ -931,8 +931,7 @@ Definition x86_is_move_opP op vx v :
   -> exec_sopn (Oasm op) [:: vx ] = ok v
   -> List.Forall2 value_uincl v [:: vx ].
 Proof.
-Admitted.
-  (* case: op => [[[|] [] ws] | []] // _.
+  case: op => [[[|] [] ws] | []] // _.
 
   all: rewrite /exec_sopn /sopn_sem /=.
   1-4: t_xrbindP => ? hsz <-.
@@ -946,7 +945,7 @@ Admitted.
 
   all: constructor; last by constructor.
   all: exact: word_uincl_zero_ext.
-Qed. *)
+Qed.
 
 
 (* ------------------------------------------------------------------------ *)
