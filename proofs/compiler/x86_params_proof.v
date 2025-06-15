@@ -747,6 +747,9 @@ Opaque cat.
 
   have {}Hws : (U64 < ws)%CMP by rewrite -cmp_nle_lt Hws.
   have Hws' : (U128 <= ws)%CMP by case: (ws) Hws.
+  case: ifP => H512.
+  -  move/eqP: H512 => ->.
+    discriminate.  
   case: xs => // vw; t_xrbindP => -[] // vmsf; t_xrbindP => // -[] // hes _ hval <- tr w hw wmsf hmsf.
   rewrite /se_protect_large_sem /= => -[?]?; subst tr ys.
   case: lvs => // -[] // [aux iaux] [] // y [] // hws.
@@ -820,7 +823,7 @@ Opaque cat.
       move=> z; rewrite /vm3.
       case: (to_var xr =P z) => [<- | /eqP ?]; last by rewrite Vm.setP_neq.
       rewrite /m2 /vm2 /= !Vm.setP_eq.
-      have ? : ws = U128 by case: (ws) hws1 Hws.
+      have ? : ws = U128 by case: (ws) hws1 Hws H512.
       by subst ws.
     subst ws => hmap2.
     apply: (@assemble_extra_concat128 rip ii [:: LLvar aux] [:: Rexpr (Fvar aux); Rexpr (Fvar aux)]
@@ -840,7 +843,7 @@ Transparent cat.
   have /(_ (with_vm m vm4)) [|s' -> hlo4] /= :=
     assemble_opsP eval_assemble_cond hmap3 erefl _ hlo3.
   + have -> /=: get_var true vm3 (to_var xr) = ok (Vword v3).
-    + by rewrite /get_var /vm3 Vm.setP_eq /= wsize_ge_U256.
+    + by rewrite /get_var /vm3 Vm.setP_eq /= wsize_ge_U512.
     have -> /= : sem_rexpr (emem m) vm3 ew = ok vw.
     + rewrite -hew; apply: free_vars_rP.
       apply/eq_onS/(eq_onT (vm2:= vm2)); [ apply/(eq_onT (vm2:= vm1)); [ apply/(eq_onT (vm2:= vm0)) | ] | ].
@@ -849,7 +852,7 @@ Transparent cat.
       + by apply(set_var_disjoint_eq_on (wdb := true) (x:= to_var xr) (v:= Vword v2)).
       apply/(set_var_disjoint_eq_on (wdb := true) (x:= to_var xr) (v:= Vword v3)) => //.
     by rewrite /exec_sopn /= truncate_word_u hw /= /sopn_sem /sopn_sem_ /= /x86_VPOR
-         /size_128_256 Hws' /= (wsize_ge_U256 ws) /=.
+         /size_128_512 Hws' /= (wsize_ge_U512 ws) /=.
   exists s' => //; apply: lom_eqv_ext hlo4 => z /=.
   rewrite /vm4; case: (to_var yr =P z) => [ | /eqP] ?;first by subst z; rewrite !Vm.setP_eq.
   rewrite Vm.setP_neq // Vm.setP_neq // /vm3 /m2 /vm2 /m1 /vm1 /m0 /vm0 /vm1' /=.

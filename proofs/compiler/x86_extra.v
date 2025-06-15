@@ -180,7 +180,7 @@ Definition Ox86SLHprotect_instr rk :=
   fun (ws:wsize) =>
   match rk with
   | Normal => if (ws <= Uptr)%CMP then
-  mk_instr_desc_safe (pp_sz SLHprotect_str ws)
+  mk_instr_des(*  *)c_safe (pp_sz SLHprotect_str ws)
                 [:: sword ws; sword ws]
                 [:: E 0; E 1]
                 [:: sbool; sbool; sbool; sbool; sbool; sword ws]
@@ -204,34 +204,7 @@ Definition Ox86SLHprotect_instr rk :=
   (ws == reg_size)
   | Mask =>  mk_instr_desc_safe (fun _ => "ERROR"%string) [::] [::] [::] [::] tt false
   end.
-(* 
 
-  if rk is Extra then
-    mk_instr_desc_safe (pp_sz SLHprotect_str ws)
-      [:: sword ws; sword ws]
-      [:: E 0; E 1 ]
-      [:: sword ws ]
-      [:: E 0 ]
-      (@se_protect_mmx_sem ws)
-      (ws == reg_size)
-  else if rk is Mask then
-    mk_instr_desc_safe (fun _ => "ERROR"%string) [::] [::] [::] [::] tt false
-  else if (ws <= Uptr)%CMP then
-    mk_instr_desc_safe (pp_sz SLHprotect_str ws)
-                  [:: sword ws; sword ws]
-                  [:: E 0; E 1]
-                  [:: sbool; sbool; sbool; sbool; sbool; sword ws]
-                  out
-                  (@se_protect_small_sem ws)
-                  true
-  else
-    mk_instr_desc_safe (pp_sz SLHprotect_str ws)
-                  [:: sword ws; ty_msf]
-                  [:: E 0; E 1]
-                  [:: sword ws; sword ws]
-                  [:: E 2; E 0]
-                  (@se_protect_large_sem ws)
-                  (Uptr < ws)%CMP. *)
 
 Definition get_instr_desc o :=
   match o with
@@ -297,6 +270,8 @@ Definition assemble_slh_protect
   cexec (seq (asm_op_msb_t * seq lexpr * seq rexpr)) :=
   if (ws <= U64)%CMP then
     ok [:: les ::= (if rk is Extra then POR else OR ws) res ]
+  else if (ws == U512) then           
+    Error (E.se_protect_arguments ii)
   else if (les, res) is ([:: LLvar aux; y], [:: x; msf ]) then
      (* aux = VPINSR msf 0;
         aux = VPINSR msf 1;
