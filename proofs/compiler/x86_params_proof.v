@@ -931,20 +931,69 @@ Definition x86_is_move_opP op vx v :
   -> exec_sopn (Oasm op) [:: vx ] = ok v
   -> List.Forall2 value_uincl v [:: vx ].
 Proof.
-  case: op => [[[|] [] ws] | []] // _.
-
-  all: rewrite /exec_sopn /sopn_sem /=.
-  1-4: t_xrbindP => ? hsz <-.
-  all: t_xrbindP => w w0 /to_wordI' [ws' [wx [hle ??]]];
+  case: op => [[[|] [] ws] | []] // .
+  all: rewrite /ap_is_move_op.
+  move => H1.
+  rewrite /exec_sopn /sopn_sem /=.
+  t_xrbindP => ? hsz <-.
+  t_xrbindP => w w0 /to_wordI' [ws' [wx [hle ??]]];
          subst vx w0.
+  rewrite /sopn_sem /sopn_sem_ /=.
+  rewrite /x86_MOV.
+  t_xrbindP=> *.
+  t_simpl_rewrites; subst.
+  constructor; last by constructor.
+  exact: word_uincl_zero_ext.
 
-  all: rewrite /sopn_sem /sopn_sem_ /=.
-  all: rewrite /x86_MOV /x86_KMOV /x86_VMOVDQ /se_move_sem.
-  all: t_xrbindP=> *.
-  all: t_simpl_rewrites; subst.
+  move => H2.
+  move => H3.
 
-  all: constructor; last by constructor.
-  all: exact: word_uincl_zero_ext.
+  rewrite /exec_sopn /sopn_sem /=.
+  t_xrbindP => ? hsz <-.
+  t_xrbindP => w w0 /to_wordI' [ws' [wx [hle ??]]];
+         subst vx w0.
+  rewrite /sopn_sem /sopn_sem_ /=.
+  rewrite /x86_KMOVALL.
+  t_xrbindP=> *.
+  t_simpl_rewrites; subst.
+  constructor; last by constructor.
+  exact: word_uincl_zero_ext.
+
+  move => H1.
+  rewrite /exec_sopn /sopn_sem /=.
+  t_xrbindP => ? hsz <-.
+  t_xrbindP => w w0 /to_wordI' [ws' [wx [hle ??]]];
+         subst vx w0.
+  rewrite /sopn_sem /sopn_sem_ /=.
+  rewrite /x86_VMOVDQ.
+  t_xrbindP=> *.
+  t_simpl_rewrites; subst.
+  constructor; last by constructor.
+  exact: word_uincl_zero_ext.
+
+  move => H1.
+  rewrite /exec_sopn /sopn_sem /=.
+  t_xrbindP => ? hsz <-.
+  t_xrbindP => w w0 /to_wordI' [ws' [wx [hle ??]]];
+         subst vx w0.
+  rewrite /sopn_sem /sopn_sem_ /=.
+  rewrite /x86_VMOVDQ.
+  t_xrbindP=> *.
+  t_simpl_rewrites; subst.
+  constructor; last by constructor.
+  exact: word_uincl_zero_ext.
+
+  move => H1.
+  rewrite /exec_sopn /sopn_sem /=.
+  t_xrbindP => w w0 /to_wordI' [ws' [wx [hle ??]]];
+         subst vx w0.
+  rewrite /sopn_sem /sopn_sem_ /=.
+  rewrite /se_move_sem.
+  t_xrbindP=> *.
+  t_simpl_rewrites; subst.
+  constructor; last by constructor.
+  exact: word_uincl_zero_ext.
+
 Qed.
 
 

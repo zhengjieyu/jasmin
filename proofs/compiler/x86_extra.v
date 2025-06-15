@@ -180,7 +180,7 @@ Definition Ox86SLHprotect_instr rk :=
   fun (ws:wsize) =>
   match rk with
   | Normal => if (ws <= Uptr)%CMP then
-  mk_instr_des(*  *)c_safe (pp_sz SLHprotect_str ws)
+  mk_instr_desc_safe (pp_sz SLHprotect_str ws)
                 [:: sword ws; sword ws]
                 [:: E 0; E 1]
                 [:: sbool; sbool; sbool; sbool; sbool; sword ws]
