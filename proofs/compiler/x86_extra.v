@@ -178,6 +178,34 @@ Definition Ox86SLHprotect_str := append "Ox86_" SLHprotect_str.
 Definition Ox86SLHprotect_instr rk :=
   let out := map sopn_arg_desc implicit_flags ++ [:: E 0] in
   fun (ws:wsize) =>
+  match rk with
+  | Normal => if (ws <= Uptr)%CMP then
+  mk_instr_desc_safe (pp_sz SLHprotect_str ws)
+                [:: sword ws; sword ws]
+                [:: E 0; E 1]
+                [:: sbool; sbool; sbool; sbool; sbool; sword ws]
+                out
+                (@se_protect_small_sem ws)
+                true
+                else
+                mk_instr_desc_safe (pp_sz SLHprotect_str ws)
+                              [:: sword ws; ty_msf]
+                              [:: E 0; E 1]
+                              [:: sword ws; sword ws]
+                              [:: E 2; E 0]
+                              (@se_protect_large_sem ws)
+                              (Uptr < ws)%CMP
+  | Extra =>  mk_instr_desc_safe (pp_sz SLHprotect_str ws)
+  [:: sword ws; sword ws]
+  [:: E 0; E 1 ]
+  [:: sword ws ]
+  [:: E 0 ]
+  (@se_protect_mmx_sem ws)
+  (ws == reg_size)
+  | Mask =>  mk_instr_desc_safe (fun _ => "ERROR"%string) [::] [::] [::] [::] tt false
+  end.
+(* 
+
   if rk is Extra then
     mk_instr_desc_safe (pp_sz SLHprotect_str ws)
       [:: sword ws; sword ws]
@@ -186,6 +214,8 @@ Definition Ox86SLHprotect_instr rk :=
       [:: E 0 ]
       (@se_protect_mmx_sem ws)
       (ws == reg_size)
+  else if rk is Mask then
+    mk_instr_desc_safe (fun _ => "ERROR"%string) [::] [::] [::] [::] tt false
   else if (ws <= Uptr)%CMP then
     mk_instr_desc_safe (pp_sz SLHprotect_str ws)
                   [:: sword ws; sword ws]
@@ -201,7 +231,7 @@ Definition Ox86SLHprotect_instr rk :=
                   [:: sword ws; sword ws]
                   [:: E 2; E 0]
                   (@se_protect_large_sem ws)
-                  (Uptr < ws)%CMP.
+                  (Uptr < ws)%CMP. *)
 
 Definition get_instr_desc o :=
   match o with

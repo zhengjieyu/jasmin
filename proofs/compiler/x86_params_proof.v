@@ -569,29 +569,16 @@ Proof.
       case ok_y: xreg_of_var => [y|//].
       assert (h := xreg_of_varI ok_y); move: h => {}ok_y.
       rewrite !andbT /compat_imm.
-      case: y ok_y => // r xr; rewrite !orbF => /eqP ? /eqP ? _; subst a0 a1; only 2,4: by [].
+      case: y ok_y => // r xr; rewrite !orbF => /eqP ? /eqP ? _; subst a0 a1; only 2-4: by [].
       rewrite /eval_op /exec_instr_op /= /eval_instr_op /=.
       rewrite truncate_word_le // /x86_XOR /size_8_64 hsz64 /= wxor_xx.
       set id := instr_desc_op (XOR sz).
-
       rewrite /SF_of_word msb0.
       by have [s' -> /= ?]:= (@compile_lvals _ _ _ _ _ _ _ _ _ _ _ _
-             rip ii m lvs m' s [:: Reg r; Reg r]
-             id.(id_out) id.(id_tout)
-             (let vf := Some false in let: vt := Some true in (::vf, vf, vf, vt, vt & (0%R: word sz)))
-             (reg_msb_flag sz) (refl_equal _) hw hlo hcd id.(id_check_dest)); eauto.
-    
-    rewrite /eval_op /exec_instr_op /= /eval_instr_op /=.
-    rewrite /x86_XOR /size_8_64 hsz64 /=.  
-    set id := instr_desc_op (XOR sz).
-    by have [s' -> /= ?]:= (@compile_lvals _ _ _ _ _ _ _ _ _ _ _ _
-             rip ii m lvs m' s [:: Regmask r; Regmask r]
-             id.(id_out) id.(id_tout)
-             (let vf := Some false in let: vt := Some true in (::vf, vf, vf, vt, vt & (0%R: word sz)))
-             (reg_msb_flag sz) (refl_equal _) hw hlo hcd id.(id_check_dest)); eauto.
-
-
-
+      rip ii m lvs m' s [:: Reg r; Reg r]
+      id.(id_out) id.(id_tout)
+      (let vf := Some false in let: vt := Some true in (::vf, vf, vf, vt, vt & (0%R: word sz)))
+      (reg_msb_flag sz) (refl_equal _) hw hlo hcd id.(id_check_dest)); eauto.
     case: xs => // ok_xs /ok_inj <-{ys} hw.
     case: rev => [ // | [ // | d ] ds ] /ok_inj <-{ops} /=.
     t_xrbindP => -[op' asm_args] hass <- hlo /=.
@@ -605,13 +592,13 @@ Proof.
     assert (h := xreg_of_varI ok_y); move: h => {}ok_y.
     rewrite !andbT /compat_imm.
     case: y ok_y => // r xr; rewrite !orbF => /eqP ? /eqP ? _; subst a1 a2.
-    1-2: by move: hidc; rewrite /check_args_kinds /= andbF.
+    1-3: by move: hidc; rewrite /check_args_kinds /= andbF.
     rewrite /eval_op /exec_instr_op /= /eval_instr_op /=.
-    rewrite truncate_word_le; last exact: wsize_ge_U256.
-    rewrite /x86_VPXOR hidc /= /size_128_256 wsize_ge_U256.
+    rewrite truncate_word_le; last exact: wsize_ge_U512.
+    rewrite /x86_VPXOR hidc /= /size_128_512 wsize_ge_U512.
     have -> /= : (U128 ≤ sz)%CMP by case: (sz) hsz64.
     rewrite wxor_xx; set id := instr_desc_op (VPXOR sz).
-    by have [s' -> /= ?] := (@compile_lvals _ _ _ _ _ _ _ _ _ _ _
+    by have [s' -> /= ?] := (@compile_lvals _ _ _ _ _ _ _ _ _ _ _ _
                rip ii m lvs m' s [:: a0; XReg r; XReg r]
                id.(id_out) id.(id_tout)
                (0%R: word sz)
@@ -731,7 +718,7 @@ Proof.
 
   (* SLHprotect *)
 Opaque cat.
-  rewrite /exec_sopn /= /sopn_sem /sopn_sem_ /= /Ox86SLHprotect_instr /Uptr /assemble_slh_protect /= => rk ws.
+  rewrite /exec_sopn /= /sopn_sem /sopn_sem_ /= /Ox86SLHprotect_instr /Uptr /assemble_slh_protect /= => rk ws.  
   case: (boolP (ws <= U64)%CMP) => /= Hws; t_xrbindP.
 
   (* ws <= U64 *)
@@ -742,12 +729,12 @@ Opaque cat.
       by rewrite /= hes /exec_sopn /= hw hmsf /= /sopn_sem /sopn_sem_ /= /x86_OR /size_8_64 Hws /= hws.
     (* MMX *)
     case: xs => // vw.
-    t_xrbindP => -[] // vmsf; t_xrbindP => // -[] // hes _ /eqP ? <- tr w hw wmsf hmsf.
+    t_xrbindP => -[] // vmsf. t_xrbindP => // -[] // hes _ /eqP ? <- tr w hw wmsf hmsf.
     rewrite /se_protect_mmx_sem /x86_POR.
     t_xrbindP => ?? hws ? hmap hlo; subst ws tr ys ops.
     apply: (assemble_opsP eval_assemble_cond hmap erefl _ hlo).
     by rewrite /= hes /exec_sopn /= hw hmsf /= /sopn_sem /sopn_sem_ /= /x86_POR /= hws.
-
+    (* Mask register *)
   (* ws > U64 *)
   case: rk => /=; t_xrbindP; first last.
   - (* Never happens. *)
