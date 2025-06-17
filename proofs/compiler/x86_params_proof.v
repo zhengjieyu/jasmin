@@ -748,8 +748,7 @@ Opaque cat.
   have {}Hws : (U64 < ws)%CMP by rewrite -cmp_nle_lt Hws.
   have Hws' : (U128 <= ws)%CMP by case: (ws) Hws.
   case: ifP => H512.
-  -  move/eqP: H512 => ->.
-    discriminate.  
+  -  move/eqP: H512 => -> //. 
   case: xs => // vw; t_xrbindP => -[] // vmsf; t_xrbindP => // -[] // hes _ hval <- tr w hw wmsf hmsf.
   rewrite /se_protect_large_sem /= => -[?]?; subst tr ys.
   case: lvs => // -[] // [aux iaux] [] // y [] // hws.
@@ -931,7 +930,7 @@ Definition x86_is_move_opP op vx v :
   -> exec_sopn (Oasm op) [:: vx ] = ok v
   -> List.Forall2 value_uincl v [:: vx ].
 Proof.
-  case: op => [[[|] [] ws] | []] // .
+  case: op => [[[|] [] ws] | []] //.
   all: rewrite /ap_is_move_op.
   move => H1.
   rewrite /exec_sopn /sopn_sem /=.
