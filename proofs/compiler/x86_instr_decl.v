@@ -2402,9 +2402,9 @@ Definition Ox86_VPMADDWD_instr :=
                 (@x86_VPMADDWD sz)
                 (check_xmm_xmm_xmmm sz)
                 3
-                (size_128_256 sz)
+                (size_128_512 sz)
                 (pp_name_ty "vpmaddwd" [:: sz; sz; sz])
-             ,("VPMADDWD"%string, prim_128_256 VPMADDWD)
+             ,("VPMADDWD"%string, prim_128_512 VPMADDWD)
   ).
 
 Definition check_movpd := [:: [::m false; xmm]].
